@@ -1,0 +1,109 @@
+/* 弹窗主题：统一 Element Plus 弹窗 / 浮层 / 消息提示的圆角、配色与阴影，与页面上的柔和卡片风格保持一致 */
+
+/* 1. 先改设计令牌，再改组件，避免逐个组件打补丁 */
+:root {
+  --el-color-primary: #4f66cf;
+  --el-color-primary-light-3: #8494dd;
+  --el-color-primary-light-5: #a7b3e7;
+  --el-color-primary-light-7: #cad1f1;
+  --el-color-primary-light-8: #dce0f5;
+  --el-color-primary-light-9: #edf0fa;
+  --el-color-primary-dark-2: #3f52a6;
+  --el-border-radius-base: 11px;
+  --el-border-radius-small: 9px;
+  --el-text-color-primary: #1d3155;
+  --el-text-color-regular: #2f4257;
+  --el-text-color-secondary: #52647f;
+  --el-text-color-placeholder: #9aa9bd;
+  --el-border-color: #dbe5f4;
+  --el-border-color-light: #e3eaf5;
+  --el-border-color-lighter: #e9eff8;
+  --el-fill-color-light: #f2f6fd;
+  --el-fill-color-lighter: #f7fafe;
+  --el-fill-color-blank: #fbfdff;
+  --el-box-shadow-light: 0 16px 36px rgba(23, 44, 82, .16);
+}
+
+/* 2. 遮罩：轻微模糊，把注意力收到弹窗上 */
+.el-overlay { background: rgba(21, 38, 66, .34); backdrop-filter: blur(5px); }
+
+/* 3. 弹窗本体：圆角卡片 + 纯色页头 + 分隔页脚 */
+.el-dialog {
+  border: 1px solid rgba(255, 255, 255, .8);
+  border-radius: 22px;
+  background: #f5f9fd;
+  box-shadow: 0 30px 70px rgba(23, 44, 82, .32), inset 0 1px 0 #fff;
+  overflow: hidden;
+}
+.el-dialog.is-fullscreen { border-radius: 0; }
+.el-dialog__header {
+  margin: 0;
+  padding: 20px 26px 16px;
+  background: #edf3fc;
+  border-bottom: 1px solid #dde5f4;
+}
+.el-dialog__title { display: inline-flex; align-items: center; gap: 10px; font-size: 19px; font-weight: 700; color: #1b2f52; }
+.el-dialog__title::before { content: ''; width: 6px; height: 20px; border-radius: 4px; background: #4f66cf; }
+.el-dialog__headerbtn { top: 16px; right: 16px; width: 34px; height: 34px; border-radius: 12px; background: rgba(255, 255, 255, .8); box-shadow: 3px 3px 8px rgba(160, 176, 202, .45), -3px -3px 8px #fff; transition: background .18s, transform .18s; }
+.el-dialog__headerbtn:hover { background: #fff; transform: translateY(-1px); }
+.el-dialog__headerbtn .el-dialog__close { color: #4b60cf; font-size: 18px; }
+.el-dialog__body { padding: 22px 26px; color: #2f4257; font-size: 15px; line-height: 1.75; scrollbar-width: thin; scrollbar-color: #c9d5e6 transparent; }
+.el-dialog__body::-webkit-scrollbar { width: 10px; }
+.el-dialog__body::-webkit-scrollbar-track { background: transparent; }
+.el-dialog__body::-webkit-scrollbar-thumb { border: 3px solid transparent; border-radius: 999px; background: #c9d5e6; background-clip: content-box; }
+.el-dialog__body::-webkit-scrollbar-thumb:hover { background: #aebdd4; background-clip: content-box; }
+.el-dialog__footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; padding: 15px 26px 20px; border-top: 1px dashed #d7e1f0; background: rgba(255, 255, 255, .6); }
+.el-dialog__footer .metric-note { margin-right: auto; }
+
+/* 4. 按钮：默认按钮沿用页面上的柔和凸起，主按钮用品牌主色纯色填充 */
+.el-button { border-radius: 11px; font-weight: 600; background: #f2f6fd; border-color: #c3cff0; color: #3b4fc0; box-shadow: 3px 3px 7px #d2dbe8, -3px -3px 7px #fff; }
+.el-button:hover, .el-button:focus { background: #e8eefc; border-color: #8f9fe4; color: #3549bf; }
+.el-button.is-disabled, .el-button.is-disabled:hover, .el-button.is-disabled:focus { background: #f4f6fa; border-color: #d8dfec; color: #93a0b8; box-shadow: none; }
+.el-button--primary { background: #4f66cf; border-color: transparent; color: #fff; box-shadow: 3px 3px 8px #ccd6e6, -3px -3px 8px #fff; }
+.el-button--primary:hover, .el-button--primary:focus { background: #3f52a6; border-color: transparent; color: #fff; }
+.el-button--primary.is-disabled, .el-button--primary.is-disabled:hover { background: #a7b3e7; border-color: transparent; color: #fff; box-shadow: none; }
+
+/* 5. 表单控件：浅底 + 细描边，聚焦时换成品牌蓝的柔光圈 */
+.el-input__wrapper, .el-select__wrapper, .el-textarea__inner, .el-input-number {
+  border-radius: 11px;
+  background: #fbfdff;
+  box-shadow: inset 0 0 0 1px #dbe5f4;
+  transition: box-shadow .18s, background .18s;
+}
+.el-input__wrapper:hover, .el-select__wrapper:hover, .el-textarea__inner:hover { box-shadow: inset 0 0 0 1px #b9c8e6; }
+.el-input__wrapper.is-focus, .el-input__wrapper:focus-within, .el-select__wrapper.is-focused { box-shadow: inset 0 0 0 1px #7d9ae8, 0 0 0 3px rgba(113, 137, 233, .18); }
+.el-input__inner, .el-textarea__inner { color: #1d3155; }
+.el-input__inner::placeholder, .el-textarea__inner::placeholder { color: #9aa9bd; }
+.el-textarea .el-input__count, .el-input__count { background: transparent; color: #8496b4; font-size: 12px; }
+
+/* 6. 下拉浮层：圆角更松、阴影更柔，选项之间留出呼吸感 */
+.el-popper.is-light, .el-popper.is-pure, .el-select__popper {
+  border-radius: 14px !important;
+  border: 1px solid #e3eaf5 !important;
+  box-shadow: 0 18px 42px rgba(23, 44, 82, .18) !important;
+}
+.el-select-dropdown__list, .el-dropdown-menu { padding: 6px; }
+.el-select-dropdown__item { height: 36px; line-height: 36px; margin: 2px 0; padding: 0 12px; border-radius: 9px; color: #2f4257; }
+.el-select-dropdown__item.is-hovering { background: #eef3ff; }
+.el-select-dropdown__item.is-selected { background: #eef3ff; color: #3b4fc0; font-weight: 600; }
+.el-select-dropdown__empty { color: #8496b4; }
+.el-select-group__title { padding-left: 18px; color: #7f8ea6; font-size: 12.5px; font-weight: 700; }
+
+/* 7. 二次确认框与轻提示，跟弹窗同一套语言 */
+.el-message-box { padding: 0; overflow: hidden; border: 1px solid rgba(255, 255, 255, .8); border-radius: 20px; background: #f5f9fd; box-shadow: 0 30px 70px rgba(23, 44, 82, .32); }
+.el-message-box__header { padding: 18px 24px 14px; background: #edf3fc; border-bottom: 1px solid #dde5f4; }
+.el-message-box__title { font-size: 18px; font-weight: 700; color: #1b2f52; }
+.el-message-box__content { padding: 20px 24px; color: #2f4257; }
+.el-message-box__btns { padding: 12px 24px 18px; border-top: 1px dashed #d7e1f0; background: rgba(255, 255, 255, .6); }
+.el-message { padding: 12px 18px; border: 1px solid #e3eaf5; border-radius: 14px; background: #fbfdff; box-shadow: 0 16px 36px rgba(23, 44, 82, .18); }
+
+/* 8. 其余小件：标签、折叠面板、日期面板 */
+.el-tag { border-radius: 9px; font-weight: 600; }
+.el-collapse, .el-collapse-item__header, .el-collapse-item__wrap { background: transparent; }
+.el-collapse-item__header { font-weight: 600; color: #2c4166; }
+.el-picker-panel { border-radius: 16px; }
+.el-date-table td.current:not(.disabled) .el-date-table-cell__text { border-radius: 9px; }
+@media (max-width: 760px) {
+  .el-dialog__header, .el-dialog__body, .el-dialog__footer { padding-left: 16px; padding-right: 16px; }
+  .el-dialog { border-radius: 16px; }
+}

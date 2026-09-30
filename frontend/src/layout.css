@@ -1,0 +1,27 @@
+/* 栅格与响应式断点：.metrics 三列概览卡，.four-metrics 能力画像的等宽四列卡，.five-metrics 班组报告口径的等宽五列卡 */
+.four-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+/* 班组报告台：应报 / 已提交 / 待确认 / 缺报 / 检测超限 五张口径卡单行铺开 */
+.metrics.five-metrics { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
+
+@media (max-width: 1500px) {
+  .metrics.five-metrics { gap: 14px; }
+  .metrics.five-metrics .metric { min-height: 146px; padding: 20px; }
+  .metrics.five-metrics .metric > small { font-size: 14.5px; }
+  .metrics.five-metrics .metric-value b { font-size: 32px; }
+  .metrics.five-metrics .metric span { font-size: 13px; }
+}
+
+@media (max-width: 1120px) {
+  .metrics.five-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 900px) {
+  .four-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .metrics.five-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 560px) {
+  .four-metrics { grid-template-columns: 1fr; }
+  .metrics.five-metrics { grid-template-columns: minmax(0, 1fr); }
+}

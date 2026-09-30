@@ -1,0 +1,45 @@
+server:
+  port: 8080
+spring:
+  application.name: talent-training-api
+  # 本机开发（IDE / mvn spring-boot:run / java -jar）与容器部署共用同一份配置来源：
+  # 自动读取仓库根目录的 .env，避免「改了 .env 却不生效」。容器里由 docker-compose 注入环境变量，
+  # 这两条 optional 找不到文件就跳过，不报错；已存在的环境变量优先级更高，仍可临时覆盖。
+  config:
+    import:
+      - optional:file:./.env[.properties]
+      - optional:file:../.env[.properties]
+  datasource:
+    # 系统只用 MySQL 一套库：主数据、业务数据、Agent 结果与审计留痕都在这里
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/train_system?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false&rewriteBatchedStatements=true}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:123456}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 5000
+      pool-name: train-mysql
+  sql.init.mode: never
+  jackson.default-property-inclusion: always
+  servlet:
+    multipart:
+      # 组长导入的培训资料 / 试卷原件可能是几十页 PDF，默认 1MB 太小
+      max-file-size: 20MB
+      max-request-size: 24MB
+springdoc:
+  swagger-ui.path: /swagger-ui.html
+report:
+  output-dir: ${REPORT_OUTPUT_DIR:${java.io.tmpdir}/power-train-reports}
+  # auto：显式路径（含 classpath:）→ 本机 Windows 字体 → 容器内 CJK 字体 → classpath:fonts/*
+  font-title: ${REPORT_FONT_TITLE:auto}
+  font-body: ${REPORT_FONT_BODY:auto}
+# 组长上传的资料原件留档目录：入库后台账里记录这个路径，便于追溯原件
+material:
+  dir: ${MATERIAL_DIR:${java.io.tmpdir}/power-train-materials}
+  max-mb: ${MATERIAL_MAX_MB:20}
+ai:
+  enabled: ${AI_ENABLED:false}
+  base-url: ${AI_BASE_URL:https://api.openai.com/v1}
+  model: ${AI_MODEL:gpt-4o-mini}
+  api-key: ${AI_API_KEY:}
+  timeout-seconds: ${AI_TIMEOUT_SECONDS:20}

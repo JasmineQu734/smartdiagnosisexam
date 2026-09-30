@@ -1,0 +1,7 @@
+# 构建上下文只需要 pom.xml 与 src（Dockerfile 里也是这么 COPY 的）。
+# 本地 target/ 不进上下文：既拖慢上传，也可能把宿主机编译出的 class 混进镜像。
+target/
+*.log
+.idea/
+.vscode/
+.git/

@@ -1,0 +1,263 @@
+
+/* 登录页：左边一座会动的三维全息沙盘（LoginStage.vue 用等距投影算出来），
+   右边一块悬浮玻璃登录卡。这里只负责材质、发光与动画：
+   --tilt-x / --tilt-y 由 App.vue 按鼠标位置写在 .login-shell 上，卡片与沙盘据此做视差。 */
+
+/* ── 1. 底板：深海蓝底 + 三团柔光，最后压一圈暗角 ─────────────────── */
+.login-shell {
+  position: relative;
+  min-height: 100vh; min-height: 100dvh;
+  display: grid; grid-template-columns: minmax(0, 1fr);
+  align-items: center; justify-items: end;
+  padding: clamp(16px, 3vw, 40px);
+  overflow: hidden;
+  color: #cfe3f6;
+  background:
+    radial-gradient(120% 88% at 24% 74%, rgba(30, 108, 196, .38), rgba(30, 108, 196, 0) 60%),
+    radial-gradient(92% 72% at 86% 6%, var(--role-tint), rgba(8, 20, 36, 0) 58%),
+    radial-gradient(74% 62% at 50% 112%, rgba(46, 168, 255, .2), rgba(46, 168, 255, 0) 68%),
+    linear-gradient(158deg, #050e1d 0%, #071628 48%, #03080f 100%);
+}
+
+/* 地面网格：透视压平后铺在下方，只做极慢的明暗呼吸，不做位移，省得整屏重绘 */
+.login-shell::before {
+  content: ''; position: absolute; left: -12%; right: -12%; bottom: -36%; height: 80%;
+  background:
+    repeating-linear-gradient(90deg, rgba(88, 170, 236, .17) 0 1px, rgba(88, 170, 236, 0) 1px 64px),
+    repeating-linear-gradient(0deg, rgba(88, 170, 236, .17) 0 1px, rgba(88, 170, 236, 0) 1px 64px);
+  transform: perspective(780px) rotateX(72deg);
+  transform-origin: 50% 100%;
+  -webkit-mask-image: radial-gradient(58% 66% at 38% 46%, #000 8%, rgba(0, 0, 0, 0) 76%);
+  mask-image: radial-gradient(58% 66% at 38% 46%, #000 8%, rgba(0, 0, 0, 0) 76%);
+  animation: hsGridBreath 12s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* 身份色柔光落在卡片这一侧，压暗四角，让玻璃卡浮起来 */
+.login-shell::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(44% 50% at 78% 46%, var(--role-tint), rgba(8, 20, 36, 0) 72%),
+    radial-gradient(128% 104% at 50% 46%, rgba(2, 6, 12, 0) 44%, rgba(2, 6, 12, .74) 100%);
+}
+
+/* ── 2. 沙盘舞台：铺满左侧，跟随鼠标做轻微视差 ───────────────────── */
+.login-stage { position: absolute; inset: 0 auto 0 0; width: min(76%, 1200px); z-index: 1; pointer-events: none; }
+.login-stage::before {
+  content: ''; position: absolute; left: 6%; top: 12%; width: 76%; aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(46, 150, 255, .22) 0%, rgba(46, 150, 255, 0) 66%);
+  animation: hsAurora 16s ease-in-out infinite;
+  pointer-events: none;
+}
+.login-stage .holo-svg {
+  display: block; width: 100%; height: 100%; overflow: visible;
+  transform: translate3d(calc(var(--tilt-y, 0) * -28px), calc(var(--tilt-x, 0) * -16px), 0);
+  transition: transform .35s ease-out;
+}
+
+/* ── 3. 登录卡：暗色玻璃 + 跟随鼠标的立体倾斜 ────────────────────── */
+.login-card {
+  position: relative; z-index: 2; width: min(432px, 100%);
+  min-width: 0;
+  padding: 30px 32px 26px; text-align: center;
+  border-radius: 26px; border: 1px solid rgba(140, 214, 255, .32);
+  background:
+    radial-gradient(124% 62% at 50% -12%, var(--role-tint), rgba(8, 22, 40, 0) 62%),
+    linear-gradient(158deg, rgba(19, 52, 90, .58), rgba(5, 16, 31, .54));
+  -webkit-backdrop-filter: blur(26px) saturate(150%);
+  backdrop-filter: blur(26px) saturate(150%);
+  box-shadow:
+    0 40px 80px rgba(0, 8, 20, .62),
+    0 0 0 1px rgba(120, 200, 255, .07),
+    0 0 64px rgba(46, 140, 255, .18),
+    inset 0 1px 0 rgba(190, 235, 255, .3),
+    inset 0 -1px 0 rgba(120, 180, 240, .12);
+  transform: perspective(1500px) rotateX(calc(var(--tilt-x, 0) * -7deg)) rotateY(calc(var(--tilt-y, 0) * 9deg));
+  transition: transform .3s ease-out, box-shadow .3s ease;
+  overflow: hidden;
+}
+
+/* 顶边一条身份色光带：两端收进暗色里，像一道高光而不是一顶帽子 */
+.login-card::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), var(--role-accent) 20%, var(--role-accent) 80%, rgba(255, 255, 255, 0));
+  box-shadow: 0 0 14px var(--role-accent);
+}
+/* 斜扫过卡面的高光：7 秒一轮，暗示这是一块有厚度的玻璃 */
+.login-card::after {
+  content: ''; position: absolute; top: -60%; left: -70%; width: 46%; height: 220%;
+  background: linear-gradient(90deg, rgba(190, 235, 255, 0), rgba(190, 235, 255, .16), rgba(190, 235, 255, 0));
+  transform: rotate(18deg);
+  animation: hsCardSheen 7.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ── 4. 身份配色：深色底上的霓虹版，选谁沙盘和卡片就跟着谁变色 ────── */
+.login-shell.role-employee { --role-accent: #3fdcdc; --role-deep: #0d7d86; --role-soft: rgba(63, 220, 220, .13); --role-tint: rgba(63, 220, 220, .26); --role-fill: rgba(63, 220, 220, .24); --role-line: rgba(63, 220, 220, .52); --role-ink: #a9f3f3; --role-shadow: rgba(2, 26, 34, .6); }
+.login-shell.role-teamLead { --role-accent: #ffc861; --role-deep: #a9761a; --role-soft: rgba(255, 200, 97, .13); --role-tint: rgba(255, 200, 97, .26); --role-fill: rgba(255, 200, 97, .24); --role-line: rgba(255, 200, 97, .52); --role-ink: #ffe3b2; --role-shadow: rgba(38, 24, 2, .6); }
+.login-shell.role-executive { --role-accent: #b6a3ff; --role-deep: #5b49c9; --role-soft: rgba(182, 163, 255, .13); --role-tint: rgba(182, 163, 255, .26); --role-fill: rgba(182, 163, 255, .24); --role-line: rgba(182, 163, 255, .52); --role-ink: #dfd8ff; --role-shadow: rgba(16, 10, 44, .6); }
+.login-shell.role-admin { --role-accent: #8ab6e6; --role-deep: #3f6fa8; --role-soft: rgba(138, 182, 230, .13); --role-tint: rgba(138, 182, 230, .26); --role-fill: rgba(138, 182, 230, .24); --role-line: rgba(138, 182, 230, .52); --role-ink: #d2e6f8; --role-shadow: rgba(6, 20, 38, .6); }
+
+/* ── 5. 卡片内容：品牌、身份列表、按钮 ───────────────────────────── */
+.login-brand { display: grid; justify-items: center; gap: 10px; }
+.login-card .brand-mark {
+  width: 62px; height: 62px; margin: 0; padding: 9px; border-radius: 19px;
+  background: linear-gradient(165deg, rgba(226, 246, 255, .18), rgba(10, 30, 52, .52));
+  box-shadow: 0 0 0 1px rgba(160, 224, 255, .3), 0 0 0 6px var(--role-tint), 0 14px 30px rgba(0, 10, 24, .5), inset 0 1px 0 rgba(226, 248, 255, .4);
+}
+.login-card h1 { font-family: var(--font-medium); font-weight: 500; font-size: 29px; letter-spacing: 7px; text-indent: 7px; margin: 6px 0 0; color: #e8f5ff; text-shadow: 0 0 20px rgba(120, 200, 255, .45); }
+.login-card .eyebrow { font-size: 10.5px; letter-spacing: 2.6px; text-indent: 2.6px; color: rgba(150, 200, 235, .72); }
+.login-lead { display: flex; align-items: center; gap: 12px; margin: 15px 0 18px; font-size: 12.5px; letter-spacing: .5px; color: rgba(160, 198, 228, .88); }
+.login-lead::before, .login-lead::after { content: ''; flex: 1 1 auto; height: 1px; }
+.login-lead::before { background: linear-gradient(90deg, rgba(110, 175, 230, 0), rgba(110, 175, 230, .55)); }
+.login-lead::after { background: linear-gradient(270deg, rgba(110, 175, 230, 0), rgba(110, 175, 230, .55)); }
+
+.account-list { display: grid; gap: 9px; text-align: left; }
+.account-list button {
+  position: relative; overflow: hidden; width: 100%; display: flex; align-items: center; gap: 12px;
+  padding: 11px 14px; border-radius: 15px; cursor: pointer; text-align: left; color: #dcecfa;
+  border: 1px solid rgba(120, 190, 240, .18);
+  background: linear-gradient(180deg, rgba(150, 210, 255, .1), rgba(6, 20, 36, .34));
+  box-shadow: inset 0 1px 0 rgba(200, 240, 255, .14), 0 8px 18px rgba(0, 10, 22, .32);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+}
+.account-list button:hover { transform: translateY(-2px); border-color: var(--role-line); box-shadow: inset 0 1px 0 rgba(200, 240, 255, .2), 0 14px 28px rgba(0, 10, 24, .45), 0 0 22px var(--role-tint); }
+.account-list button.selected { border-color: var(--role-accent); background: linear-gradient(180deg, var(--role-fill), rgba(6, 20, 36, .4)); box-shadow: inset 0 1px 0 rgba(220, 245, 255, .22), 0 16px 32px rgba(0, 10, 24, .5), 0 0 26px var(--role-tint); }
+.account-list button.selected::before { content: ''; position: absolute; left: 0; top: 13px; bottom: 13px; width: 3px; border-radius: 0 3px 3px 0; background: var(--role-accent); box-shadow: 0 0 12px var(--role-accent); }
+.account-list .avatar {
+  position: relative; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 13px;
+  background: linear-gradient(160deg, rgba(226, 246, 255, .24), rgba(200, 235, 255, .04) 46%, rgba(200, 235, 255, 0) 62%), linear-gradient(165deg, var(--role-deep), rgba(8, 26, 46, .6));
+  border: 1px solid rgba(170, 225, 255, .32); color: #ecf9ff; text-shadow: 0 0 10px rgba(150, 220, 255, .55);
+  box-shadow: inset 0 1px 0 rgba(226, 248, 255, .4), 0 8px 18px rgba(0, 10, 22, .4), 0 0 16px var(--role-tint);
+  font-family: var(--font-medium); font-weight: 700; font-size: 16.5px;
+}
+.account-list .avatar::after { content: ''; position: absolute; top: 4px; left: 5px; right: 28%; height: 34%; border-radius: 999px; background: linear-gradient(180deg, rgba(255, 255, 255, .5), rgba(255, 255, 255, 0)); pointer-events: none; }
+.account-list .account-name { display: grid; gap: 4px; min-width: 0; }
+.account-list button b { font-family: var(--font-medium); font-weight: 500; font-size: 15.5px; letter-spacing: .8px; color: #e8f4ff; }
+.account-list button.selected b { color: #fff; }
+.account-list button small { font-size: 12.5px; letter-spacing: .2px; color: rgba(152, 192, 226, .92); }
+.account-name em { justify-self: start; padding: 2px 9px; border-radius: 999px; background: var(--role-soft); border: 1px solid rgba(150, 210, 250, .2); color: var(--role-ink); font-style: normal; font-size: 11px; font-weight: 600; line-height: 1.45; letter-spacing: .2px; }
+.account-list button i { margin-left: auto; font-size: 19px; font-style: normal; color: rgba(140, 185, 225, .7); transition: transform .18s ease, color .18s ease; }
+.account-list button.selected i { color: var(--role-accent); transform: translateX(2px); }
+
+.login-button { width: 100%; height: 47px; margin-top: 18px; border: 0 !important; border-radius: 15px !important; font-family: var(--font-medium); font-weight: 500; font-size: 15px; letter-spacing: 5px; text-indent: 5px; color: #f2fbff !important; background: linear-gradient(180deg, rgba(255, 255, 255, .26), rgba(255, 255, 255, 0) 46%), linear-gradient(135deg, var(--role-deep), var(--role-accent)) !important; box-shadow: 0 18px 32px rgba(0, 10, 24, .48), 0 0 26px var(--role-tint), inset 0 1px 0 rgba(255, 255, 255, .42) !important; transition: transform .18s ease, box-shadow .18s ease, filter .18s ease; }
+.login-button:hover, .login-button:focus-visible { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 22px 40px rgba(0, 10, 24, .52), 0 0 34px var(--role-tint), inset 0 1px 0 rgba(255, 255, 255, .4) !important; }
+.login-button:active { transform: translateY(1px) scale(.996); }
+.login-error { color: #ffc2cf !important; margin: 13px 0 0 !important; padding: 8px 12px; border-radius: 11px; background: rgba(255, 120, 150, .12); border: 1px solid rgba(255, 140, 170, .3); font-size: 12.5px !important; letter-spacing: .2px; }
+.login-role-hint { margin: 12px 0 0; padding: 8px 12px; border-radius: 12px; background: var(--role-soft); border: 1px solid rgba(140, 205, 250, .16); color: var(--role-ink); font-size: 12px; line-height: 1.7; letter-spacing: .2px; }
+
+/* ── 6. 沙盘材质：配色统一走 --holo-* 与身份色，换身份就换一片霓虹 ── */
+.holo-svg { --holo-line: rgba(126, 208, 255, .55); --holo-dim: rgba(96, 168, 226, .28); --holo-core: #c9f6ff; }
+.holo-svg .streak { fill: url(#hsStreak); opacity: .2; animation: hsStreakPulse 7s ease-in-out infinite; }
+.holo-svg .floor-glow { opacity: .9; }
+.holo-svg .floor-ring { fill: none; stroke: rgba(92, 200, 255, .38); stroke-width: 1.3; transform-box: fill-box; transform-origin: center; animation: hsFloorPulse 7s ease-out infinite; }
+.holo-svg .floor-streak { fill: url(#hsBeam); opacity: .5; animation: hsFloorGlow 6.5s ease-in-out infinite; }
+.holo-svg .beam-down { fill: url(#hsBeam); filter: url(#hsSoft); animation: hsBeamPulse 5.5s ease-in-out infinite; }
+.holo-svg .beam-up { fill: url(#hsBeamUp); filter: url(#hsSoft); animation: hsBeamPulse 4.2s ease-in-out infinite; }
+.holo-svg .beam-core { stroke: var(--holo-core); stroke-width: 1.6; opacity: .75; animation: hsBeamPulse 3.4s ease-in-out infinite; }
+.holo-svg .slab-wall.wall-x { fill: url(#hsWallX); }
+.holo-svg .slab-wall.wall-y { fill: url(#hsWallY); }
+.holo-svg .slab-top { fill: url(#hsSlab); stroke: rgba(140, 220, 255, .45); stroke-width: 1.4; }
+.holo-svg .slab-edge { fill: none; stroke: rgba(160, 232, 255, .78); stroke-width: 2; stroke-linejoin: round; filter: url(#hsGlow); }
+.holo-svg .slab-inset { fill: none; stroke: rgba(126, 208, 255, .3); stroke-width: 1; stroke-linejoin: round; }
+.holo-svg .deck-wall.wall-x { fill: rgba(10, 34, 60, .92); }
+.holo-svg .deck-wall.wall-y { fill: rgba(6, 26, 48, .92); }
+.holo-svg .deck-top { fill: rgba(11, 38, 68, .84); stroke: rgba(120, 205, 255, .32); stroke-width: 1.1; }
+.holo-svg .deck-inset { fill: none; stroke: var(--holo-dim); stroke-width: 1; stroke-dasharray: 12 9; animation: hsFlow 26s linear infinite; }
+.holo-svg .ring { fill: none; stroke-width: 1.6; animation: hsRingFlow 10s linear infinite; }
+.holo-svg .ring-main { stroke: rgba(126, 224, 255, .55); stroke-dasharray: 54 30; }
+.holo-svg .ring-alt { stroke: var(--role-line); stroke-dasharray: 22 40; }
+.holo-svg .helipad { fill: rgba(10, 34, 58, .7); stroke: rgba(140, 220, 255, .42); stroke-width: 1.4; stroke-dasharray: 9 7; animation: hsFlow 18s linear infinite; }
+.holo-svg .helipad-inner { fill: none; stroke: var(--role-accent); stroke-width: 1.2; opacity: .75; }
+.holo-svg .emitter-base { fill: rgba(8, 30, 54, .92); stroke: rgba(120, 205, 255, .38); }
+.holo-svg .emitter-mid { fill: rgba(52, 170, 240, .28); stroke: rgba(150, 230, 255, .5); }
+.holo-svg .emitter-core { fill: var(--role-accent); opacity: .9; transform-box: fill-box; transform-origin: center; animation: hsCore 2.6s ease-in-out infinite; }
+.holo-svg .road { fill: rgba(14, 44, 76, .8); stroke: rgba(110, 190, 250, .28); stroke-width: 1; }
+.holo-svg .road-dash { stroke: rgba(150, 226, 255, .45); stroke-width: 1.4; stroke-dasharray: 13 11; animation: hsFlow 2.6s linear infinite; }
+.holo-svg .car-trail { fill: rgba(130, 220, 255, .24); }
+.holo-svg .car-body { fill: var(--holo-core); }
+.holo-svg .car { animation-name: hsDrive; animation-timing-function: linear; animation-iteration-count: infinite; }
+
+.holo-svg .signal-pole { fill: rgba(150, 205, 245, .42); }
+.holo-svg .signal-box { fill: rgba(6, 22, 40, .94); stroke: rgba(140, 215, 255, .45); stroke-width: 1.2; }
+.holo-svg .lamp { opacity: .16; }
+.holo-svg .lamp-red { fill: #ff6b7f; animation: hsLamp 6s steps(1, end) infinite; }
+.holo-svg .lamp-amber { fill: #ffc861; animation: hsLamp 6s steps(1, end) infinite; animation-delay: -2s; }
+.holo-svg .lamp-green { fill: #57e6a5; animation: hsLamp 6s steps(1, end) infinite; animation-delay: -4s; }
+.holo-svg .tower-wall.wall-x { fill: url(#hsWallX); }
+.holo-svg .tower-wall.wall-y { fill: url(#hsWallY); }
+.holo-svg .tower-top { fill: url(#hsTower); stroke: rgba(150, 226, 255, .5); stroke-width: 1; }
+.holo-svg .tower.hot .tower-top { stroke: rgba(196, 244, 255, .85); }
+.holo-svg .tower-floor { stroke: rgba(126, 200, 250, .24); stroke-width: .9; }
+.holo-svg .tower-win { fill: var(--role-accent); opacity: 0; animation: hsWin 6.5s ease-in-out infinite; }
+
+.holo-svg .panel { animation: hsBob 9s ease-in-out infinite; }
+.holo-svg .holo-panels .panel:nth-child(2) { animation-delay: -3.4s; }
+.holo-svg .panel-tether { stroke: rgba(140, 215, 255, .3); stroke-width: 1; stroke-dasharray: 5 6; }
+.holo-svg .panel-frame { fill: none; stroke: rgba(160, 230, 255, .38); stroke-width: 1.2; }
+.holo-svg .panel-head { stroke: rgba(160, 230, 255, .28); stroke-width: 1; }
+.holo-svg .panel-title { fill: #e2f6ff; font-family: var(--font-medium); font-size: 14px; letter-spacing: 1.4px; }
+.holo-svg .panel-sub { fill: rgba(150, 205, 240, .58); font-family: var(--font-ui); font-size: 8.5px; letter-spacing: 2.2px; }
+.holo-svg .panel-base { stroke: rgba(140, 215, 255, .32); stroke-width: 1; }
+.holo-svg .panel-bar { fill: var(--role-accent); opacity: .85; transform-box: fill-box; transform-origin: bottom; animation: hsBar 2.8s ease-in-out infinite alternate; }
+.holo-svg .panel-scan { fill: rgba(190, 240, 255, .16); animation: hsScan 5.5s ease-in-out infinite; }
+.holo-svg .dust { fill: #cdf3ff; opacity: 0; animation: hsRise 8s ease-in-out infinite; }
+.holo-svg .bridge-glass { fill: url(#hsBridge); }
+.holo-svg .bridge-edge { fill: none; stroke: rgba(196, 232, 255, .32); stroke-width: 1.4; }
+.holo-svg .bridge-sheen { fill: url(#hsSheen); opacity: 0; animation: hsBridgeSheen 6s ease-in-out infinite; }
+
+/* ── 7. 动画：以位移和透明度为主，少碰实时滤镜，保证几十个元素同屏也跑得动 ── */
+@keyframes hsGridBreath { 0%, 100% { opacity: .32; } 50% { opacity: .6; } }
+@keyframes hsAurora { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: .75; } 50% { transform: translate3d(3%, -2%, 0) scale(1.08); opacity: 1; } }
+@keyframes hsCardSheen { 0% { transform: translate3d(-40%, 0, 0) rotate(18deg); opacity: 0; } 16% { opacity: 1; } 58% { transform: translate3d(330%, 0, 0) rotate(18deg); opacity: 0; } 100% { transform: translate3d(330%, 0, 0) rotate(18deg); opacity: 0; } }
+@keyframes hsStreakPulse { 0%, 100% { opacity: .08; } 50% { opacity: .3; } }
+@keyframes hsFloorPulse { 0% { transform: scale(.72); opacity: 0; } 30% { opacity: .5; } 100% { transform: scale(1.24); opacity: 0; } }
+@keyframes hsFloorGlow { 0%, 100% { opacity: .26; } 50% { opacity: .6; } }
+@keyframes hsBeamPulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+@keyframes hsFlow { to { stroke-dashoffset: -100; } }
+@keyframes hsRingFlow { to { stroke-dashoffset: -168; } }
+@keyframes hsCore { 0%, 100% { transform: scale(.86); opacity: .68; } 50% { transform: scale(1.12); opacity: 1; } }
+@keyframes hsDrive { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(var(--car-dx, 0px), var(--car-dy, 0px), 0); } }
+@keyframes hsLamp { 0%, 22% { opacity: 1; } 23%, 100% { opacity: .16; } }
+@keyframes hsWin { 0%, 100% { opacity: .06; } 42% { opacity: .82; } }
+@keyframes hsBar { from { transform: scaleY(.55); } to { transform: scaleY(1); } }
+@keyframes hsScan { 0% { transform: translateY(0); opacity: 0; } 12% { opacity: 1; } 86% { opacity: 1; } 100% { transform: translateY(1100%); opacity: 0; } }
+@keyframes hsBob { 0%, 100% { transform: translateY(-3px); } 50% { transform: translateY(4px); } }
+@keyframes hsRise { 0% { transform: translateY(18px); opacity: 0; } 20% { opacity: .85; } 80% { opacity: .35; } 100% { transform: translateY(-72px); opacity: 0; } }
+@keyframes hsBridgeSheen { 0% { transform: translate(-30px, 0); opacity: 0; } 40% { opacity: .85; } 72% { transform: translate(92px, 0); opacity: 0; } 100% { transform: translate(92px, 0); opacity: 0; } }
+
+/* ── 8. 自适应：窄屏把沙盘压到卡片背后，矮窗口把卡片收一档 ────────── */
+@media (max-width: 1180px) {
+  .login-stage { width: min(72%, 920px); }
+  .login-card { width: min(400px, 100%); padding: 26px 26px 22px; }
+}
+@media (max-width: 980px) {
+  .login-shell { grid-template-columns: minmax(0, 1fr); justify-items: center; padding: 24px 18px; }
+  .login-stage { position: absolute; inset: 0; width: 100%; opacity: .5; }
+  .login-stage::before { opacity: .7; }
+  .login-stage .holo-svg { transform: none; }
+  .login-card { width: min(440px, 100%); }
+}
+@media (max-height: 840px) {
+  .login-card { padding: 22px 26px 20px; }
+  .login-card .brand-mark { width: 54px; height: 54px; padding: 8px; border-radius: 17px; }
+  .login-card h1 { font-size: 25px; letter-spacing: 6px; text-indent: 6px; margin-top: 4px; }
+  .login-lead { margin: 12px 0 14px; }
+  .account-list { gap: 7px; }
+  .account-list button { padding: 9px 12px; }
+  .account-list .avatar { width: 38px; height: 38px; font-size: 15px; }
+  .login-button { height: 44px; margin-top: 15px; }
+}
+@media (max-width: 560px) {
+  .login-card { padding: 24px 18px; }
+  .login-card h1 { font-size: 25px; letter-spacing: 5px; text-indent: 5px; }
+  .account-list button small { font-size: 12px; }
+  .account-name em { font-size: 10.5px; }
+}
+/* 系统开了“减少动态效果”就整体静下来，只留静态的沙盘与玻璃 */
+@media (prefers-reduced-motion: reduce) {
+  .login-shell::before, .login-stage::before, .login-card::after, .holo-svg * { animation: none !important; }
+  .login-stage .holo-svg, .login-card { transition: none; }
+  .holo-svg .dust, .holo-svg .bridge-sheen { display: none; }
+}

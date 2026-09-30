@@ -1,0 +1,64 @@
+services:
+  mysql:
+    image: mysql:8.4
+    # 服务器重启后自动拉起；手工 docker compose stop 的不再自动起
+    restart: unless-stopped
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci"]
+    environment:
+      # 仅本机演示的默认值：部署时用 .env 覆盖成强密码，backend 共用同一变量不会改漏
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+      MYSQL_DATABASE: train_system
+    # 默认只绑回环地址：本机用 127.0.0.1:3307 连，局域网与公网连不到容器 MySQL。
+    # 需要同网段其他机器直连（仅限内网演示）时，在 .env 里设 MYSQL_BIND=0.0.0.0
+    ports: ["${MYSQL_BIND:-127.0.0.1}:${MYSQL_PORT:-3306}:3306"]
+    volumes:
+      - mysqldata:/var/lib/mysql
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # 用容器内的 MYSQL_ROOT_PASSWORD 探活：初始化阶段 mysqld 不监听 TCP，
+      # 能登进去才说明建库与种子脚本已跑完。$$ 转义后交给容器内的 sh 展开，文件里不出现明文密码。
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" 2>/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+  backend:
+    # 固定镜像名：不随文件夹名/Compose 项目名漂移，离线分发包 docker load 后即可直接用
+    build: ./backend
+    image: powertrain/backend:1.0.0
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/train_system?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false&rewriteBatchedStatements=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+      # 大模型（可选增强，不配就全系统离线走规则引擎）：光写 .env 不够，必须在这里透传，容器里才拿得到。
+      # AI_API_KEY 只放 .env（已 gitignore），不进仓库。
+      AI_ENABLED: ${AI_ENABLED:-false}
+      AI_BASE_URL: ${AI_BASE_URL:-https://api.openai.com/v1}
+      AI_MODEL: ${AI_MODEL:-gpt-4o-mini}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_TIMEOUT_SECONDS: ${AI_TIMEOUT_SECONDS:-20}
+      # 上传原件与生成文档落到具名卷：默认值是容器里的 java.io.tmpdir，
+      # 容器一重建（up --build、重启）整目录就没了，台账里会留下一堆指向不存在文件的记录。
+      MATERIAL_DIR: /var/lib/power-train/materials
+      REPORT_OUTPUT_DIR: /var/lib/power-train/reports
+      # 登录令牌的签名密钥：值放 .env（已 gitignore）。用默认值时任何人都能按公开默认值自签令牌，
+      # 对外演示或部署前务必在 .env 里换成随机串；换了等于所有人重新登录一次。
+      AUTH_SECRET: ${AUTH_SECRET:-power-train-demo-secret}
+    # API 只绑回环地址：对外只暴露 Web 端口，前端经 nginx 反代到 backend:8080（容器网络内）。
+    # 发布到 0.0.0.0 会绕过 nginx 把 API 开到宿主机所有网卡；本机调试走 127.0.0.1:${API_PORT:-8080} 即可。
+    ports: ["127.0.0.1:${API_PORT:-8080}:8080"]
+    volumes:
+      - trainfiles:/var/lib/power-train
+    depends_on:
+      mysql:
+        condition: service_healthy
+  frontend:
+    image: powertrain/frontend:1.0.0
+    build: ./frontend
+    restart: unless-stopped
+    ports: ["${WEB_PORT:-5173}:80"]
+    depends_on: [backend]
+volumes:
+  mysqldata:
+  # 组长上传的资料原件与报告文档：与数据库分开存，重建容器不丢
+  trainfiles:

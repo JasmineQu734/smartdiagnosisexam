@@ -1,0 +1,16 @@
+frontend/node_modules/
+frontend/dist/
+backend/target/
+tmp/
+*.log
+.idea/
+.vscode/
+.codex-ui-check/
+.env
+# 顶层打包产物：内含 128MB 的 Windows 安装包，超过 GitHub 单文件 100MB 上限
+dist/
+# Codex 排版工具的中间稿（PPT 候选版本与校验结果），非交付物
+.codex-finalizer/
+# IDE 的 Java 升级改造记录，与 CI 工作流无关
+.github/modernize/
+.md

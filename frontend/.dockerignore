@@ -1,0 +1,9 @@
+# 依赖与产物都由镜像内的 npm install / vite build 生成，宿主机的不进上下文。
+# 尤其 node_modules/：宿主机（Windows）的依赖会覆盖容器内 npm install 出来的
+# Linux 依赖（esbuild / rollup 平台二进制），轻则镜像膨胀，重则构建报 Exec format error。
+node_modules/
+dist/
+*.log
+.idea/
+.vscode/
+.git/

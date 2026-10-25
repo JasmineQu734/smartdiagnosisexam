@@ -3,6 +3,7 @@ package com.power.train;
 import static com.power.train.support.ApiResponse.ok;
 import static com.power.train.support.ApiResponse.row;
 
+import com.power.train.agent.AgentDispatchService;
 import com.power.train.exam.ExamCenter;
 import com.power.train.rbac.AuthToken;
 import com.power.train.report.ReportAttributionService;
@@ -46,16 +47,19 @@ public class ApiController {
     private final DatasetStore datasets;
     private final RuleSuggestionService suggestions;
     private final AuthToken authTokens;
+    private final AgentDispatchService agents;
     private final Sql sql;
 
     public ApiController(ReportService reportService, ExamCenter examCenter, PersonalStore personal,
-                         DatasetStore datasets, RuleSuggestionService suggestions, AuthToken authTokens, Sql sql) {
+                         DatasetStore datasets, RuleSuggestionService suggestions, AuthToken authTokens,
+                         AgentDispatchService agents, Sql sql) {
         this.reportService = reportService;
         this.examCenter = examCenter;
         this.personal = personal;
         this.datasets = datasets;
         this.suggestions = suggestions;
         this.authTokens = authTokens;
+        this.agents = agents;
         this.sql = sql;
     }
 
@@ -65,26 +69,54 @@ public class ApiController {
     }
 
     /**
-     * 登录：账号存在才签发令牌，令牌里带账号与角色（服务端签发，客户端改不动）。
-     * 账号不存在返回 401 —— 不再静默回落到演示账号，否则随便填个名字就能拿到别人的身份。
+     * 登录：账号 + 口令。口令以 SHA-256(username + ':' + password) 十六进制存 app_user.password_hash，
+     * 初始口令由 db/init/013_login_password.sql 写入（账号名 + @110）。账号不存在 / 口令错误返回 401，
+     * 账号未启用（status != ACTIVE）返回 403 —— 不再静默回落到演示账号，也不区分提示账号与口令哪个错。
      */
     @PostMapping("/auth/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody(required = false) Map<String, String> body) {
-        String username = body == null ? Users.DEFAULT : Users.account(body.get("username"));
-        Map<String, Object> user = personal.findIdentity(username);
-        if (user == null) {
-            Map<String, Object> denied = new LinkedHashMap<>();
+        String username = body == null || body.get("username") == null ? "" : body.get("username").trim();
+        String password = body == null || body.get("password") == null ? "" : body.get("password");
+        Map<String, Object> denied = new LinkedHashMap<>();
+        denied.put("data", Map.of());
+        denied.put("trace_id", UUID.randomUUID().toString());
+        if (username.isEmpty() || password.isEmpty()) {
             denied.put("code", 401);
-            denied.put("message", "账号不存在：" + username);
-            denied.put("data", Map.of());
-            denied.put("trace_id", UUID.randomUUID().toString());
+            denied.put("message", "请输入账号与密码");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(denied);
         }
+        Map<String, Object> row = sql.row(
+            "SELECT username, role_code, status, password_hash FROM app_user WHERE username = ?", username);
+        if (row == null || String.valueOf(row.get("password_hash")).isBlank()
+                || !String.valueOf(row.get("password_hash")).equalsIgnoreCase(sha256(username + ":" + password))) {
+            denied.put("code", 401);
+            denied.put("message", "账号或密码不正确");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(denied);
+        }
+        if (!"ACTIVE".equals(row.get("status"))) {
+            denied.put("code", 403);
+            denied.put("message", "账号待启用，请联系管理员");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(denied);
+        }
+        Map<String, Object> user = personal.findIdentity(username);
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("token", authTokens.issue(String.valueOf(user.get("username")), String.valueOf(user.get("role"))));
         data.put("token_type", "Bearer");
         data.put("user", user);
         return ResponseEntity.ok(ok(data));
+    }
+
+    /** 与 db/init/013 的口令散列口径一致：SHA-256(username + ':' + password) 的小写十六进制。 */
+    private static String sha256(String text) {
+        try {
+            byte[] digest = java.security.MessageDigest.getInstance("SHA-256")
+                .digest(text.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder(digest.length * 2);
+            for (byte b : digest) hex.append(Character.forDigit((b >> 4) & 0xF, 16)).append(Character.forDigit(b & 0xF, 16));
+            return hex.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 不可用", e);
+        }
     }
 
     @PostMapping("/auth/logout")
@@ -409,31 +441,14 @@ public class ApiController {
     /**
      * 通用 Agent 建议接口：结果按 agent_type / target_id 存入 agent_suggestion，
      * 人工确认结果可继续写 decision_log，Agent 不直接改业务数据。
+     *
+     * 具体事实组装、场景执行与建议投影都在 AgentDispatchService 里：
+     * 本方法只保持契约（路径 / 请求体 / 响应字段）不变，不再返回任何写死文案。
      */
     @PostMapping("/agent/{agentType}/{action}")
     public ResponseEntity<Map<String, Object>> agent(@PathVariable String agentType, @PathVariable String action,
                                                      @RequestBody(required = false) Map<String, Object> request) {
-        String type = agentType + "/" + action;
-        String suggestionId = UUID.randomUUID().toString();
-        Object targetId = request == null ? null : request.get("target_id");
-        List<String> suggestions = List.of("补充《软压板逻辑》课程", "安排师傅带教 2 次", "安排一次模拟考试");
-        String createdAt = Instant.now().toString();
-        sql.update("INSERT INTO agent_suggestion (suggestion_id, agent_type, target_id, input_json, output_json, "
-                + "confidence, source, need_human_confirm, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            suggestionId, type, targetId == null ? null : String.valueOf(targetId),
-            request == null ? null : sql.json(request), sql.json(suggestions),
-            new java.math.BigDecimal("0.86"), "rule", 1, "PENDING");
-        Map<String, Object> suggestion = new LinkedHashMap<>();
-        suggestion.put("suggestion_id", suggestionId);
-        suggestion.put("agent_type", type);
-        suggestion.put("target_id", targetId);
-        suggestion.put("suggestions", suggestions);
-        suggestion.put("confidence", 0.86);
-        suggestion.put("source", "rule");
-        suggestion.put("need_human_confirm", true);
-        suggestion.put("status", "PENDING");
-        suggestion.put("created_at", createdAt);
-        return ResponseEntity.ok(ok(suggestion));
+        return ResponseEntity.ok(ok(agents.dispatch(agentType, action, request)));
     }
 
     @GetMapping("/health")

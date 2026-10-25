@@ -14,3 +14,7 @@ dist/
 # IDE 的 Java 升级改造记录，与 CI 工作流无关
 .github/modernize/
 .md
+# WorkBuddy 本地工作区数据
+.workbuddy/
+__pycache__/
+*.pyc

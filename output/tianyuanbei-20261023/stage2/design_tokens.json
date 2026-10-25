@@ -1,0 +1,28 @@
+{
+  "genre": "business-report",
+  "theme": "business-modern",
+  "palette": {
+    "primary": "#1a5fb4",
+    "text": "#000000",
+    "muted": "#5f6368",
+    "border": "#c6cbd4",
+    "highlight": "#f4f7fb",
+    "accent": "#e8f0fe"
+  },
+  "typography": {
+    "fontFamilyHeading": "SimHei, \"黑体\", sans-serif",
+    "fontFamilyBody": "SimSun, \"宋体\", serif",
+    "fontSizeH1": "16pt",
+    "fontSizeH2": "14pt",
+    "fontSizeH3": "12pt",
+    "fontSizeBody": "12pt",
+    "lineHeightBody": 1.7
+  },
+  "pageFurniture": {
+    "coverFooter": "none",
+    "bodyFooter": "第 X 页 居中页码",
+    "tocOwnSection": true,
+    "pageRestart": true
+  },
+  "generatedAt": "2026-10-23T22:05:00+08:00"
+}

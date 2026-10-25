@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>110kV 线路保护定值核对与投退 · 3D 实操原型</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    color: #1f2937; background: #eef2f6;
+  }
+  #stage { position: absolute; inset: 0; }
+  #stage canvas { display: block; }
+
+  .panel {
+    position: absolute; background: rgba(255,255,255,.95);
+    border: 1px solid #d8dee6; border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(31,41,55,.06);
+  }
+
+  header {
+    position: absolute; top: 16px; left: 16px; right: 16px; height: 56px;
+    display: flex; align-items: center; gap: 16px; padding: 0 18px;
+    background: rgba(255,255,255,.95); border: 1px solid #d8dee6;
+    border-radius: 12px; z-index: 10;
+  }
+  header .title { font-size: 15px; font-weight: 600; letter-spacing: .2px; }
+  header .sub { font-size: 12px; color: #6b7280; }
+  header .spacer { flex: 1; }
+  .stat { text-align: right; }
+  .stat b { display: block; font-size: 17px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .stat span { font-size: 11px; color: #6b7280; }
+
+  #steps { top: 88px; left: 16px; width: 246px; padding: 14px 16px 16px; z-index: 9; }
+  #steps h3, #device h3 { margin: 0 0 10px; font-size: 13px; font-weight: 600; color: #374151; }
+  .step {
+    display: flex; gap: 9px; align-items: flex-start; padding: 7px 8px;
+    border-radius: 8px; font-size: 13px; color: #4b5563; line-height: 1.35;
+  }
+  .step .dot {
+    width: 18px; height: 18px; flex: 0 0 18px; border-radius: 50%;
+    border: 1px solid #c7ced6; background: #fff; color: #9ca3af;
+    font-size: 11px; display: flex; align-items: center; justify-content: center;
+  }
+  .step.current { background: #eaf2fb; color: #0c447c; font-weight: 600; }
+  .step.current .dot { border-color: #185fa5; background: #185fa5; color: #fff; }
+  .step.done { color: #0f6e56; }
+  .step.done .dot { border-color: #1d9e75; background: #e1f5ee; color: #0f6e56; }
+  .step .why { display: block; font-size: 11px; color: #9ca3af; font-weight: 400; margin-top: 1px; }
+
+  #device { top: 88px; right: 16px; width: 262px; padding: 14px 16px 16px; z-index: 9; }
+  #device .name { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+  #device .code { font-size: 11px; color: #9ca3af; margin-bottom: 12px; }
+  #device .hint { font-size: 12px; color: #6b7280; line-height: 1.6; margin-bottom: 12px; }
+  .act {
+    display: block; width: 100%; text-align: left; margin-bottom: 8px;
+    padding: 10px 12px; font-size: 13px; cursor: pointer;
+    background: #fff; border: 1px solid #c7ced6; border-radius: 8px;
+    color: #1f2937; font-family: inherit; transition: border-color .12s, background .12s;
+  }
+  .act:hover { border-color: #185fa5; background: #f5f9fd; }
+  .act .tag { font-size: 10px; color: #fff; background: #ba7517; padding: 1px 5px; border-radius: 4px; margin-left: 6px; vertical-align: 1px; }
+  .act.done { opacity: .45; cursor: default; text-decoration: line-through; }
+  .act.done:hover { border-color: #c7ced6; background: #fff; }
+
+  #log {
+    left: 16px; right: 16px; bottom: 16px; height: 118px; padding: 10px 14px;
+    overflow: hidden; font-size: 12px; z-index: 9;
+  }
+  #log h3 { margin: 0 0 6px; font-size: 12px; font-weight: 600; color: #6b7280; }
+  .row { display: flex; gap: 10px; padding: 2px 0; font-variant-numeric: tabular-nums; }
+  .row .t { color: #9ca3af; width: 52px; flex: 0 0 52px; }
+  .row .m { color: #4b5563; }
+  .row.bad .m { color: #a32d2d; }
+  .row.good .m { color: #0f6e56; }
+
+  .label {
+    font-size: 11px; color: #0c447c; background: rgba(255,255,255,.9);
+    border: 1px solid #b5d4f4; border-radius: 5px; padding: 2px 7px;
+    white-space: nowrap; cursor: pointer; pointer-events: auto !important;
+    font-family: inherit;
+  }
+  .label:hover { background: #e6f1fb; }
+
+  #result {
+    position: absolute; inset: 0; z-index: 30; display: none;
+    align-items: center; justify-content: center; background: rgba(31,41,55,.35);
+  }
+  #result.show { display: flex; }
+  #result .card {
+    width: 520px; max-height: 84vh; overflow: auto; background: #fff;
+    border-radius: 14px; padding: 22px 24px; border: 1px solid #d8dee6;
+  }
+  #result h2 { margin: 0 0 4px; font-size: 18px; }
+  #result .verdict { font-size: 12px; color: #6b7280; margin-bottom: 16px; }
+  .score { display: flex; gap: 18px; align-items: baseline; margin-bottom: 16px; }
+  .score b { font-size: 38px; line-height: 1; }
+  .score .unit { font-size: 13px; color: #6b7280; }
+  .bar { height: 6px; background: #eef2f6; border-radius: 3px; overflow: hidden; margin-bottom: 14px; }
+  .bar i { display: block; height: 100%; background: #185fa5; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; font-size: 12px; margin-bottom: 16px; }
+  .grid div { display: flex; justify-content: space-between; border-bottom: 1px dashed #e5e7eb; padding: 4px 0; }
+  .grid span { color: #6b7280; }
+  .vio { font-size: 12px; color: #a32d2d; line-height: 1.7; margin-bottom: 16px; }
+  .vio .ok { color: #0f6e56; }
+  .btns { display: flex; gap: 10px; }
+  .btn {
+    padding: 9px 16px; font-size: 13px; font-family: inherit; cursor: pointer;
+    border-radius: 8px; border: 1px solid #c7ced6; background: #fff; color: #1f2937;
+  }
+  .btn.primary { background: #185fa5; border-color: #185fa5; color: #fff; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .note { font-size: 11px; color: #9ca3af; margin-top: 14px; line-height: 1.6; }
+
+  #loading {
+    position: absolute; inset: 0; display: flex; align-items: center;
+    justify-content: center; font-size: 13px; color: #6b7280; z-index: 50;
+    background: #eef2f6;
+  }
+  @media (max-width: 1100px) {
+    #steps { display: none; }
+    #device { width: 220px; }
+  }
+</style>
+</head>
+<body>
+<div id="loading">正在加载 3D 场景…</div>
+<script>
+setTimeout(function () {
+  if (!window.__simBooted) {
+    var el = document.getElementById('loading');
+    if (el) el.innerHTML = '3D 场景加载失败。<br>若在浏览器中直接双击打开，请改用本地静态服务或工作台内置预览。';
+  }
+}, 5000);
+</script>
+<div id="stage"></div>
+
+<header>
+  <div>
+    <div class="title">110kV 线路保护定值核对与投退</div>
+    <div class="sub">3D 实操演练 · 原型 · 每次操作都会写入事件轨迹</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="stat"><b id="clock">00:00</b><span>用时</span></div>
+  <div class="stat"><b id="vcount" style="color:#0f6e56">0</b><span>违规</span></div>
+  <div class="stat"><b id="pcount">0/6</b><span>步骤</span></div>
+</header>
+
+<aside id="steps" class="panel">
+  <h3>操作步骤（按顺序）</h3>
+  <div id="stepList"></div>
+</aside>
+
+<aside id="device" class="panel">
+  <div class="name" id="dName">未选中设备</div>
+  <div class="code" id="dCode">点击场景中的设备</div>
+  <div class="hint" id="dHint">可拖动旋转视角，滚轮缩放。点击设备后在此执行操作。</div>
+  <div id="dActs"></div>
+</aside>
+
+<footer id="log" class="panel">
+  <h3>操作事件流（sim_event）</h3>
+  <div id="logRows"></div>
+</footer>
+
+<div id="result">
+  <div class="card">
+    <h2 id="rTitle">演练完成</h2>
+    <div class="verdict" id="rVerdict"></div>
+    <div class="score"><b id="rScore">0</b><span class="unit">/ 100</span></div>
+    <div class="bar"><i id="rBar" style="width:0%"></i></div>
+    <div class="grid" id="rGrid"></div>
+    <div class="vio" id="rVio"></div>
+    <div class="btns">
+      <button class="btn primary" id="btnExport">导出事件 JSON</button>
+      <button class="btn" id="btnAgain">重做一次</button>
+      <button class="btn" id="btnClose">关闭</button>
+    </div>
+    <div class="note">这份 JSON 就是「操作轨迹」：可直接回放、可作为规则事实源、可写入 sim_event 表。</div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three.module.js",
+    "three/addons/": "./vendor/addons/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+window.__simBooted = true;
+
+const stage = document.getElementById('stage');
+const W = () => stage.clientWidth;
+const H = () => stage.clientHeight;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xeef2f6);
+
+const camera = new THREE.PerspectiveCamera(42, W() / H(), 0.1, 300);
+camera.position.set(11, 9.5, 15);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+renderer.setSize(W(), H());
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stage.appendChild(renderer.domElement);
+
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(W(), H());
+labelRenderer.domElement.style.position = 'absolute';
+labelRenderer.domElement.style.top = '0';
+labelRenderer.domElement.style.left = '0';
+labelRenderer.domElement.style.pointerEvents = 'none';
+stage.appendChild(labelRenderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 2.4, -2.2);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 8;
+controls.maxDistance = 34;
+controls.maxPolarAngle = Math.PI * 0.49;
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0xdbe3ec, 1.15));
+const dir = new THREE.DirectionalLight(0xffffff, 1.7);
+dir.position.set(9, 16, 11);
+scene.add(dir);
+const fill = new THREE.DirectionalLight(0xffffff, 0.5);
+fill.position.set(-10, 8, -8);
+scene.add(fill);
+
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(48, 36),
+  new THREE.MeshStandardMaterial({ color: 0xdfe4ea, roughness: 1, metalness: 0 })
+);
+ground.rotation.x = -Math.PI / 2;
+scene.add(ground);
+const grid = new THREE.GridHelper(48, 48, 0xc3cbd4, 0xd6dde5);
+grid.position.y = 0.01;
+scene.add(grid);
+
+const M = (color, rough = 0.72, metal = 0.12) =>
+  new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal });
+
+function box(w, h, d, color, x, y, z) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), M(color));
+  m.position.set(x, y, z);
+  return m;
+}
+function cyl(r, h, color, x, y, z, seg = 24) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, seg), M(color));
+  m.position.set(x, y, z);
+  return m;
+}
+
+const devices = {};
+function makeDevice(id, name, code, hint, acts) {
+  const g = new THREE.Group();
+  g.userData.deviceId = id;
+  devices[id] = { id, name, code, hint, acts, group: g, obj: g };
+  scene.add(g);
+  return g;
+}
+function tag(g, id) {
+  g.traverse(o => { if (o.isMesh) o.userData.deviceId = id; });
+}
+function label(text, x, y, z, id) {
+  const el = document.createElement('div');
+  el.className = 'label';
+  el.textContent = text;
+  el.addEventListener('click', e => { e.stopPropagation(); selectDevice(id); });
+  const o = new CSS2DObject(el);
+  o.position.set(x, y, z);
+  return o;
+}
+
+/* ---------- 母线 ---------- */
+const bus = cyl(0.16, 13, 0xb8bfc8, 0, 6.0, -3.1);
+bus.rotation.z = Math.PI / 2;
+scene.add(bus);
+for (let i = -5; i <= 5; i += 2.5) {
+  scene.add(cyl(0.1, 6, 0xcfd6de, i, 3, -4.6));
+}
+
+/* ---------- 断路器 ---------- */
+const br = makeDevice('breaker', '110kV 断路器', 'QF-1101', '断路器本体，分合位指示在机构箱。', []);
+br.add(box(1.7, 3.0, 1.5, 0x9aa4b0, 0, 1.5, 0));
+br.add(box(1.9, 0.24, 1.7, 0x7f8a96, 0, 3.06, 0));
+br.add(cyl(0.13, 1.5, 0xd8dee6, -0.55, 3.9, 0));
+br.add(cyl(0.13, 1.5, 0xd8dee6, 0.55, 3.9, 0));
+const brBox = box(0.5, 0.7, 0.1, 0x2f3a45, 0.62, 1.3, 0.78);
+br.add(brBox);
+br.position.set(0.4, 0, -3.1);
+tag(br, 'breaker');
+br.add(label('断路器 QF-1101', 0, 5.2, 0, 'breaker'));
+
+/* ---------- 隔离开关 ---------- */
+const iso = makeDevice('isolator', '隔离开关', 'QS-11011', '母线侧隔离开关，操作前必须确认接地刀闸已合。', []);
+iso.add(box(1.5, 0.3, 1.2, 0x8d97a2, 0, 0.15, 0));
+iso.add(cyl(0.14, 1.7, 0xe4e9ee, -0.5, 1.15, 0));
+iso.add(cyl(0.14, 1.7, 0xe4e9ee, 0.5, 1.15, 0));
+const blade = new THREE.Group();
+const bladeMesh = box(1.34, 0.09, 0.09, 0xc9d2dc, 0, 0, 0);
+blade.add(bladeMesh);
+blade.position.set(0, 2.0, 0);
+iso.add(blade);
+iso.position.set(-3.4, 0, -3.1);
+tag(iso, 'isolator');
+iso.add(label('隔离开关 QS-11011', 0, 3.2, 0, 'isolator'));
+
+/* ---------- 接地刀闸 ---------- */
+const earth = makeDevice('earth', '接地刀闸', 'QE-110117', '线路侧接地刀闸。未验电合闸属严重违章。', []);
+earth.add(box(1.0, 0.26, 0.9, 0x8d97a2, 0, 0.13, 0));
+earth.add(cyl(0.1, 1.15, 0xe4e9ee, -0.32, 0.72, 0));
+earth.add(cyl(0.1, 1.15, 0xe4e9ee, 0.32, 0.72, 0));
+const eBlade = new THREE.Group();
+eBlade.add(box(0.86, 0.07, 0.07, 0xc9d2dc, 0, 0, 0));
+eBlade.position.set(0, 1.3, 0);
+earth.add(eBlade);
+earth.position.set(-3.4, 0, 0.5);
+tag(earth, 'earth');
+earth.add(label('接地刀闸 QE-110117', 0, 2.2, 0, 'earth'));
+
+/* ---------- 电流互感器 ---------- */
+const ct = makeDevice('ct', '电流互感器', 'TA-1101', '线路电流互感器，二次侧严禁开路。', []);
+ct.add(cyl(0.52, 1.25, 0x6d7885, 0, 0.63, 0));
+ct.add(cyl(0.52, 1.25, 0x6d7885, 0, 1.95, 0));
+ct.add(cyl(0.1, 1.1, 0x9aa4b0, 0, 3.0, 0));
+ct.position.set(3.0, 0, -3.1);
+tag(ct, 'ct');
+ct.add(label('电流互感器 TA-1101', 0, 4.0, 0, 'ct'));
+
+/* ---------- 线路侧 ---------- */
+const line = makeDevice('line', '线路侧引线', 'W-1101', '验电点。合接地刀闸前必须在此验电。', []);
+line.add(cyl(0.1, 2.4, 0xb8bfc8, 0, 1.2, 0));
+line.add(box(0.16, 0.16, 1.6, 0xb8bfc8, 0, 2.42, 0.7));
+const verifyLamp = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 12), M(0x9ca3af, 0.4, 0.1));
+verifyLamp.position.set(0, 3.0, 0);
+line.add(verifyLamp);
+line.position.set(-6.2, 0, -0.6);
+tag(line, 'line');
+line.add(label('线路侧（验电点）', 0, 3.7, 0, 'line'));
+
+/* ---------- 保护屏 ---------- */
+const panel = makeDevice('panel', '线路保护屏', 'PR-1101', '定值单核对、软压板投退在此进行。', []);
+panel.add(box(0.9, 2.7, 2.1, 0x3f4a57, 0, 1.35, 0));
+const screen = box(0.06, 0.62, 0.92, 0x1b3a52, 0.47, 1.85, 0);
+panel.add(screen);
+panel.add(box(0.06, 0.36, 0.92, 0x2b3542, 0.47, 1.05, 0));
+for (let i = 0; i < 6; i++) {
+  panel.add(box(0.05, 0.09, 0.09, i < 3 ? 0x1d9e75 : 0xba7517, 0.47, 0.95 + (i % 3) * 0.11, -0.3 + Math.floor(i / 3) * 0.6));
+}
+panel.position.set(6.4, 0, 1.4);
+tag(panel, 'panel');
+panel.add(label('线路保护屏 PR-1101', 0, 3.2, 0, 'panel'));
+
+/* ---------- 主变（背景） ---------- */
+const tr = new THREE.Group();
+tr.add(cyl(1.5, 2.6, 0x8a949f, 0, 1.3, 0, 28));
+tr.add(cyl(1.62, 0.16, 0x707a86, 0, 2.66, 0, 28));
+for (let i = 0; i < 8; i++) {
+  const a = (i / 8) * Math.PI * 2;
+  tr.add(box(0.1, 2.2, 0.5, 0x75808c, Math.cos(a) * 1.62, 1.25, Math.sin(a) * 1.62));
+}
+for (let i = 0; i < 3; i++) {
+  tr.add(cyl(0.14, 0.9, 0xd8dee6, -0.6 + i * 0.6, 3.1, 0));
+}
+tr.position.set(-10.5, 0, -6.5);
+scene.add(tr);
+
+/* ---------- 交互 ---------- */
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+let selected = null;
+let boxHelper = null;
+
+const dName = document.getElementById('dName');
+const dCode = document.getElementById('dCode');
+const dHint = document.getElementById('dHint');
+const dActs = document.getElementById('dActs');
+
+function selectDevice(id) {
+  const d = devices[id];
+  if (!d) return;
+  selected = d;
+  dName.textContent = d.name;
+  dCode.textContent = d.code;
+  dHint.textContent = d.hint;
+  renderActs();
+  if (boxHelper) { scene.remove(boxHelper); boxHelper.geometry.dispose(); }
+  boxHelper = new THREE.BoxHelper(d.group, 0x185fa5);
+  boxHelper.material.depthTest = false;
+  scene.add(boxHelper);
+}
+
+renderer.domElement.addEventListener('pointerdown', ev => {
+  const r = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((ev.clientX - r.left) / r.width) * 2 - 1;
+  pointer.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObjects(scene.children, true);
+  for (const h of hits) {
+    let o = h.object;
+    while (o && !o.userData.deviceId) o = o.parent;
+    if (o && o.userData.deviceId) { selectDevice(o.userData.deviceId); return; }
+  }
+});
+
+/* ---------- 演练状态机 ---------- */
+const STEPS = [
+  { code: 'check_sheet', name: '核对定值单', device: 'panel', pre: [], safety: false },
+  { code: 'verify', name: '线路侧验电', device: 'line', pre: ['check_sheet'], safety: true },
+  { code: 'earth', name: '合接地刀闸', device: 'earth', pre: ['verify'], safety: true },
+  { code: 'exit_plate', name: '退出软压板', device: 'panel', pre: ['earth'], safety: false },
+  { code: 'open_iso', name: '拉开隔离开关', device: 'isolator', pre: ['exit_plate'], safety: false },
+  { code: 'readback', name: '唱票复诵', device: 'panel', pre: ['open_iso'], safety: true }
+];
+const ACT_LABEL = {
+  check_sheet: '核对定值单并签字',
+  verify: '验电（确认无电压）',
+  earth: '合上接地刀闸',
+  exit_plate: '退出线路保护软压板',
+  open_iso: '拉开母线侧隔离开关',
+  readback: '唱票并复诵'
+};
+
+const state = {
+  done: new Set(),
+  events: [],
+  violations: [],
+  startedAt: 0,
+  elapsed: 0,
+  finished: false,
+  locked: false
+};
+
+const stepList = document.getElementById('stepList');
+function renderSteps() {
+  stepList.innerHTML = STEPS.map((s, i) => {
+    const done = state.done.has(s.code);
+    const current = !done && s.pre.every(p => state.done.has(p)) && !state.finished;
+    const cls = done ? 'step done' : (current ? 'step current' : 'step');
+    return `<div class="${cls}">
+      <div class="dot">${done ? '✓' : (i + 1)}</div>
+      <div>${s.name}${s.safety ? '<span class="why">安全动作</span>' : ''}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderActs() {
+  if (!selected) { dActs.innerHTML = ''; return; }
+  const list = STEPS.filter(s => s.device === selected.id);
+  if (!list.length) {
+    dActs.innerHTML = '<div class="hint" style="margin:0">该设备在本任务中无操作项，点击其他设备。</div>';
+    return;
+  }
+  dActs.innerHTML = list.map(s => {
+    const done = state.done.has(s.code);
+    return `<button class="act ${done ? 'done' : ''}" data-act="${s.code}" ${done || state.finished ? 'disabled' : ''}>
+      ${ACT_LABEL[s.code]}${s.safety ? '<span class="tag">安全动作</span>' : ''}
+    </button>`;
+  }).join('');
+}
+
+const clockEl = document.getElementById('clock');
+const vcountEl = document.getElementById('vcount');
+const pcountEl = document.getElementById('pcount');
+const logRows = document.getElementById('logRows');
+
+function fmt(ms) {
+  const s = Math.floor(ms / 1000);
+  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+}
+
+function logRow(cls, msg, at) {
+  const d = document.createElement('div');
+  d.className = 'row ' + cls;
+  d.innerHTML = `<span class="t">${at || fmt(state.elapsed)}</span><span class="m">${msg}</span>`;
+  logRows.prepend(d);
+  while (logRows.children.length > 6) logRows.lastChild.remove();
+}
+
+function pushEvent(stepCode, action, ok, violationCode, extra) {
+  state.events.push({
+    seq: state.events.length + 1,
+    step_code: stepCode,
+    action: action,
+    at_ms: Math.round(state.elapsed),
+    ok: ok,
+    violation_code: violationCode || null,
+    device: selected ? selected.id : null,
+    ...(extra || {})
+  });
+}
+
+function violation(code, msg, fatal) {
+  state.violations.push({ code, msg, at_ms: Math.round(state.elapsed), fatal: !!fatal });
+  vcountEl.textContent = state.violations.length;
+  vcountEl.style.color = '#a32d2d';
+  logRow('bad', `违规 ${code}：${msg}`);
+  if (fatal) {
+    state.locked = true;
+    logRow('bad', '安全红线已触发，本次演练判定为不合格。');
+  }
+}
+
+function doAction(code) {
+  if (state.finished) return;
+  if (!state.startedAt) state.startedAt = performance.now();
+  state.elapsed = performance.now() - state.startedAt;
+  const step = STEPS.find(s => s.code === code);
+  if (!step) return;
+
+  if (state.locked && step.safety) {
+    pushEvent(code, 'rejected', false, 'LOCKED', { reason: '安全红线后仍尝试操作' });
+    logRow('bad', '操作被拒绝：安全红线已触发。');
+    return;
+  }
+
+  const missing = step.pre.filter(p => !state.done.has(p));
+  if (missing.length) {
+    const busy = missing.map(m => STEPS.find(s => s.code === m).name).join('、');
+    if (code === 'earth' && !state.done.has('verify')) {
+      violation('SAFETY_01', '未验电即合接地刀闸', true);
+      pushEvent(code, 'rejected', false, 'SAFETY_01');
+    } else if (code === 'open_iso' && !state.done.has('earth')) {
+      violation('SAFETY_02', '未合接地刀闸即拉隔离开关', true);
+      pushEvent(code, 'rejected', false, 'SAFETY_02');
+    } else {
+      violation('PROC_01', `顺序错误：应先完成「${busy}」`);
+      pushEvent(code, 'rejected', false, 'PROC_01');
+    }
+    renderSteps(); renderActs();
+    return;
+  }
+
+  state.done.add(code);
+  pushEvent(code, 'execute', true, null);
+  logRow('good', `完成：${step.name}`);
+
+  if (code === 'verify') {
+    verifyLamp.material.color.set(0x1d9e75);
+    verifyLamp.material.emissive = new THREE.Color(0x0f6e56);
+    verifyLamp.material.emissiveIntensity = 0.8;
+  }
+  if (code === 'earth') eBlade.rotation.z = -0.95;
+  if (code === 'open_iso') blade.rotation.z = -1.1;
+  if (code === 'exit_plate') screen.material.color.set(0x6b3f12);
+
+  renderSteps(); renderActs();
+  pcountEl.textContent = `${state.done.size}/6`;
+
+  if (state.done.size === STEPS.length) finish();
+}
+
+dActs.addEventListener('click', e => {
+  const btn = e.target.closest('[data-act]');
+  if (btn && !btn.disabled) doAction(btn.dataset.act);
+});
+
+/* ---------- 结算 ---------- */
+const result = document.getElementById('result');
+const rScore = document.getElementById('rScore');
+const rBar = document.getElementById('rBar');
+const rGrid = document.getElementById('rGrid');
+const rVio = document.getElementById('rVio');
+const rTitle = document.getElementById('rTitle');
+const rVerdict = document.getElementById('rVerdict');
+
+function computeScore() {
+  const complete = state.done.size / STEPS.length;
+  const procVio = state.violations.filter(v => v.code.startsWith('PROC')).length;
+  const safeVio = state.violations.filter(v => v.code.startsWith('SAFETY')).length;
+  const std = 95;
+  const over = Math.max(0, state.elapsed / 1000 - std);
+  const timeScore = Math.max(0, 1 - over / 180);
+
+  const sComplete = 30 * complete;
+  const sOrder = Math.max(0, 25 - procVio * 8);
+  const sSafety = Math.max(0, 25 - safeVio * 25);
+  const sTime = 20 * timeScore;
+  const fatal = state.violations.some(v => v.fatal);
+  const raw = sComplete + sOrder + sSafety + sTime;
+  return {
+    total: fatal ? 0 : Math.round(raw),
+    complete: Math.round(sComplete),
+    order: Math.round(sOrder),
+    safety: Math.round(sSafety),
+    time: Math.round(sTime),
+    fatal
+  };
+}
+
+function finish() {
+  state.finished = true;
+  const s = computeScore();
+  rScore.textContent = s.total;
+  rScore.style.color = s.total >= 80 ? '#0f6e56' : (s.total >= 60 ? '#ba7517' : '#a32d2d');
+  rBar.style.width = s.total + '%';
+  rBar.style.background = s.total >= 80 ? '#1d9e75' : (s.total >= 60 ? '#ba7517' : '#a32d2d');
+  rTitle.textContent = s.total >= 80 ? '演练通过' : (s.total >= 60 ? '演练有条件通过' : '演练不合格');
+  rVerdict.textContent = s.fatal
+    ? '触发安全红线，按一票否决处理，不参与加权。'
+    : (s.total >= 80 ? '步骤完整、安全动作到位。' : '存在步骤或安全问题，需重做。');
+
+  rGrid.innerHTML = `
+    <div><span>步骤完整性</span><b>${s.complete} / 30</b></div>
+    <div><span>顺序正确性</span><b>${s.order} / 25</b></div>
+    <div><span>安全动作</span><b>${s.safety} / 25</b></div>
+    <div><span>耗时</span><b>${s.time} / 20</b></div>
+    <div><span>总用时</span><b>${fmt(state.elapsed)}</b></div>
+    <div><span>违规次数</span><b>${state.violations.length}</b></div>
+  `;
+
+  rVio.innerHTML = state.violations.length
+    ? state.violations.map(v => `· ${v.code} ${v.msg}${v.fatal ? '（一票否决）' : ''}`).join('<br>')
+    : '<span class="ok">· 无违规，安全动作齐全。</span>';
+
+  result.classList.add('show');
+  renderActs();
+}
+
+document.getElementById('btnClose').onclick = () => result.classList.remove('show');
+
+document.getElementById('btnAgain').onclick = () => {
+  state.done.clear(); state.events = []; state.violations = [];
+  state.elapsed = 0; state.startedAt = 0; state.finished = false; state.locked = false;
+  verifyLamp.material.color.set(0x9ca3af);
+  verifyLamp.material.emissiveIntensity = 0;
+  verifyLamp.material.emissive.set(0x000000);
+  screen.material.color.set(0x1b3a52);
+  eBlade.rotation.z = 0;
+  blade.rotation.z = 0;
+  logRows.innerHTML = '';
+  vcountEl.textContent = '0'; vcountEl.style.color = '#0f6e56';
+  pcountEl.textContent = '0/6';
+  clockEl.textContent = '00:00';
+  renderSteps(); renderActs();
+  result.classList.remove('show');
+};
+
+document.getElementById('btnExport').onclick = () => {
+  const s = computeScore();
+  const payload = {
+    scene_code: 'SIM_110KV_LINE_PROTECTION',
+    scene_version: 'p0',
+    employee_id: 'zhangwei',
+    standard_seconds: 95,
+    duration_ms: Math.round(state.elapsed),
+    score: s,
+    steps_total: STEPS.length,
+    steps_done: state.done.size,
+    events: state.events,
+    violations: state.violations
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'sim_session_' + Date.now() + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+/* ---------- 启动 ---------- */
+renderSteps();
+setInterval(() => {
+  if (state.finished) return;
+  if (!state.startedAt) {
+    if (state.events.length === 0) return;
+    state.startedAt = performance.now();
+  }
+  state.elapsed = performance.now() - state.startedAt;
+  clockEl.textContent = fmt(state.elapsed);
+}, 200);
+
+document.getElementById('loading').remove();
+
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  if (boxHelper) boxHelper.update();
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', () => {
+  camera.aspect = W() / H();
+  camera.updateProjectionMatrix();
+  renderer.setSize(W(), H());
+  labelRenderer.setSize(W(), H());
+});
+
+selectDevice('panel');
+</script>
+</body>
+</html>

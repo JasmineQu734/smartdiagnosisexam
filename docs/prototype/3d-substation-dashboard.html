@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GridTrack · 110kV 城东变电站数字孪生</title>
+<style>
+  :root{
+    --ink:#1f2a44; --sub:#64748b; --line:#e6ebf4;
+    --blue:#2f6bff; --blue-soft:#eaf1ff; --green:#22b573; --amber:#f59e0b; --red:#ef4444;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;color:var(--ink);overflow:hidden}
+  #app{display:flex;flex-direction:column;height:100vh;background:#e3eaf6}
+  header{display:flex;align-items:center;gap:18px;padding:10px 18px;background:#fff;border-bottom:1px solid var(--line);z-index:6}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px}
+  .logo .dot{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#2f6bff,#6ea8ff);display:grid;place-items:center;color:#fff;font-size:15px}
+  .logo small{display:block;font-size:11px;color:var(--sub);font-weight:400}
+  .kpis{display:flex;gap:10px;margin-left:auto;flex-wrap:wrap}
+  .kpi{background:#f5f8ff;border:1px solid var(--line);border-radius:12px;padding:6px 14px;min-width:104px}
+  .kpi .k{font-size:11px;color:var(--sub)}
+  .kpi .v{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+  .kpi .v b{font-size:11px;color:var(--sub);font-weight:400;margin-left:2px}
+  .kpi .trend{font-size:10px;font-weight:700;margin-left:6px}
+  .up{color:var(--green)} .down{color:var(--red)} .flat{color:var(--sub)}
+  .user{display:flex;align-items:center;gap:8px;padding-left:14px;border-left:1px solid var(--line)}
+  .avatar{width:32px;height:32px;border-radius:50%;background:#dbe7ff;display:grid;place-items:center;font-weight:800;color:var(--blue);font-size:13px}
+  .user .n{font-size:12px;font-weight:700}.user .r{font-size:10px;color:var(--sub)}
+  main{position:relative;flex:1;min-height:0}
+  #canvas{position:absolute;inset:0}
+  #canvas canvas{display:block}
+  .hint{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.85);backdrop-filter:blur(6px);
+    border:1px solid var(--line);border-radius:999px;padding:6px 16px;font-size:12px;color:var(--sub);pointer-events:none;white-space:nowrap;z-index:4}
+  .hint b{color:var(--blue)}
+  aside{position:absolute;top:12px;right:12px;bottom:76px;width:308px;display:flex;flex-direction:column;gap:10px;z-index:4;pointer-events:none}
+  .card{background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:16px;
+    padding:14px 16px;pointer-events:auto;box-shadow:0 8px 24px rgba(31,42,68,.08)}
+  .card h3{font-size:13px;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .card h3 .badge{margin-left:auto;font-size:10px;font-weight:700;color:var(--blue);background:var(--blue-soft);padding:2px 8px;border-radius:999px}
+  #overview{flex:0 0 auto;max-height:40%;overflow:auto}
+  .dev-row{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:10px;cursor:pointer;font-size:12px;transition:background .15s}
+  .dev-row:hover{background:var(--blue-soft)}
+  .dev-row.active{background:var(--blue-soft);outline:1px solid #c7d9ff}
+  .dev-row .ic{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:13px;flex:0 0 26px}
+  .dev-row .info{flex:1;min-width:0}
+  .dev-row .info .nm{font-weight:700}
+  .dev-row .info .st{font-size:10px;color:var(--sub)}
+  .dotst{width:8px;height:8px;border-radius:50%;flex:0 0 8px}
+  #detail{flex:1;min-height:0;overflow:auto;display:none}
+  #detail.show{display:block}
+  #detail .hd{display:flex;align-items:flex-start;gap:10px}
+  #detail .hd .ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:22px;flex:0 0 44px}
+  #detail .hd .nm{font-size:16px;font-weight:800}
+  #detail .hd .en{font-size:10px;color:var(--sub);letter-spacing:.4px}
+  .params{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0}
+  .param{background:#f5f8ff;border-radius:10px;padding:6px 9px}
+  .param .k{font-size:10px;color:var(--sub)}
+  .param .v{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums}
+  .param .v b{font-size:10px;color:var(--sub);font-weight:400}
+  .sec-t{font-size:11px;font-weight:800;color:var(--sub);margin:10px 0 5px;letter-spacing:.5px}
+  .learn li{font-size:12px;line-height:1.55;margin:4px 0 4px 16px}
+  .course{display:flex;align-items:center;gap:8px;background:#f5f8ff;border-radius:10px;padding:7px 9px;font-size:11px;margin-top:6px;cursor:pointer;transition:background .15s}
+  .course:hover{background:var(--blue-soft)}
+  .course .tag{font-size:9px;font-weight:800;color:#fff;background:var(--blue);border-radius:5px;padding:1px 6px;flex:0 0 auto}
+  .course .go{margin-left:auto;color:var(--blue);font-weight:800}
+  .back{font-size:11px;color:var(--blue);cursor:pointer;font-weight:700;margin-bottom:8px;display:inline-block}
+  .ops{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .op{border:1px solid #d5e0f5;background:#fff;border-radius:9px;padding:7px 6px;font-size:11px;font-weight:700;color:#2b3a5c;cursor:pointer;transition:all .15s;text-align:center}
+  .op:hover{background:var(--blue);border-color:var(--blue);color:#fff;transform:translateY(-1px)}
+  .op:active{transform:none}
+  .op.danger{border-color:#ffd5d5;color:#b42318}
+  .op.danger:hover{background:var(--red);border-color:var(--red);color:#fff}
+  #alerts{position:absolute;left:12px;bottom:76px;width:288px;z-index:4;pointer-events:none}
+  #alerts .card{padding:11px 14px}
+  .al{display:flex;gap:8px;font-size:11px;padding:5px 0;border-bottom:1px dashed var(--line);animation:slidein .4s ease}
+  .al:last-child{border-bottom:none}
+  .al .tm{color:var(--sub);font-variant-numeric:tabular-nums;flex:0 0 38px}
+  .al .op-tag{font-size:9px;color:#fff;background:var(--blue);border-radius:4px;padding:0 4px;flex:0 0 auto;height:14px;line-height:14px}
+  @keyframes slidein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  #toast{position:absolute;top:56px;left:50%;transform:translate(-50%,-12px);background:rgba(31,42,68,.92);color:#fff;
+    padding:9px 18px;border-radius:10px;font-size:12px;font-weight:700;opacity:0;transition:all .25s;pointer-events:none;z-index:8;white-space:nowrap}
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+  #track{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;z-index:4;background:rgba(255,255,255,.95);
+    backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:16px;padding:10px 18px;display:flex;align-items:center;gap:22px;box-shadow:0 8px 24px rgba(31,42,68,.1)}
+  #track .tt{font-size:10px;color:var(--sub);font-weight:700;letter-spacing:.5px}
+  #track .steps{display:flex;align-items:center;gap:0}
+  .stp{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:var(--sub);width:86px}
+  .stp .b{width:22px;height:22px;border-radius:50%;background:#e6ebf4;display:grid;place-items:center;font-size:10px;font-weight:800;color:#94a3b8;transition:all .3s}
+  .stp.done .b{background:var(--green);color:#fff}
+  .stp.now .b{background:var(--blue);color:#fff;box-shadow:0 0 0 5px var(--blue-soft)}
+  .stp-line{width:34px;height:3px;background:#e6ebf4;border-radius:2px;margin-bottom:14px}
+  .stp-line.done{background:var(--green)}
+  #track .eta{font-size:11px;font-weight:800;font-variant-numeric:tabular-nums}
+  @media (max-width:960px){ aside{width:256px} #alerts{display:none} }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo"><div class="dot">⚡</div><div>GridTrack<small>110kV 城东变电站 · 数字孪生学习舱</small></div></div>
+    <div class="kpis">
+      <div class="kpi"><div class="k">今日巡检任务</div><div class="v" id="k1">12<b>项</b><span class="trend up">+3</span></div></div>
+      <div class="kpi"><div class="k">设备在线率</div><div class="v" id="k2">98.6<b>%</b><span class="trend flat">—</span></div></div>
+      <div class="kpi"><div class="k">平均负载率</div><div class="v" id="k3">63.2<b>%</b><span class="trend up">▲1.1</span></div></div>
+      <div class="kpi"><div class="k">学习完成度</div><div class="v" id="k4">80.0<b>%</b><span class="trend up">▲4.0</span></div></div>
+    </div>
+    <div class="user"><div class="avatar">张</div><div><div class="n">张伟</div><div class="r">值班员 · 正值</div></div></div>
+  </header>
+  <main>
+    <div id="canvas"></div>
+    <div class="hint">🖱 拖动旋转 · 滚轮缩放 · <b>点击设备查看结构并操作</b></div>
+    <aside>
+      <div class="card" id="overview">
+        <h3>场区设备 <span class="badge" id="devCount"></span></h3>
+        <div id="devList"></div>
+      </div>
+      <div class="card" id="detail">
+        <span class="back">← 返回设备总览</span>
+        <div class="hd">
+          <div class="ic" id="dIc"></div>
+          <div><div class="nm" id="dNm"></div><div class="en" id="dEn"></div></div>
+        </div>
+        <div class="params" id="dParams"></div>
+        <div class="sec-t">现场操作</div>
+        <div class="ops" id="dOps"></div>
+        <div class="sec-t">学习要点</div>
+        <ul class="learn" id="dLearn"></ul>
+        <div class="sec-t">关联课程</div>
+        <div id="dCourses"></div>
+      </div>
+    </aside>
+    <div id="alerts"><div class="card"><h3 style="font-size:12px">实时事件流 <span class="badge">LIVE</span></h3><div id="alList"></div></div></div>
+    <div id="toast"></div>
+    <div id="track">
+      <div><div class="tt">当前作业 · 110kV 线路停电检修</div>
+        <div class="steps" id="steps"></div></div>
+      <div><div class="tt">预计剩余</div><div class="eta" id="eta">18:42</div></div>
+    </div>
+  </main>
+</div>
+
+<script type="importmap">
+{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/addons/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* ═══════════════════ 渲染基础 ═══════════════════ */
+const wrap = document.getElementById('canvas');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xcfe0f2);
+scene.fog = new THREE.Fog(0xcfe0f2, 150, 420);
+
+const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 900);
+camera.position.set(46, 36, 52);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+wrap.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.maxPolarAngle = Math.PI * 0.48;
+controls.minDistance = 10; controls.maxDistance = 220;
+controls.target.set(0, 2, 0);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x93a9c9, 1.0));
+const sun = new THREE.DirectionalLight(0xfff3e2, 1.35);
+sun.position.set(48, 62, 34);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -70, right: 70, top: 70, bottom: -70, far: 200 });
+scene.add(sun);
+
+const MAT = {};
+function mat(c) { if (!MAT[c]) MAT[c] = new THREE.MeshLambertMaterial({ color: c }); return MAT[c]; }
+function box(w, h, d, c, x = 0, y = 0, z = 0, p) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(c));
+  m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true;
+  if (p) p.add(m); return m;
+}
+function cyl(rt, rb, h, c, x = 0, y = 0, z = 0, p, seg = 12) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat(c));
+  m.position.set(x, y, z); m.castShadow = true;
+  if (p) p.add(m); return m;
+}
+function wire(p1, p2, sag = 1.2, c = 0x46536b, r = 0.045) {
+  const mid = p1.clone().add(p2).multiplyScalar(0.5); mid.y -= sag;
+  const curve = new THREE.QuadraticBezierCurve3(p1, mid, p2);
+  const m = new THREE.Mesh(new THREE.TubeGeometry(curve, 18, r, 5), mat(c));
+  scene.add(m); return m;
+}
+function string(parent, x, y, z, n = 5, c = 0x9fb3d1) {
+  cyl(0.03, 0.03, n * 0.16, 0x6b7a94, x, y - n * 0.08, z, parent);
+  for (let i = 0; i < n; i++) {
+    const d = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.045, 6, 12), mat(c));
+    d.rotation.x = Math.PI / 2; d.position.set(x, y - 0.16 - i * 0.16, z); parent.add(d);
+  }
+}
+
+/* ═══════════════════ 设备数据 ═══════════════════ */
+const DEVICES = [
+  { id:'transformer1', ic:'🔴', color:'ic-red', status:'运行', stColor:'#22b573', name:'1号主变压器', en:'MAIN TRANSFORMER · SFZ11-50000/110',
+    desc:'型号 SFZ11-50000/110，YNd11，ONAF 风冷。油枕、瓦斯继电器、压力释放阀、有载调压机构齐备。',
+    params:[['高压侧','110','kV'],['低压侧','10.5','kV'],['油面温度','62','℃'],['分接档位','9','档']],
+    learn:['呼吸器硅胶变色超过 1/2 必须更换，否则油枕进潮','瓦斯继电器装在油箱与油枕连管上，有 1%~1.5% 坡度便于集气','压力释放阀动作后标志杆升起，复归前必须查明原因','有载调压每档需间隔 1 分钟，操作后核对档位与电压'],
+    courses:[['主变本体结构与保护','必修'],['有载调压装置运行规定','必修']] },
+  { id:'transformer2', ic:'🔴', color:'ic-red', status:'运行', stColor:'#22b573', name:'2号主变压器', en:'MAIN TRANSFORMER · SFZ11-50000/110',
+    desc:'与 1 号主变分列运行，冷却方式 ONAF，额定电压 115/10.5kV。',
+    params:[['高压侧','110','kV'],['低压侧','10.5','kV'],['油面温度','58','℃'],['分接档位','9','档']],
+    learn:['两台主变并列前必须核对相序、组别与分接头一致','负荷分配偏差大于 15% 应调整分接头','潜油泵风扇需定期切换试验，防止长期停用卡涩','中性点接地方式切换须按调度令执行'],
+    courses:[['主变并列运行条件','必修']] },
+  { id:'breaker', ic:'🟢', color:'ic-green', status:'热备用', stColor:'#f59e0b', name:'110kV SF6 断路器', en:'SF6 BREAKER · LW36-126',
+    desc:'支柱式 SF6 断路器，配弹簧机构，气室压力表与密度继电器就地监视。',
+    params:[['SF6 压力','0.52','MPa'],['分闸次数','1,204','次'],['机构压力','31.5','MPa'],['位置','分位','']],
+    learn:['SF6 压力低于 0.45MPa 闭锁分合闸，必须先补气','密度继电器分两级：补气报警与闭锁','机构频繁打压说明内漏，48h 内处理','故障跳闸后记录动作次数并检查 SF6 分解物'],
+    courses:[['断路器灭弧原理','必修'],['SF6 气体管理','必修']] },
+  { id:'disconnector', ic:'🟡', color:'ic-amber', status:'合闸', stColor:'#22b573', name:'110kV 隔离开关', en:'GW4-126D · DOUBLE COLUMN',
+    desc:'GW4 型双柱水平旋转式，两柱各转 90° 实现分合，中间触头接触；带接地刀与机械联锁。',
+    params:[['位置','合闸',''],['机构','CJ6 电动',''],['触头温度','41','℃'],['回路电阻','38','μΩ']],
+    learn:['主刀与地刀有机械联锁，主刀合闸时地刀不能操作','分合闸后检查触指接触与三相同期，转角约 90°','触头发热 80℃ 或相间温差 15℃ 立即转移负荷','操作必须唱票复诵，一人操作一人监护'],
+    courses:[['GW4 隔离开关结构','必修'],['倒闸操作票规范','必修']] },
+  { id:'ct', ic:'🔵', color:'ic-blue', status:'运行', stColor:'#22b573', name:'电流互感器', en:'CT · LB6-110',
+    desc:'油浸式电容型电流互感器，二次侧接保护与测量绕组，末屏可靠接地。',
+    params:[['变比','600/5','A'],['精度级','0.5S',''],['二次电流','3.21','A'],['绝缘','>1000','MΩ']],
+    learn:['运行中二次侧严禁开路，会产生危险高电压','更换二次回路前先可靠短接','末屏接地必须可靠，防止悬浮放电','油位过低或渗漏油须及时补油并查密封'],
+    courses:[['互感器二次回路','必修']] },
+  { id:'arrester', ic:'🟣', color:'ic-purple', status:'运行', stColor:'#22b573', name:'氧化锌避雷器', en:'MOA · YH10W-108/281',
+    desc:'无间隙金属氧化物避雷器，配在线监测表与动作计数器，雷雨季前测泄漏电流。',
+    params:[['全电流','0.42','mA'],['阻性电流','0.11','mA'],['动作次数','7','次'],['监测','正常','']],
+    learn:['阻性电流较初值增大 50% 提示阀片劣化','雷雨后必须抄录动作计数器并拍照留档','均压环锈蚀会改变电位分布，纳入缺陷管理','避雷器底座绝缘子不得有裂纹或放电痕迹'],
+    courses:[['过电压与绝缘配合','选修']] },
+  { id:'busbar', ic:'🔌', color:'ic-blue', status:'带电', stColor:'#f59e0b', name:'110kV 母线构架', en:'BUSBAR & GANTRY',
+    desc:'软母线经耐张绝缘子串悬挂于门型构架，导线呈悬垂弧，间隔引下线接设备。',
+    params:[['母线电压','112','kV'],['相序','A/B/C',''],['弧垂','合格',''],['零值绝缘子','0','片']],
+    learn:['弧垂突变提示接头松动、断股或覆冰','零值绝缘子每季用分布电压法检测','构架接地扁铁锈断属危急缺陷','验电必须使用对应电压等级验电器'],
+    courses:[['变电站主接线','必修']] },
+  { id:'tower', ic:'🗼', color:'ic-gray', status:'运行', stColor:'#22b573', name:'110kV 终端塔', en:'TERMINAL TOWER · SJ3',
+    desc:'格构式终端塔，导线经引流线进站，塔脚设接地引下线与基础保护帽。',
+    params:[['塔型','SJ3',''],['档距','142','m'],['导线','LGJ-240',''],['接地电阻','4.8','Ω']],
+    learn:['引流线驰度不足会在大风时拉坏设备端子','雷雨季前检查塔顶避雷线与接地引下线通断','塔材锈蚀、螺栓松动由线路班组周期巡检','线下作业保持 5m 以上安全距离'],
+    courses:[['输电线路基础','选修']] },
+  { id:'protect', ic:'🟦', color:'ic-blue', status:'投入', stColor:'#22b573', name:'主控楼·继电保护室', en:'CONTROL & PROTECTION ROOM',
+    desc:'保护屏、测控装置、直流系统所在建筑，软压板投退与定值切换的核心场所。',
+    params:[['保护装置','PCS-941',''],['软压板','投入',''],['定值区','1 区',''],['直流电压','±110','V']],
+    learn:['改定值前打印定值单并双人核对签字','投退软压板后必须在装置面板确认变位','校验前退出出口压板，防止误动运行设备','直流接地必须在 2 小时内定位排除'],
+    courses:[['软压板逻辑与投退','必修'],['保护定值单管理','必修']] },
+  { id:'gis', ic:'⚪', color:'ic-gray', status:'运行', stColor:'#22b573', name:'10kV 开关柜室', en:'10kV SWITCHGEAR HALL',
+    desc:'手车式开关柜，五防联锁，柜内设局放传感器与带电显示装置。',
+    params:[['柜内温度','38','℃'],['局放','正常',''],['带电显示','有电',''],['五防锁','投入','']],
+    learn:['手车摇进摇出必须到位，行程开关不到位会告警','局放超标柜加密检测并安排检修','五防解锁钥匙使用须审批并记录','柜门打开状态下严禁分合闸操作'],
+    courses:[['开关柜五防系统','必修']] },
+  { id:'robot', ic:'🤖', color:'ic-cyan', status:'巡检中', stColor:'#2f6bff', name:'智能巡检机器人', en:'INSPECTION ROBOT',
+    desc:'沿磁轨道自主巡检，红外测温 + 表计读数，异常仍需人工复核。',
+    params:[['电量','78','%'],['任务进度','3/8','点'],['红外测温','正常',''],['云台','自检OK','']],
+    learn:['机器人数据只作参考，异常必须人工到场复核','雨雪天气自动收杆，改人工巡视','充电坞接触不良是最常见故障','点位表变更后必须先离线验证再上线'],
+    courses:[['变电巡检智能化','选修']] },
+];
+
+/* ═══════════════════ 大环境 ═══════════════════ */
+(function skyDome() {
+  const cv = document.createElement('canvas'); cv.width = 8; cv.height = 256;
+  const ctx = cv.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, 0, 256);
+  g.addColorStop(0, '#7fa9e0'); g.addColorStop(0.45, '#bcd6ef');
+  g.addColorStop(0.78, '#e8f1fb'); g.addColorStop(1, '#f7fafd');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 8, 256);
+  const tex = new THREE.CanvasTexture(cv);
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(420, 32, 24),
+    new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide, depthWrite: false }));
+  scene.add(dome);
+})();
+for (let i = 0; i < 26; i++) {
+  const a = (i / 26) * Math.PI * 2 + Math.random() * 0.15;
+  const r = 235 + Math.random() * 60, h = 24 + Math.random() * 42;
+  const m = new THREE.Mesh(new THREE.ConeGeometry(34 + Math.random() * 22, h, 6),
+    new THREE.MeshLambertMaterial({ color: i % 3 === 0 ? 0x93a9c4 : 0xa8bcd2 }));
+  m.position.set(Math.cos(a) * r, h / 2 - 6, Math.sin(a) * r);
+  scene.add(m);
+}
+const terrain = new THREE.Mesh(new THREE.BoxGeometry(420, 1, 420), mat(0xa9c98f));
+terrain.position.y = -1.4; terrain.receiveShadow = true; scene.add(terrain);
+const FIELD_C = [0xbcd98f, 0xa8c878, 0xd6d79a, 0x9fc07a, 0xc9d9a0, 0xb5cf87];
+for (let i = 0; i < 26; i++) {
+  const a = Math.random() * Math.PI * 2, r = 80 + Math.random() * 100;
+  const w = 22 + Math.random() * 26, d = 18 + Math.random() * 26;
+  const f = new THREE.Mesh(new THREE.BoxGeometry(w, 0.3, d), mat(FIELD_C[i % FIELD_C.length]));
+  f.position.set(Math.cos(a) * r, -0.85, Math.sin(a) * r);
+  f.rotation.y = Math.random() * 0.7; f.receiveShadow = true; scene.add(f);
+}
+const river = new THREE.Mesh(new THREE.PlaneGeometry(60, 320), new THREE.MeshLambertMaterial({ color: 0x8cc3e6 }));
+river.rotation.x = -Math.PI / 2; river.rotation.z = 0.22; river.position.set(-120, -0.6, 20); scene.add(river);
+const bank = new THREE.Mesh(new THREE.PlaneGeometry(68, 320), mat(0xc7d9b0));
+bank.rotation.x = -Math.PI / 2; bank.rotation.z = 0.22; bank.position.set(-120, -0.72, 20); scene.add(bank);
+for (let i = 0; i < 14; i++) {
+  const a = Math.random() * Math.PI * 2, r = 90 + Math.random() * 90;
+  const h = new THREE.Mesh(new THREE.SphereGeometry(16 + Math.random() * 16, 10, 8), mat(0x9dbd86));
+  h.scale.y = 0.32 + Math.random() * 0.2;
+  h.position.set(Math.cos(a) * r, -1, Math.sin(a) * r);
+  h.receiveShadow = true; scene.add(h);
+}
+const highway = new THREE.Mesh(new THREE.BoxGeometry(400, 0.08, 8), mat(0xb9c6d8));
+highway.position.set(0, -0.55, 40); scene.add(highway);
+for (let i = -190; i <= 190; i += 8) {
+  const dash = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.02, 0.35), mat(0xffffff));
+  dash.position.set(i, -0.5, 40); scene.add(dash);
+}
+for (let i = 0; i < 22; i++) {
+  const bx = 66 + Math.random() * 90, bz = -60 + Math.random() * 80;
+  const w = 6 + Math.random() * 10, h = 5 + Math.random() * 13, d = 6 + Math.random() * 10;
+  box(w, h, d, [0xcfd6e2, 0xd9cbb8, 0xc2ccd8][i % 3], bx, h / 2 - 1, bz, scene);
+  box(w * 0.9, 0.3, d * 0.9, 0x8e9bb0, bx, h - 0.9, bz, scene);
+}
+function farTower(x, z, h = 26) {
+  const g = new THREE.Group(); g.position.set(x, -1, z);
+  for (const [sx, sz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+    const leg = cyl(0.1, 0.4, h, 0x8794a8, sx * 2.2, h / 2, sz * 2.2, g);
+    leg.rotation.z = -sx * 0.09; leg.rotation.x = sz * 0.09;
+  }
+  box(3, 0.2, 0.2, 0x8794a8, 0, h - 1, 0, g);
+  box(9, 0.18, 0.18, 0x8794a8, 0, h - 3.4, 0, g);
+  box(6, 0.18, 0.18, 0x8794a8, 0, h, 0, g);
+  scene.add(g); return g;
+}
+farTower(74, -30); farTower(104, -48, 30); farTower(132, -62, 32);
+for (let k = 0; k < 3; k++) {
+  const o = (k - 1) * 1.4;
+  wire(new THREE.Vector3(36 + o, 14.6, -14), new THREE.Vector3(74 + o, 21, -30), 5, 0x5c6a80, 0.05);
+  wire(new THREE.Vector3(74 + o, 21, -30), new THREE.Vector3(104 + o, 25, -48), 6, 0x5c6a80, 0.05);
+  wire(new THREE.Vector3(104 + o, 25, -48), new THREE.Vector3(132 + o, 27, -62), 6, 0x5c6a80, 0.05);
+}
+const clouds = [];
+for (let i = 0; i < 9; i++) {
+  const c = new THREE.Group();
+  for (let j = 0; j < 3; j++) {
+    const s = new THREE.Mesh(new THREE.SphereGeometry(4 + Math.random() * 4, 8, 6),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 }));
+    s.position.set(j * 5 - 5, Math.random() * 1.5, Math.random() * 3); c.add(s);
+  }
+  c.position.set(-160 + Math.random() * 320, 52 + Math.random() * 22, -140 + Math.random() * 240);
+  scene.add(c); clouds.push(c);
+}
+
+/* ═══════════════════ 站区地面 ═══════════════════ */
+const clickable = [], pickables = [];
+function register(group, dev) {
+  if (!dev) return;
+  clickable.push({ group, dev });
+  group.traverse(o => { if (o.isMesh) { o.userData.dev = dev; pickables.push(o); } });
+}
+const pad = new THREE.Mesh(new THREE.BoxGeometry(100, 0.5, 76), mat(0xe9edf4));
+pad.position.y = 0.0; pad.receiveShadow = true; scene.add(pad);
+const gravel = new THREE.Mesh(new THREE.BoxGeometry(60, 0.14, 15), mat(0xd9d4c8));
+gravel.position.set(-4, 0.3, -8); gravel.receiveShadow = true; scene.add(gravel);
+const oilPit = new THREE.Mesh(new THREE.BoxGeometry(17, 0.18, 14), mat(0xcfc9bd));
+oilPit.position.set(-21, 0.3, 2.5); oilPit.receiveShadow = true; scene.add(oilPit);
+const road = new THREE.Mesh(new THREE.BoxGeometry(100, 0.1, 5), mat(0xc3cedf));
+road.position.set(0, 0.36, 24); road.receiveShadow = true; scene.add(road);
+for (let i = -46; i <= 46; i += 5) {
+  const dash = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.02, 0.3), mat(0xffffff));
+  dash.position.set(i, 0.42, 24); scene.add(dash);
+}
+const road2 = new THREE.Mesh(new THREE.BoxGeometry(5, 0.1, 34), mat(0xc3cedf));
+road2.position.set(24, 0.36, 8); scene.add(road2);
+function trench(x1, z1, x2, z2) {
+  const len = Math.hypot(x2 - x1, z2 - z1);
+  const t = new THREE.Mesh(new THREE.BoxGeometry(len, 0.06, 0.8), mat(0x9aa7bd));
+  t.position.set((x1 + x2) / 2, 0.38, (z1 + z2) / 2);
+  t.rotation.y = -Math.atan2(z2 - z1, x2 - x1); scene.add(t);
+}
+trench(-30, -1, 20, -1); trench(-30, 9, -2, 9); trench(20, -16, 20, 12);
+
+/* ═══════════════════ 构架 / 母线 ═══════════════════ */
+const steelC = 0x7d8ba3, busC = 0x5b6a85, insuC = 0xa9bcd9;
+function portal(x1, x2, z, h = 8, withBus = true) {
+  const g = new THREE.Group(); g.position.set(0, 0.3, z);
+  for (const x of [x1, x2]) {
+    cyl(0.14, 0.2, h, steelC, x, h / 2, -0.5, g);
+    cyl(0.14, 0.2, h, steelC, x, h / 2, 0.5, g);
+    cyl(0.05, 0.05, 1.0, steelC, x, h, 0, g);
+  }
+  box(x2 - x1 + 1, 0.28, 0.28, steelC, (x1 + x2) / 2, h, 0, g);
+  if (withBus) {
+    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, x2 - x1 + 2), mat(busC));
+    bar.rotation.z = Math.PI / 2; bar.position.set((x1 + x2) / 2, h - 0.9, 0); g.add(bar);
+    string(g, x1 + 2, h - 0.4, 0, 6);
+    string(g, x2 - 2, h - 0.4, 0, 6);
+  }
+  scene.add(g); return g;
+}
+for (let i = 0; i < 5; i++) portal(-30 + i * 13, -30 + i * 13, -14, 8.5, false);
+DEVICES[6].anchor = portal(-30, 22, -14, 8.5);
+portal(-30, 22, -2, 7.5);
+for (let ph = 0; ph < 3; ph++) {
+  const off = (ph - 1) * 1.1;
+  wire(new THREE.Vector3(-30 + off, 8.0, -14), new THREE.Vector3(22 + off, 8.0, -14), 1.4);
+  wire(new THREE.Vector3(-30 + off, 7.0, -2), new THREE.Vector3(22 + off, 7.0, -2), 1.2);
+  for (let i = 0; i < 5; i++) wire(new THREE.Vector3(-30 + i * 13 + off, 7.6, -14), new THREE.Vector3(-30 + i * 13 + off, 6.6, -2), 0.8);
+}
+function busPost(x, z, kind) {
+  const g = new THREE.Group(); g.position.set(x, 0.3, z);
+  box(1.6, 0.5, 1.6, 0x9aa7bd, 0, 0.25, 0, g);
+  if (kind === 'ct') {
+    for (let i = -1; i <= 1; i++) { cyl(0.16, 0.16, 1.0, 0x8a97ae, i * 0.55, 0.85, 0, g); cyl(0.34, 0.22, 1.1, insuC, i * 0.55, 1.85, 0, g); }
+  } else if (kind === 'la') {
+    for (let i = -1; i <= 1; i++) { cyl(0.13, 0.16, 2.4, 0x8f7bd9, i * 0.5, 1.5, 0, g); const r = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.035, 6, 14), mat(steelC)); r.rotation.x = Math.PI / 2; r.position.set(i * 0.5, 2.6, 0); g.add(r); }
+  } else {
+    for (let i = -1; i <= 1; i++) { cyl(0.1, 0.12, 1.4, insuC, i * 0.5, 1.05, -0.3, g); cyl(0.1, 0.12, 1.4, insuC, i * 0.5, 1.05, 0.3, g); box(0.08, 0.08, 0.8, 0xd9925b, i * 0.5, 1.8, 0, g); }
+  }
+  scene.add(g); return g;
+}
+['ct', 'ds', 'la', 'ds', 'ct', 'ds', 'la'].forEach((k, i) => busPost(-26 + i * 8, -5.2, k));
+[[-14, -14], [2, -14]].forEach(([x, z]) => {
+  box(1.6, 0.9, 0.08, 0xffffff, x, 9.6, z, scene);
+  box(1.6, 0.18, 0.09, 0xef4444, x, 9.9, z + 0.01, scene);
+  box(1.6, 0.18, 0.09, 0xf59e0b, x, 9.66, z + 0.01, scene);
+  box(1.6, 0.18, 0.09, 0x22b573, x, 9.42, z + 0.01, scene);
+});
+[[-8, 8.4, -14], [10, 8.4, -14]].forEach(([x, y, z]) => {
+  const b = new THREE.Mesh(new THREE.SphereGeometry(0.3), mat(0xef4444));
+  b.position.set(x, y, z); scene.add(b);
+});
+
+/* ═══════════════════ 可交互设备建模 ═══════════════════ */
+const fans = [], dsGroups = [], lampRefs = {};
+
+/* 主变 */
+function buildTransformer(x, z, dev, idx) {
+  const g = new THREE.Group(); g.position.set(x, 0.3, z);
+  box(4.8, 2.6, 3.4, 0x2f4f8f, 0, 1.7, 0, g);
+  box(5.0, 0.55, 3.6, 0x24406f, 0, 0.4, 0, g);
+  const cons = cyl(0.55, 0.55, 3.4, 0x24406f, 0, 3.9, 1.2, g, 16);
+  cons.rotation.z = Math.PI / 2;
+  cyl(0.06, 0.06, 1.6, 0x8895ad, -1.2, 3.0, 1.2, g);
+  cyl(0.06, 0.06, 1.6, 0x8895ad, 1.2, 3.0, 1.2, g);
+  box(0.7, 0.22, 0.06, 0xdfe8f5, 1.4, 3.9, 1.5, g);
+  box(0.5, 0.42, 0.42, 0xc9d2e2, 0, 3.35, 2.55, g);
+  box(0.55, 0.08, 0.45, 0x8895ad, 0, 3.6, 2.55, g);
+  cyl(0.12, 0.12, 0.9, 0x8895ad, 0, 3.1, 2.55, g, 10);
+  cyl(0.16, 0.16, 0.4, 0xd9b25b, 0.6, 3.15, -0.7, g, 10);
+  cyl(0.28, 0.22, 0.14, 0xd9b25b, 0.6, 3.4, -0.7, g, 10);
+  for (let i = 0; i < 4; i++) box(0.35, 2.1, 3.0, 0x1d3358, -1.55 + i * 0.9, 1.7, 2.05, g);
+  box(3.6, 0.18, 0.18, 0x8895ad, 0, 2.9, 2.2, g);
+  box(3.6, 0.18, 0.18, 0x8895ad, 0, 0.6, 2.2, g);
+  box(1.1, 1.3, 0.7, 0x9aa7bd, 2.0, 1.1, 1.9, g);
+  box(0.5, 0.16, 0.06, 0x1f2a44, 2.0, 1.45, 2.28, g);
+  for (let i = -1; i <= 1; i++) {
+    cyl(0.15, 0.22, 2.4, 0xc4d1e4, i * 1.4, 4.0, -0.7, g);
+    for (let r = 0; r < 5; r++) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.3 - r * 0.025, 0.05, 6, 16), mat(0xb2c2d8));
+      ring.rotation.x = Math.PI / 2; ring.position.set(i * 1.4, 3.3 + r * 0.42, -0.7); g.add(ring);
+    }
+    cyl(0.32, 0.32, 0.08, 0xdfe8f5, i * 1.4, 5.25, -0.7, g, 12);
+    wire(new THREE.Vector3(x + i * 1.4, 5.3, z - 0.7), new THREE.Vector3(x + i * 1.4, 8.0, -14), 1.0);
+  }
+  cyl(0.1, 0.14, 1.4, 0xc4d1e4, -2.0, 3.2, 1.4, g);
+  cyl(0.22, 0.22, 0.06, 0xdfe8f5, -2.0, 3.95, 1.4, g, 10);
+  cyl(0.12, 0.12, 1.9, 0x8f7bd9, -2.4, 1.4, 2.5, g);
+  cyl(0.32, 0.32, 0.1, 0x8895ad, -2.4, 2.35, 2.5, g, 10);
+  const fanHub = new THREE.Group(); fanHub.position.set(0, 1.7, -1.95); g.add(fanHub);
+  for (let i = 0; i < 3; i++) {
+    const fm = new THREE.Group(); fm.position.set(-1.5 + i * 1.5, 0, 0); fanHub.add(fm);
+    const ringM = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.08, 6, 18), mat(0x9db3d6)); fm.add(ringM);
+    const blade = new THREE.Group(); fm.add(blade);
+    for (let b = 0; b < 4; b++) { box(0.4, 0.09, 0.04, 0x6e86ad, 0.3, 0, 0, blade).rotation.z = b * Math.PI / 2; }
+    blade.position.z = 0.08;
+    fans.push({ mesh: blade, owner: 'transformer' + (idx + 1) });
+  }
+  cyl(0.18, 0.18, 0.05, 0xffffff, 1.7, 2.6, -1.0, g, 12);
+  box(0.9, 0.5, 0.04, 0xdfe8f5, -1.9, 2.2, -1.72, g);
+  const fg = 0xb6c3d8;
+  for (let i = -3; i <= 3; i++) { cyl(0.04, 0.04, 1.0, fg, i * 1.5, 0.5, 2.7, g); cyl(0.04, 0.04, 1.0, fg, i * 1.5, 0.5, -2.7, g); }
+  box(9.2, 0.06, 0.06, fg, 0, 0.95, 2.7, g); box(9.2, 0.06, 0.06, fg, 0, 0.95, -2.7, g);
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[0].anchor = buildTransformer(-24, 0, DEVICES[0], 0);
+DEVICES[1].anchor = buildTransformer(-17, 0, DEVICES[1], 1);
+box(0.6, 6.5, 13, 0xc9c4b8, -20.5, 3.5, 0.4, scene);
+box(0.8, 0.4, 13.4, 0xb3ada0, -20.5, 6.9, 0.4, scene);
+
+/* 断路器 */
+function buildBreaker(x, z, dev) {
+  const g = new THREE.Group(); g.position.set(x, 0.3, z);
+  box(3.8, 0.7, 1.9, 0x8895ad, 0, 0.35, 0, g);
+  for (let i = -1; i <= 1; i++) {
+    cyl(0.3, 0.3, 1.5, 0x2fae74, i * 1.25, 1.45, 0, g);
+    cyl(0.42, 0.42, 1.7, 0x2fae74, i * 1.25, 3.0, 0, g);
+    cyl(0.48, 0.48, 0.22, 0x207a52, i * 1.25, 3.95, 0, g);
+    cyl(0.1, 0.1, 0.5, 0x8895ad, i * 1.25, 4.2, 0, g);
+  }
+  box(1.1, 1.6, 0.9, 0x9aa7bd, 2.5, 0.9, 0, g);
+  box(0.6, 0.2, 0.06, 0x1f2a44, 2.5, 1.4, 0.48, g);
+  cyl(0.16, 0.16, 0.08, 0xffffff, 2.5, 1.7, 0.46, g, 12);
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.1), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
+  lamp.position.set(2.9, 1.9, 0.5); g.add(lamp); lampRefs.breaker = lamp;
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[2].anchor = buildBreaker(6, -5.2, DEVICES[2]);
+
+/* GW4 隔离开关 */
+function buildDisconnector(x, z, dev) {
+  const g = new THREE.Group(); g.position.set(x, 0.3, z);
+  box(3.4, 0.4, 1.6, 0x8895ad, 0, 0.2, 0, g);
+  box(1.1, 0.9, 0.7, 0x9aa7bd, 1.55, 0.75, 0.95, g);
+  const mkSide = (sign) => {
+    const col = new THREE.Group(); col.position.set(sign * 1.2, 0, 0); g.add(col);
+    cyl(0.12, 0.16, 1.9, insuC, 0, 0.95, -0.3, col);
+    cyl(0.12, 0.16, 1.9, insuC, 0, 0.95, 0.3, col);
+    for (let r = 0; r < 4; r++) {
+      const d = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.04, 6, 13), mat(0x9fb3d1));
+      d.rotation.x = Math.PI / 2; d.position.set(0, 0.5 + r * 0.4, 0); col.add(d);
+    }
+    box(0.14, 0.12, 0.9, 0xc9d2e2, 0, 1.95, -0.35, col);
+    box(0.1, 0.1, 1.05, 0xd9925b, 0, 2.0, -sign * 0.55, col);
+    return col;
+  };
+  const left = mkSide(-1), right = mkSide(1);
+  dsGroups.push({ left, right });
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[3].anchor = buildDisconnector(14, -5.2, DEVICES[3]);
+
+/* CT */
+function buildCT(x, z, dev) {
+  const g = new THREE.Group(); g.position.set(x, 0.3, z);
+  for (let i = -1; i <= 1; i++) {
+    cyl(0.18, 0.18, 1.2, 0x8895ad, i * 1.0, 0.9, 0, g);
+    cyl(0.38, 0.26, 1.4, insuC, i * 1.0, 2.15, 0, g);
+    for (let r = 0; r < 3; r++) {
+      const d = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.04, 6, 14), mat(0x9fb3d1));
+      d.rotation.x = Math.PI / 2; d.position.set(i * 1.0, 1.75 + r * 0.4, 0); g.add(d);
+    }
+    cyl(0.26, 0.26, 0.3, 0x94a3b8, i * 1.0, 2.95, 0, g);
+    box(0.4, 0.35, 0.3, 0x9aa7bd, i * 1.0, 1.2, 0.42, g);
+    box(0.18, 0.14, 0.02, 0xdfe8f5, i * 1.0, 1.95, 0.4, g);
+  }
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[4].anchor = buildCT(22, -5.2, DEVICES[4]);
+
+/* 避雷器 */
+function buildArrester(x, z, dev) {
+  const g = new THREE.Group(); g.position.set(x, 0.3, z);
+  for (let i = -1; i <= 1; i++) {
+    cyl(0.14, 0.18, 2.7, 0x8f7bd9, i * 0.9, 1.65, 0, g);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.04, 6, 16), mat(steelC));
+    ring.rotation.x = Math.PI / 2; ring.position.set(i * 0.9, 2.95, 0); g.add(ring);
+    cyl(0.2, 0.2, 0.06, 0xdfe8f5, i * 0.9, 0.5, 0, g, 12);
+    box(0.46, 0.5, 0.34, 0xdfe8f5, i * 0.9, 0.42, 0.55, g);
+    box(0.3, 0.12, 0.02, 0x1f2a44, i * 0.9, 0.5, 0.73, g);
+  }
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[5].anchor = buildArrester(-2, -5.2, DEVICES[5]);
+
+/* 主控楼 */
+function buildControlRoom(x, z, dev) {
+  const g = new THREE.Group(); g.position.set(x, 0.3, z);
+  box(11, 4.4, 6.5, 0x3555a8, 0, 2.4, 0, g);
+  box(11.5, 0.5, 7.0, 0x24406f, 0, 4.75, 0, g);
+  box(11.5, 0.3, 7.1, 0x5b83d9, 0, 5.1, 0, g);
+  for (let i = 0; i < 4; i++) box(1.5, 1.4, 0.12, 0xbcd8ff, -3.8 + i * 2.4, 2.7, 3.3, g);
+  box(1.3, 2.3, 0.15, 0x8fb4f2, 4.0, 1.15, 3.3, g);
+  box(2.8, 0.6, 0.1, 0xffffff, 0, 4.0, 3.32, g);
+  box(1.0, 0.8, 0.6, 0xdfe8f5, -5.3, 0.7, 3.0, g);
+  box(0.9, 0.7, 0.5, 0xdfe8f5, -5.3, 0.7, 2.2, g);
+  box(9.0, 0.2, 0.5, 0x9aa7bd, 0, 4.4, 3.55, g);
+  cyl(0.04, 0.04, 4.0, 0x8895ad, 4.8, 7.0, -1.0, g);
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.13), new THREE.MeshBasicMaterial({ color: 0x22b573 }));
+  lamp.position.set(0, 5.35, 3.3); g.add(lamp); lampRefs.protect = lamp;
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[8].anchor = buildControlRoom(8, 9, DEVICES[8]);
+
+/* 开关柜室 */
+function buildGIS(x, z, dev) {
+  const g = new THREE.Group(); g.position.set(x, 0.3, z);
+  box(14, 3.8, 6.5, 0x6e86ad, 0, 2.1, 0, g);
+  box(14.5, 0.4, 7.0, 0x5a6f95, 0, 4.15, 0, g);
+  for (let i = 0; i < 7; i++) box(1.6, 2.3, 0.12, 0xa9bcd9, -5.7 + i * 1.9, 1.7, 3.3, g);
+  for (let i = 0; i < 4; i++) box(0.9, 0.5, 0.1, 0x9aa7bd, -4.6 + i * 3.2, 3.4, 3.32, g);
+  box(2.4, 0.5, 0.1, 0xffffff, 0, 2.9, 3.32, g);
+  box(1.2, 0.5, 0.6, 0x9aa7bd, 5.6, 0.7, 3.0, g);
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[9].anchor = buildGIS(-14, 14, DEVICES[9]);
+
+/* 终端塔 */
+function buildTower(x, z, dev, rot = 0) {
+  const g = new THREE.Group(); g.position.set(x, 0.0, z); g.rotation.y = rot;
+  const H = 15, wB = 2.4, wT = 0.9;
+  for (const [sx, sz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+    const leg = cyl(0.09, 0.13, H, steelC, sx * wB / 2, H / 2, sz * wB / 2, g);
+    leg.rotation.z = -sx * 0.05; leg.rotation.x = sz * 0.05;
+    box(0.9, 0.5, 0.9, 0xb9c3d4, sx * wB / 2, 0.25, sz * wB / 2, g);
+  }
+  for (let lv = 0; lv < 5; lv++) {
+    const y = 2.5 + lv * 3, w = wB - (wB - wT) * (y / H);
+    box(w, 0.12, 0.12, steelC, 0, y, wB / 2 - (wB - wT) * y / H / 2, g);
+    box(w, 0.12, 0.12, steelC, 0, y, -(wB / 2 - (wB - wT) * y / H / 2), g);
+    box(0.12, 0.12, w, steelC, wB / 2 - (wB - wT) * y / H / 2, y, 0, g);
+    box(0.12, 0.12, w, steelC, -(wB / 2 - (wB - wT) * y / H / 2), y, 0, g);
+  }
+  box(7.5, 0.22, 0.22, steelC, 0, H + 1.2, 0, g);
+  box(5.0, 0.22, 0.22, steelC, 0, H + 3.2, 0, g);
+  for (const hx of [-3, 0, 3]) string(g, hx, H + 1.1, 0, 7);
+  for (const hx of [-2, 2]) string(g, hx, H + 3.1, 0, 7);
+  [[-3, 0xef4444], [0, 0xf59e0b], [3, 0x22b573]].forEach(([hx, c]) => box(0.4, 0.5, 0.06, c, hx, H + 0.2, 0, g));
+  for (let y = 1; y < H; y += 0.6) box(0.5, 0.05, 0.05, steelC, -wB / 2 - 0.1, y, 0.2, g);
+  box(0.06, H, 0.06, 0xb08d57, wB / 2 + 0.1, H / 2, 0, g);
+  cyl(0.04, 0.04, 2.5, steelC, 0, H + 4.4, 0, g);
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[7].anchor = buildTower(36, -14, DEVICES[7]);
+buildTower(36, 2, null, Math.PI);
+for (let ph = 0; ph < 3; ph++) {
+  const off = (ph - 1) * 1.1;
+  wire(new THREE.Vector3(30 + off, 13.5, -14), new THREE.Vector3(22 + off, 8.0, -14), 2.2);
+  wire(new THREE.Vector3(30 + off, 13.5, 2), new THREE.Vector3(24 + off, 6.0, 2), 2.0, 0x46536b, 0.05);
+}
+
+/* 大门 */
+(function gateHouse() {
+  const g = new THREE.Group(); g.position.set(26, 0.3, 28);
+  box(3.2, 2.6, 2.8, 0x9db3d6, 0, 1.3, 0, g);
+  box(3.6, 0.3, 3.2, 0x24406f, 0, 2.75, 0, g);
+  box(0.9, 1.6, 0.1, 0xdfe8f5, 0, 1.6, 1.42, g);
+  const bar = box(4.5, 0.12, 0.12, 0xef4444, -3.0, 1.5, -2.2, g);
+  bar.rotation.z = -0.5;
+  scene.add(g);
+})();
+for (let i = -47; i <= 47; i += 3.5) {
+  if (Math.abs(i - 24) < 4) continue;
+  cyl(0.06, 0.06, 1.3, 0xb6c3d8, i, 0.85, 30, scene);
+  box(3.5, 0.06, 0.06, 0xb6c3d8, i + 1.75, 1.3, 30, scene);
+}
+/* 树 / 路灯 */
+function tree(x, z, s = 1) {
+  const t = new THREE.Group();
+  cyl(0.14, 0.2, 0.9, 0x8a6b4f, 0, 0.45, 0, t);
+  const c1 = new THREE.Mesh(new THREE.SphereGeometry(0.85 * s, 10, 8), mat(0x6fbf7f)); c1.position.y = 1.45 * s; c1.castShadow = true; t.add(c1);
+  const c2 = new THREE.Mesh(new THREE.SphereGeometry(0.55 * s, 10, 8), mat(0x8fd39a)); c2.position.set(0.3 * s, 1.95 * s, 0.15); c2.castShadow = true; t.add(c2);
+  t.position.set(x, 0.2, z); scene.add(t);
+}
+[[-34, 20], [-40, 17], [16, 20], [34, 24], [-42, -8], [46, -4], [-44, 12], [44, 14], [-48, -22], [8, 32], [-52, 4], [50, 8]]
+  .forEach(p => tree(p[0], p[1], 0.8 + Math.random() * 0.5));
+for (let i = -40; i <= 40; i += 14) {
+  const lamp = new THREE.Group();
+  cyl(0.06, 0.08, 2.8, 0x8895ad, 0, 1.4, 0, lamp);
+  box(0.55, 0.12, 0.3, 0xf3f7fc, 0.22, 2.8, 0, lamp);
+  lamp.position.set(i, 0.2, 27); scene.add(lamp);
+}
+/* 机器人 */
+const robot = new THREE.Group();
+box(1.1, 0.6, 1.5, 0x2f6bff, 0, 0.55, 0, robot);
+box(0.8, 0.35, 0.9, 0xdfe8f5, 0, 1.0, -0.1, robot);
+cyl(0.16, 0.16, 0.3, 0x1f2a44, 0, 1.35, -0.1, robot);
+const roboLight = new THREE.Mesh(new THREE.SphereGeometry(0.08), new THREE.MeshBasicMaterial({ color: 0x22b573 }));
+roboLight.position.set(0, 1.55, -0.1); robot.add(roboLight);
+robot.position.set(24, 0.7, 24); scene.add(robot);
+DEVICES[10].anchor = robot;
+/* 公路上的车 */
+const cars = [];
+function makeCar(color, z, dir) {
+  const c = new THREE.Group();
+  box(2.2, 0.6, 1.0, color, 0, 0.55, 0, c);
+  box(1.3, 0.5, 0.9, 0x2b3550, -0.1, 1.0, 0, c);
+  for (const [wx, wz] of [[-0.7, 0.5], [0.7, 0.5], [-0.7, -0.5], [0.7, -0.5]]) {
+    const w = cyl(0.22, 0.22, 0.18, 0x1f2a44, wx, 0.28, wz, c, 10); w.rotation.x = Math.PI / 2;
+  }
+  c.position.set(-120 + Math.random() * 240, 0, z); c.scale.x = dir;
+  scene.add(c); cars.push({ g: c, dir });
+}
+makeCar(0x2f6bff, 39.2, 1); makeCar(0xef4444, 41.2, -1); makeCar(0xf59e0b, 39.2, 1);
+
+/* ═══════════════════ 交互与状态 ═══════════════════ */
+const state = {
+  fan: { transformer1: true, transformer2: true },
+  tap: { transformer1: 9, transformer2: 9 },
+  breakerClosed: false,
+  dsClosed: true,
+  plateIn: true,
+  robotRun: true,
+  ops: 0
+};
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+let selected = null;
+const ring = new THREE.Mesh(
+  new THREE.RingGeometry(1.5, 1.8, 40),
+  new THREE.MeshBasicMaterial({ color: 0x2f6bff, transparent: true, opacity: 0.85, side: THREE.DoubleSide }));
+ring.rotation.x = -Math.PI / 2; ring.visible = false; scene.add(ring);
+
+function pointerPos(e) {
+  const r = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+  pointer.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+}
+renderer.domElement.addEventListener('pointermove', e => {
+  pointerPos(e);
+  raycaster.setFromCamera(pointer, camera);
+  const hit = raycaster.intersectObjects(pickables, false)[0];
+  const dev = hit ? hit.object.userData.dev : null;
+  renderer.domElement.style.cursor = dev ? 'pointer' : 'grab';
+  if (dev && dev.anchor) {
+    const p = new THREE.Vector3(); dev.anchor.getWorldPosition(p);
+    ring.position.set(p.x, 0.55, p.z); ring.visible = true;
+  } else ring.visible = false;
+});
+renderer.domElement.addEventListener('click', e => {
+  pointerPos(e);
+  raycaster.setFromCamera(pointer, camera);
+  const hit = raycaster.intersectObjects(pickables, false)[0];
+  if (hit && hit.object.userData.dev) selectDevice(hit.object.userData.dev);
+});
+
+/* toast + 事件流 */
+const toastEl = document.getElementById('toast');
+let toastTimer = null;
+function toast(msg) {
+  toastEl.textContent = msg; toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2400);
+}
+const alList = document.getElementById('alList');
+function pushEvent(text, isOp) {
+  const d = new Date();
+  const tm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  const div = document.createElement('div');
+  div.className = 'al';
+  div.innerHTML = `<span class="tm">${tm}</span>${isOp ? '<span class="op-tag">操作</span>' : ''}<span style="flex:1">${text}</span>`;
+  alList.prepend(div);
+  while (alList.children.length > 5) alList.lastChild.remove();
+}
+['1号主变油温 61.8℃，正常', '巡检机器人完成 3 号点位红外测温', '110kV 线路保护 A 通道自检通过'].forEach(t => pushEvent(t, false));
+
+/* 操作定义 */
+const OPS = {
+  transformer1: [['风机启动', 'fanOn'], ['风机停止', 'fanOff'], ['调高一档', 'tapUp'], ['调低一档', 'tapDown']],
+  transformer2: [['风机启动', 'fanOn'], ['风机停止', 'fanOff'], ['调高一档', 'tapUp'], ['调低一档', 'tapDown']],
+  breaker: [['合闸送电', 'close'], ['分闸停电', 'open']],
+  disconnector: [['合上主刀', 'dsClose'], ['拉开主刀', 'dsOpen']],
+  ct: [['测二次电流', 'measure'], ['查看油位', 'oil']],
+  arrester: [['泄漏电流试验', 'leak'], ['计数器复归', 'reset']],
+  busbar: [['红外测温', 'ir'], ['弧垂检查', 'sag']],
+  tower: [['接地电阻测试', 'ground'], ['红外测温', 'ir']],
+  protect: [['投入软压板', 'plateIn'], ['退出软压板', 'plateOut']],
+  gis: [['局放检测', 'pd'], ['柜温检测', 'temp']],
+  robot: [['暂停巡检', 'stop'], ['继续巡检', 'run']]
+};
+
+/* 场景反馈 */
+const flashes = [];
+function flashAt(pos, color = 0xffd166, size = 1.2) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(size, 12, 10),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9 }));
+  m.position.copy(pos); scene.add(m);
+  flashes.push({ m, t: 0 });
+}
+function anchorPos(dev) {
+  const p = new THREE.Vector3();
+  dev.anchor ? dev.anchor.getWorldPosition(p) : p.set(0, 1, 0);
+  return p;
+}
+function runOp(dev, key) {
+  const p = anchorPos(dev);
+  const t = p.clone(); t.y += 3;
+  switch (key) {
+    case 'fanOn':
+      state.fan[dev.id] = true;
+      toast('冷却风机已启动，油温开始下降');
+      pushEvent(dev.name + ' 冷却风机启动（CJ6 机构）', true); break;
+    case 'fanOff':
+      state.fan[dev.id] = false;
+      toast('冷却风机已停止，注意油温上升趋势');
+      pushEvent(dev.name + ' 冷却风机停止，转自冷运行', true); break;
+    case 'tapUp': case 'tapDown': {
+      const step = key === 'tapUp' ? 1 : -1;
+      const next = Math.min(17, Math.max(1, state.tap[dev.id] + step));
+      if (next === state.tap[dev.id]) { toast('已到极限档位，禁止继续调压'); return; }
+      state.tap[dev.id] = next;
+      setParam(dev, 3, next);
+      const v = (110 + (next - 9) * 0.625).toFixed(1);
+      setParam(dev, 0, v);
+      toast('有载调压至 ' + next + ' 档，母线电压 ' + v + ' kV');
+      pushEvent(dev.name + ' 有载调压' + (step > 0 ? '升' : '降') + '至 ' + next + ' 档', true);
+      flashAt(t, 0x9ec5ff, 0.9); break;
+    }
+    case 'close':
+      if (state.breakerClosed) { toast('断路器已在合位，无需重复操作'); return; }
+      state.breakerClosed = true;
+      setParam(dev, 3, '合位'); setStatus(dev, '运行', '#22b573');
+      lampRefs.breaker.material.color.setHex(0x22b573);
+      flashAt(t, 0x9fe8c4, 1.4);
+      toast('断路器合闸成功，线路送电');
+      pushEvent(dev.name + ' 合闸送电（操作票 DZ-20261019-07）', true); break;
+    case 'open':
+      if (!state.breakerClosed) { toast('断路器已在分位'); return; }
+      state.breakerClosed = false;
+      setParam(dev, 3, '分位'); setStatus(dev, '热备用', '#f59e0b');
+      lampRefs.breaker.material.color.setHex(0xef4444);
+      flashAt(t, 0xffcf7a, 1.1);
+      toast('断路器分闸，线路转热备用');
+      pushEvent(dev.name + ' 分闸（负荷电流已转移）', true); break;
+    case 'dsOpen': case 'dsClose': {
+      const want = key === 'dsClose';
+      if (want === state.dsClosed) { toast(want ? '主刀已在合位' : '主刀已在分位'); return; }
+      if (want && state.breakerClosed) {
+        toast('⚠ 五防闭锁：断路器在合位，禁止操作隔离开关');
+        pushEvent('五防闭锁拦截：带负荷操作隔离开关', true); return;
+      }
+      state.dsClosed = want; animateDs(want);
+      setParam(dev, 0, want ? '合闸' : '分闸');
+      setStatus(dev, want ? '合闸' : '分闸', want ? '#22b573' : '#94a3b8');
+      toast(want ? '主刀合上，双柱旋转 90° 到位' : '主刀拉开，形成明显断开点');
+      pushEvent(dev.name + (want ? ' 主刀合闸' : ' 主刀分闸') + '（三相联动）', true); break;
+    }
+    case 'measure':
+      setParam(dev, 2, (3.0 + Math.random() * 0.5).toFixed(2));
+      toast('二次电流实测 ' + dev.params[2][1] + ' A，三相平衡');
+      pushEvent(dev.name + ' 二次电流测量完成', true); break;
+    case 'oil':
+      toast('油位在 2/3 处，油色正常，无渗漏');
+      pushEvent(dev.name + ' 油位检查：正常', true); break;
+    case 'leak':
+      setParam(dev, 0, (0.40 + Math.random() * 0.06).toFixed(2));
+      setParam(dev, 1, (0.10 + Math.random() * 0.04).toFixed(2));
+      toast('全电流 ' + dev.params[0][1] + ' mA，阻性电流 ' + dev.params[1][1] + ' mA，合格');
+      pushEvent(dev.name + ' 泄漏电流试验完成', true); break;
+    case 'reset':
+      setParam(dev, 2, '0');
+      toast('动作计数器已复归为 0（原值 7 次须记录）');
+      pushEvent(dev.name + ' 动作计数器复归', true); break;
+    case 'ir': {
+      const tmp = (38 + Math.random() * 12).toFixed(1);
+      toast('红外测温最高 ' + tmp + '℃，' + (tmp > 45 ? '存在异常温升，需复核' : '温升正常'));
+      pushEvent(dev.name + ' 红外测温 ' + tmp + '℃', true); break;
+    }
+    case 'sag':
+      toast('弧垂目测合格，三相一致，无覆冰与断股');
+      pushEvent(dev.name + ' 弧垂检查完成', true); break;
+    case 'ground':
+      setParam(dev, 3, (3.5 + Math.random() * 2).toFixed(1));
+      toast('接地电阻 ' + dev.params[3][1] + ' Ω，小于 10Ω 合格');
+      pushEvent(dev.name + ' 接地电阻测试 ' + dev.params[3][1] + ' Ω', true); break;
+    case 'plateIn': case 'plateOut': {
+      const want = key === 'plateIn';
+      if (want === state.plateIn) { toast(want ? '软压板已投入' : '软压板已退出'); return; }
+      if (!want && state.breakerClosed) { toast('⚠ 线路运行中，退出差动软压板须先申请调度'); return; }
+      state.plateIn = want;
+      setParam(dev, 1, want ? '投入' : '退出');
+      lampRefs.protect.material.color.setHex(want ? 0x22b573 : 0xef4444);
+      flashAt(t, want ? 0x9fe8c4 : 0xffb4b4, 0.8);
+      toast(want ? '软压板已投入，装置面板确认变位' : '软压板已退出，装置告警灯亮');
+      pushEvent(dev.name + ' 差动软压板' + (want ? '投入' : '退出'), true); break;
+    }
+    case 'pd':
+      toast('局放检测：TEV 12dB / 超声 6dB，未见异常');
+      pushEvent(dev.name + ' 局放检测通过', true); break;
+    case 'temp':
+      setParam(dev, 0, (36 + Math.random() * 6).toFixed(1));
+      toast('柜内温度 ' + dev.params[0][1] + '℃，正常');
+      pushEvent(dev.name + ' 柜温检测', true); break;
+    case 'stop':
+      state.robotRun = false; setStatus(dev, '已暂停', '#94a3b8');
+      toast('巡检机器人已暂停，停靠在 5 号点位');
+      pushEvent(dev.name + ' 巡检任务暂停', true); break;
+    case 'run':
+      state.robotRun = true; setStatus(dev, '巡检中', '#2f6bff');
+      toast('巡检机器人继续执行任务');
+      pushEvent(dev.name + ' 巡检任务恢复', true); break;
+  }
+  state.ops++;
+}
+function setParam(dev, idx, val) {
+  dev.params[idx][1] = String(val);
+  if (selected && selected.id === dev.id) renderParams(dev);
+}
+function setStatus(dev, text, color) {
+  dev.status = text; dev.stColor = color;
+  const row = document.getElementById('row-' + dev.id);
+  if (row) {
+    const d = row.querySelector('.dotst');
+    d.style.background = color; d.style.boxShadow = '0 0 6px ' + color;
+  }
+}
+const tweenList = [];
+function animateDs(closed) {
+  dsGroups.forEach(gp => {
+    const fromL = gp.left.rotation.y, fromR = gp.right.rotation.y;
+    const toL = closed ? 0 : Math.PI / 2 * 0.92;
+    const toR = closed ? 0 : -Math.PI / 2 * 0.92;
+    tweenList.push({ t: 0, dur: 1.1, fn: k => { gp.left.rotation.y = fromL + (toL - fromL) * k; gp.right.rotation.y = fromR + (toR - fromR) * k; } });
+  });
+}
+
+/* ═══════════════════ UI ═══════════════════ */
+const devList = document.getElementById('devList');
+document.getElementById('devCount').textContent = DEVICES.length + ' 台在册';
+DEVICES.forEach(d => {
+  const row = document.createElement('div');
+  row.className = 'dev-row'; row.id = 'row-' + d.id;
+  row.innerHTML = `<div class="ic ${d.color}">${d.ic}</div>
+    <div class="info"><div class="nm">${d.name}</div><div class="st">${d.en}</div></div>
+    <div class="dotst" style="background:${d.stColor};box-shadow:0 0 6px ${d.stColor}"></div>`;
+  row.onclick = () => selectDevice(d);
+  devList.appendChild(row);
+});
+function renderParams(d) {
+  document.getElementById('dParams').innerHTML = d.params.map(p =>
+    `<div class="param"><div class="k">${p[0]}</div><div class="v">${p[1]}<b> ${p[2]}</b></div></div>`).join('');
+}
+function selectDevice(d) {
+  selected = d;
+  document.getElementById('overview').style.display = 'none';
+  const det = document.getElementById('detail');
+  det.classList.add('show');
+  document.getElementById('dIc').textContent = d.ic;
+  document.getElementById('dIc').className = 'ic ' + d.color;
+  document.getElementById('dNm').textContent = d.name;
+  document.getElementById('dEn').textContent = d.en;
+  renderParams(d);
+  document.getElementById('dOps').innerHTML = (OPS[d.id] || []).map(([label, key]) =>
+    `<button class="op ${key === 'open' || key === 'dsOpen' ? 'danger' : ''}" data-key="${key}">${label}</button>`).join('');
+  document.querySelectorAll('#dOps .op').forEach(btn => {
+    btn.onclick = () => runOp(d, btn.dataset.key);
+  });
+  document.getElementById('dLearn').innerHTML = d.learn.map(x => `<li>${x}</li>`).join('');
+  document.getElementById('dCourses').innerHTML = d.courses.map(c =>
+    `<div class="course"><span class="tag">${c[1]}</span>${c[0]}<span class="go">→</span></div>`).join('');
+  det.querySelector('.back').onclick = () => {
+    det.classList.remove('show');
+    document.getElementById('overview').style.display = '';
+    selected = null;
+  };
+  document.querySelectorAll('.dev-row').forEach(r => r.classList.remove('active'));
+  const row = document.getElementById('row-' + d.id);
+  if (row) row.classList.add('active');
+  if (d.anchor) {
+    const p = new THREE.Vector3(); d.anchor.getWorldPosition(p);
+    controls.target.copy(p);
+    camTween(p.clone().add(new THREE.Vector3(9, 9, 11)));
+  }
+}
+let camAnim = null;
+function camTween(to) { camAnim = { from: camera.position.clone(), to, t: 0 }; }
+document.querySelector('.back')?.addEventListener('click', () => { camTween(new THREE.Vector3(46, 36, 52)); controls.target.set(0, 2, 0); });
+
+/* KPI + 油温联动 */
+let kpiT = 0;
+function tickData() {
+  kpiT++;
+  const load = (62 + Math.sin(kpiT / 4) * 4 + Math.random()).toFixed(1);
+  document.getElementById('k3').innerHTML = load + '<b>%</b><span class="trend ' + (load > 63 ? 'up' : 'down') + '">' + (load > 63 ? '▲' : '▼') + Math.abs(load - 63.2).toFixed(1) + '</span>';
+  document.getElementById('k2').innerHTML = (98 + Math.random() * 1.4).toFixed(1) + '<b>%</b><span class="trend flat">—</span>';
+  ['transformer1', 'transformer2'].forEach(id => {
+    const dev = DEVICES.find(x => x.id === id);
+    const cur = parseFloat(dev.params[2][1]);
+    const target = state.fan[id] ? 58 : 72;
+    const next = cur + (target - cur) * 0.02 + (Math.random() - 0.5) * 0.15;
+    dev.params[2][1] = next.toFixed(1);
+  });
+  if (selected && selected.id.startsWith('transformer')) renderParams(selected);
+}
+setInterval(tickData, 2500);
+
+/* 作业步骤 */
+const STEPS = ['核对定值单', '布置安全措施', '验电', '合接地刀闸', '悬挂标示牌', '工作许可'];
+let stepNow = 2;
+const stepsEl = document.getElementById('steps');
+STEPS.forEach((s, i) => {
+  if (i > 0) { const line = document.createElement('div'); line.className = 'stp-line'; stepsEl.appendChild(line); }
+  const el = document.createElement('div');
+  el.className = 'stp'; el.innerHTML = `<div class="b">${i + 1}</div>${s}`;
+  stepsEl.appendChild(el);
+});
+function paintSteps() {
+  [...stepsEl.querySelectorAll('.stp')].forEach((el, i) => {
+    el.classList.toggle('done', i < stepNow);
+    el.classList.toggle('now', i === stepNow);
+    el.querySelector('.b').textContent = i < stepNow ? '✓' : i === stepNow ? '●' : i + 1;
+  });
+  [...stepsEl.querySelectorAll('.stp-line')].forEach((el, i) => el.classList.toggle('done', i < stepNow));
+}
+paintSteps();
+setInterval(() => { stepNow = (stepNow + 1) % STEPS.length; paintSteps(); }, 12000);
+let etaS = 1122;
+setInterval(() => {
+  etaS = Math.max(0, etaS - 1);
+  document.getElementById('eta').textContent = Math.floor(etaS / 60) + ':' + String(etaS % 60).padStart(2, '0');
+}, 1000);
+
+/* ═══════════════════ 动画 ═══════════════════ */
+const ROBOT_PATH = [[24, 24], [24, 6], [6, -3], [-10, -1], [-22, 4], [-10, 12], [4, 15], [24, 24]];
+let pathSeg = 0, pathT = 0;
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = 0.016, t = performance.now() / 1000;
+  fans.forEach(f => { if (state.fan[f.owner]) f.mesh.rotation.z += dt * 5; });
+  if (state.robotRun) {
+    pathT += dt * 0.10;
+    if (pathT >= 1) { pathT = 0; pathSeg = (pathSeg + 1) % (ROBOT_PATH.length - 1); }
+  }
+  const a = ROBOT_PATH[pathSeg], b = ROBOT_PATH[pathSeg + 1];
+  robot.position.x = a[0] + (b[0] - a[0]) * pathT;
+  robot.position.z = a[1] + (b[1] - a[1]) * pathT;
+  if (state.robotRun) robot.rotation.y = Math.atan2(b[0] - a[0], b[1] - a[1]);
+  roboLight.material.color.setHex(state.robotRun && Math.sin(t * 6) > 0 ? 0x22b573 : 0x14532d);
+  cars.forEach(c => {
+    c.g.position.x += c.dir * dt * 9;
+    if (c.g.position.x > 150) c.g.position.x = -150;
+    if (c.g.position.x < -150) c.g.position.x = 150;
+  });
+  clouds.forEach((c, i) => { c.position.x += dt * (0.4 + i * 0.05); if (c.position.x > 200) c.position.x = -200; });
+  if (ring.visible) ring.material.opacity = 0.5 + Math.sin(t * 4) * 0.3;
+  for (let i = flashes.length - 1; i >= 0; i--) {
+    const f = flashes[i]; f.t += dt;
+    f.m.scale.setScalar(1 + f.t * 2.2);
+    f.m.material.opacity = Math.max(0, 0.9 - f.t * 1.6);
+    if (f.t > 0.6) { scene.remove(f.m); flashes.splice(i, 1); }
+  }
+  for (let i = tweenList.length - 1; i >= 0; i--) {
+    const tw = tweenList[i]; tw.t += dt;
+    const k = Math.min(1, tw.t / tw.dur);
+    tw.fn(k * k * (3 - 2 * k));
+    if (k >= 1) tweenList.splice(i, 1);
+  }
+  if (camAnim) {
+    camAnim.t += 0.045;
+    const k = 1 - Math.pow(1 - Math.min(1, camAnim.t), 2);
+    camera.position.lerpVectors(camAnim.from, camAnim.to, k);
+    if (camAnim.t >= 1) camAnim = null;
+  }
+  controls.update();
+  renderer.render(scene, camera);
+}
+function resize() {
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+}
+window.addEventListener('resize', resize);
+resize();
+animate();
+</script>
+</body>
+</html>

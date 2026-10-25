@@ -1,5 +1,8 @@
 package com.power.train.support;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -49,11 +52,22 @@ public final class DiagnosisPipeline {
      */
     public static ModelRun generate(AiJsonClient client, String label, String systemPrompt, String userPrompt,
                                     Function<Map<String, Object>, List<String>> contract) {
+        return generate(client, label, systemPrompt, userPrompt, contract, false);
+    }
+
+    /**
+     * 同上，exec=true 时走公司运行诊断 Agent 的专属端点（AiJsonClient 里 ai.exec-* 配置），
+     * 未配置专属端点时与 exec=false 完全同路。重试、契约校验与兜底语义保持一致。
+     */
+    public static ModelRun generate(AiJsonClient client, String label, String systemPrompt, String userPrompt,
+                                    Function<Map<String, Object>, List<String>> contract, boolean exec) {
         if (!client.available()) {
             return new ModelRun(null, OFFLINE_FALLBACK);
         }
         try {
-            Map<String, Object> raw = client.completeJson(systemPrompt, userPrompt);
+            Map<String, Object> raw = exec
+                ? client.completeJsonExec(systemPrompt, userPrompt)
+                : client.completeJson(systemPrompt, userPrompt);
             List<String> errors = contract.apply(raw);
             return errors.isEmpty() ? new ModelRun(raw, null) : new ModelRun(null, CONTRACT_FALLBACK + errors.get(0));
         } catch (Exception error) {
@@ -89,6 +103,196 @@ public final class DiagnosisPipeline {
         }
         result.put("confidence", confidence);
         return result;
+    }
+
+    // ---- 结论事后规范：只处理「模型不擅长、但后端有确定答案」的非事实字段 ----
+
+    /** 计划排期的步进天数：课程 → 带教 → 模拟考 的常规节奏，两周一步。 */
+    private static final int PLAN_STEP_DAYS = 14;
+    /** plan 各步 reason 的相似度阈值：超过就认为在复读，改写成该步自己的说法。 */
+    private static final double REPEAT_REASON = 0.8;
+    /** reason 的第二个判据：公共前缀长度。实测常见的是「前半句照抄、后半句换词」，占比能卡在阈值之下逃掉。 */
+    private static final int REPEAT_PREFIX = 24;
+    /** compound_path.benefit 与 why 的相似度阈值：超过就重写 benefit。 */
+    private static final double REPEAT_BENEFIT = 0.5;
+
+    /**
+     * 个人诊断结论的事后规范。刻意只碰两类字段：
+     *
+     * 1. plan[].due_at 是「计划日期」而不是事实数据。模型经常把它排到今天之前，或让几步挤在同一天；
+     *    一旦出现「早于今天」或「不严格递增」，就整列按今天起、每步 PLAN_STEP_DAYS 天重排。
+     * 2. plan[].reason 与 compound_path.benefit 经常被模型复制成同一句话。检测到复读，就改写成
+     *    该条目自身字段能支撑的说法（target_skill / to_level / stages 的里程碑），不引入任何新事实。
+     *
+     * summary / verdict / gaps 等涉及事实的叙述一律不动。调用点在契约校验「通过之后」，
+     * 所以它只会把合格结论说得更像样，绝不会把不合格结论「洗」成合格。
+     */
+    public static void polishPersonal(Map<String, Object> payload, String today) {
+        if (payload == null) {
+            return;
+        }
+        List<Map<String, Object>> plan = copyList(payload.get("plan"));
+        if (!plan.isEmpty()) {
+            reflowDueAt(plan, today);
+            rewriteRepeatedReason(plan);
+            payload.put("plan", plan);
+        }
+        if (payload.get("compound_path") instanceof Map<?, ?> raw) {
+            Map<String, Object> compound = copyMap(raw);
+            rewriteRepeatedBenefit(compound);
+            payload.put("compound_path", compound);
+        }
+    }
+
+    /** 排期只在不「晚于今天且严格递增」时才接管：模型排对了就不动它。 */
+    private static void reflowDueAt(List<Map<String, Object>> plan, String today) {
+        LocalDate base = parseDate(today);
+        if (base == null) {
+            return;
+        }
+        LocalDate previous = null;
+        boolean ordered = true;
+        for (Map<String, Object> step : plan) {
+            LocalDate due = parseDate(Texts.text(step.get("due_at")));
+            // 必须是「晚于今天」：首步落在今天等于「今天就到期」，读起来像已经逾期
+            if (due == null || !due.isAfter(base) || (previous != null && !due.isAfter(previous))) {
+                ordered = false;
+                break;
+            }
+            previous = due;
+        }
+        if (ordered) {
+            return;
+        }
+        for (int index = 0; index < plan.size(); index++) {
+            plan.get(index).put("due_at", base.plusDays((long) (index + 1) * PLAN_STEP_DAYS).toString());
+        }
+    }
+
+    /** 复读的 reason 换成该步自己的说法：只用它已有的 title / target_skill / to_level，不编新内容。 */
+    private static void rewriteRepeatedReason(List<Map<String, Object>> plan) {
+        List<String> seen = new ArrayList<>();
+        for (Map<String, Object> step : plan) {
+            String reason = Texts.text(step.get("reason"));
+            if (reason.isBlank()) {
+                continue;
+            }
+            if (!repeats(seen, reason)) {
+                seen.add(reason);
+                continue;
+            }
+            String rewritten = distinctReason(step);
+            // 改写后仍与已有文案完全相同（例如两步的 target_skill 与 to_level 一样），退回用这一步的标题兜底
+            if (seen.contains(rewritten)) {
+                String title = Texts.text(step.get("title"));
+                rewritten = title.isBlank()
+                    ? "承接上一步，按上一步的结论继续推进。"
+                    : "承接上一步，本步以「" + title + "」的形式把上一步的内容落地。";
+            }
+            step.put("reason", rewritten);
+            seen.add(rewritten);
+        }
+    }
+
+    private static String distinctReason(Map<String, Object> step) {
+        String title = Texts.text(step.get("title"));
+        String skill = Texts.text(step.get("target_skill"));
+        String level = Texts.text(step.get("to_level"));
+        if (title.isBlank()) {
+            return skill.isBlank() ? "承接上一步，按上一步的结论继续推进。"
+                : "承接上一步，聚焦" + skill + "的落地验证。";
+        }
+        String subject = skill.isBlank() ? "上一步的内容" : skill;
+        String target = level.isBlank() ? "" : "推进到 " + level + "，";
+        return "承接上一步，把" + subject + target + "落点在「" + title + "」。";
+    }
+
+    private static boolean repeats(List<String> seen, String text) {
+        for (String previous : seen) {
+            if (overlap(previous, text) >= REPEAT_REASON || prefixLength(previous, text) >= REPEAT_PREFIX) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** 公共前缀长度：中文里前 24 个字一模一样，读起来就是同一句话。 */
+    private static int prefixLength(String left, String right) {
+        int limit = Math.min(left.length(), right.length());
+        int index = 0;
+        while (index < limit && left.charAt(index) == right.charAt(index)) {
+            index++;
+        }
+        return index;
+    }
+
+    /** benefit 不能是 why 的翻版：与 why 太像时，改用各阶段里程碑来回答「走完能得到什么」。 */
+    private static void rewriteRepeatedBenefit(Map<String, Object> compound) {
+        String why = Texts.text(compound.get("why"));
+        String benefit = Texts.text(compound.get("benefit"));
+        if (why.isBlank() || benefit.isBlank() || overlap(why, benefit) < REPEAT_BENEFIT) {
+            return;
+        }
+        List<Map<String, Object>> stages = copyList(compound.get("stages"));
+        String milestone = "";
+        for (Map<String, Object> stage : stages) {
+            String value = Texts.text(stage.get("milestone"));
+            if (!value.isBlank()) {
+                milestone = value;
+            }
+        }
+        compound.put("benefit", milestone.isBlank()
+            ? "按上述阶段逐步推进，让缺口逐项转为岗位要求的达标能力。"
+            : "按上述阶段逐步推进，以「" + milestone + "」作为最终验收标志。");
+    }
+
+    /** 两段文案的最长公共子串占比 = 识别「换了个说法重复同一句」的复读。 */
+    private static double overlap(String left, String right) {
+        if (left == null || right == null || left.isBlank() || right.isBlank()) {
+            return 0.0;
+        }
+        int[] previous = new int[right.length() + 1];
+        int longest = 0;
+        for (int i = 1; i <= left.length(); i++) {
+            int[] current = new int[right.length() + 1];
+            for (int j = 1; j <= right.length(); j++) {
+                if (left.charAt(i - 1) == right.charAt(j - 1)) {
+                    current[j] = previous[j - 1] + 1;
+                    if (current[j] > longest) {
+                        longest = current[j];
+                    }
+                }
+            }
+            previous = current;
+        }
+        return (double) longest / Math.min(left.length(), right.length());
+    }
+
+    private static LocalDate parseDate(String value) {
+        try {
+            return value == null || value.isBlank() ? null : LocalDate.parse(value);
+        } catch (DateTimeParseException ignored) {
+            return null;
+        }
+    }
+
+    /** 深拷贝一层：polish 只改顶层键，不碰原始对象，避免影响到别处引用的同一份结论。 */
+    private static List<Map<String, Object>> copyList(Object value) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        if (value instanceof List<?> list) {
+            for (Object item : list) {
+                if (item instanceof Map<?, ?> raw) {
+                    result.add(copyMap(raw));
+                }
+            }
+        }
+        return result;
+    }
+
+    private static Map<String, Object> copyMap(Map<?, ?> raw) {
+        Map<String, Object> copy = new LinkedHashMap<>();
+        raw.forEach((key, value) -> copy.put(String.valueOf(key), value));
+        return copy;
     }
 
     /** 事实清单里新增一条：编号按清单顺序生成（F1、F2…），结论引用它即证明「数字有出处」。 */

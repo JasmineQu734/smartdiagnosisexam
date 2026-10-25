@@ -1,0 +1,10 @@
+{
+  "my_data": {
+    "file_name": "my_data.json",
+    "columns": {
+      "prompt": "instruction",
+      "query": "input",
+      "response": "output"
+    }
+  }
+}

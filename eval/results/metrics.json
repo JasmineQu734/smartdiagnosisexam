@@ -1,0 +1,241 @@
+{
+  "meta": {
+    "generated_at": "2026-10-18 23:40:10",
+    "rule_count": 22,
+    "rule_sources": [
+      "002_seed.sql: 6 行",
+      "008_rule_engine.sql: 6 行",
+      "009_report_gas_rules.sql: 12 行",
+      "012_rule_calibration.sql: 8 行"
+    ],
+    "corpus": "my_data15.json",
+    "corpus_size": 150,
+    "rule_table": [
+      [
+        "EXAM_RESULT",
+        2,
+        [
+          "(默认)"
+        ],
+        "groups"
+      ],
+      [
+        "PERSONAL_GAP",
+        4,
+        [
+          "SAFETY",
+          "(默认)"
+        ],
+        "groups"
+      ],
+      [
+        "REPORT_ANALYSIS",
+        2,
+        [
+          "(默认)"
+        ],
+        "groups"
+      ],
+      [
+        "REPORT_GAS",
+        12,
+        [
+          "VALUE",
+          "KEYWORD"
+        ],
+        "groups"
+      ],
+      [
+        "TALENT_GAP",
+        2,
+        [
+          "(默认)"
+        ],
+        "groups"
+      ]
+    ]
+  },
+  "E1": {
+    "executions": 450,
+    "matched": 404,
+    "per_scene": {
+      "PERSONAL_GAP": {
+        "n": 150,
+        "matched": 145,
+        "rule_hits": {
+          "SKILL_BELOW_REQUIRED": 120,
+          "SAFETY_DEDUCTION": 50,
+          "SAFETY_VETO_VIOLATION": 75
+        }
+      },
+      "EXAM_RESULT": {
+        "n": 150,
+        "matched": 132,
+        "rule_hits": {
+          "EXAM_BELOW_PASS": 132
+        }
+      },
+      "REPORT_ANALYSIS": {
+        "n": 150,
+        "matched": 127,
+        "rule_hits": {
+          "PRACTICE_SKILL_CAUSE": 52,
+          "PRACTICE_HUMAN_CAUSE": 75
+        }
+      }
+    },
+    "rule_hits": {
+      "SKILL_BELOW_REQUIRED": 120,
+      "EXAM_BELOW_PASS": 132,
+      "SAFETY_DEDUCTION": 50,
+      "PRACTICE_SKILL_CAUSE": 52,
+      "SAFETY_VETO_VIOLATION": 75,
+      "PRACTICE_HUMAN_CAUSE": 75
+    },
+    "skip_reasons": {
+      "分组 SAFETY 已收敛": 75,
+      "分组 (默认) 已收敛": 75
+    },
+    "profiles_with_any_hit": 150,
+    "exam_threshold_drift": {
+      "true_positive": 132,
+      "false_negative": 0,
+      "false_positive": 0,
+      "silent_failure_rate": 0.0,
+      "recall_vs_business_pass_line": 1.0,
+      "precision": 1.0
+    },
+    "level_hardcoding": {
+      "hit": 145,
+      "missed_because_level_not_3": 0,
+      "missed_because_undecidable": 0,
+      "no_gap_expected": 5,
+      "future_axis_gap_with_no_rule": 120
+    },
+    "safety_negative_profiles": 125,
+    "safety_auth_violation_profiles": 75,
+    "safety_unflagged": 0,
+    "coverage_profiles_with_any_hit": 150,
+    "coverage_rate": 1.0,
+    "rules_never_fired": [],
+    "rules_in_covered_scenes": 8
+  },
+  "E2": {
+    "runs": 450,
+    "byte_identical_reruns": 450,
+    "identical_after_rule_shuffle": 450,
+    "determinism_rate": 1.0,
+    "order_invariance_rate": 1.0
+  },
+  "E3": {
+    "n": 150,
+    "schema_conformance": 1.0,
+    "level_arithmetic_consistency": 1.0,
+    "std_mapping_consistency": 1.0,
+    "priority_order_consistency": 1.0,
+    "deadline_monotonicity": 1.0,
+    "safety_boundary_completeness": 1.0,
+    "baseline_fact_consistency": 1.0,
+    "model_profile_fact_consistency": 0.7467,
+    "safety_negative_handled_rate": 1.0,
+    "safety_negative_profiles": 125,
+    "evidence_category_coverage": 1.0,
+    "numbers_total": 2324,
+    "numbers_unverified": 4,
+    "number_unverified_rate": 0.0017,
+    "outputs_with_unverified_number_rate": 0.0267,
+    "evidence_grounding_rate": 1.0,
+    "issue_examples": {
+      "fact_mismatch": [
+        {
+          "idx": 0,
+          "cert": 1,
+          "goal": 4,
+          "task": 4,
+          "g0": {
+            "current": "L1",
+            "job_req": "L3",
+            "future_req": "L4"
+          }
+        },
+        {
+          "idx": 3,
+          "cert": 3,
+          "goal": 5,
+          "task": 5,
+          "g0": {
+            "current": "L3",
+            "job_req": "L4",
+            "future_req": "L5"
+          }
+        },
+        {
+          "idx": 8,
+          "cert": 5,
+          "goal": 5,
+          "task": 5,
+          "g0": {
+            "current": "L4",
+            "job_req": "L5",
+            "future_req": "L5"
+          }
+        }
+      ],
+      "unverified_number": [
+        {
+          "idx": 88,
+          "nums": [
+            "43.7"
+          ]
+        },
+        {
+          "idx": 97,
+          "nums": [
+            "3.2"
+          ]
+        },
+        {
+          "idx": 121,
+          "nums": [
+            "3.9"
+          ]
+        }
+      ]
+    }
+  },
+  "E4": {
+    "executions": 450,
+    "total_s": 0.0056,
+    "mean_ms": 0.0122,
+    "p50_ms": 0.0105,
+    "p95_ms": 0.0194,
+    "max_ms": 0.0609
+  },
+  "E5": {
+    "grid_cases": 200,
+    "value_ladder_accuracy_vs_intent": 1.0,
+    "value_ladder_accuracy_vs_implementation": 1.0,
+    "keyword_group_correct": 200,
+    "keyword_accuracy": 1.0,
+    "severity_merge_correct": 200,
+    "severity_accuracy": 1.0,
+    "fact_reference_correct": 120,
+    "fact_reference_cases": 120,
+    "fact_reference_accuracy": 1.0,
+    "unreachable_rules": [],
+    "comfortable_cases": 40,
+    "false_escalation_cases": 0,
+    "false_escalation_rate": 0.0
+  },
+  "E6": {
+    "baseline_unverified_number_rate": 0.0267,
+    "baseline_safety_boundary_fail": 0.0,
+    "baseline_level_arithmetic_fail": 0.0,
+    "rule_layer_unverified_number_rate": 0.0,
+    "rule_layer_safety_boundary_fail": 0.0,
+    "safety_negative_flagged_by_baseline": 0,
+    "safety_negative_flagged_by_rule_layer": 125,
+    "safety_negative_profiles": 125,
+    "note": "两条路径的强项互补：规则层确定、可溯源、安全记录全部处置，覆盖 100.0% 的档案、考试与等级差距漏报率为 0；模型输出的优势在表达与覆盖未见组合，但数字可溯源率与确定性不如规则层。结论：规则层守住确定性与安全边界，模型层补表达，护栏层负责取舍并留痕。"
+  }
+}

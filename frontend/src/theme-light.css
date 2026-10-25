@@ -1,0 +1,315 @@
+/* ============================================================
+   白天模式（html.day）—— 与黑夜模式同一套 token 骨架：
+   工业浅灰蓝底 + 纯白面板 + 金线 HUD 刻线保留，金色/科技蓝
+   点缀加深以保证对比度。黑夜=深夜航蓝香槟金；白天=浅色工作台。
+   切换由 App.vue 控制 html 的 day/dark 类，选择存 localStorage。
+   ============================================================ */
+
+html.day {
+  --ink: #22314e;
+  --sub: #5d6d8a;
+  --faint: #8a97b0;
+  --line: #d4dcea;
+  --line-soft: rgba(198, 209, 228, .6);
+  --blue: #2e6bd8;
+  --green: #1fa97a;
+  --amber: #d98a1f;
+  --red: #d5443f;
+  --gold: #a8874a;
+  --gold-deep: #8c6c33;
+  --goldline: rgba(168, 135, 74, .55);
+  --gold-soft: rgba(168, 135, 74, .12);
+  --bg: #eef1f7;
+  --card-hi: rgba(255, 255, 255, .94);
+  --card-lo: rgba(246, 248, 252, .88);
+  --card-solid: #ffffff;
+  --hover: rgba(46, 107, 216, .08);
+}
+
+/* ---- 基底与底纹：浅色细网格 ---- */
+html.day body { background: var(--bg); }
+html.day body::before {
+  background-image:
+    linear-gradient(rgba(46, 107, 216, .055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(46, 107, 216, .055) 1px, transparent 1px);
+}
+
+/* ---- 关闭夜景辉光：白天不发光，只留清晰层次 ---- */
+html.day h1, html.day .greeting b, html.day .metric b, html.day .metric-value b,
+html.day .hero strong, html.day .ring b, html.day .brand,
+html.day nav button.active { text-shadow: none; }
+html.day .hero strong { color: #8c6c33; }
+
+/* ---- 侧栏与面板：白玻璃 ---- */
+html.day aside {
+  background: linear-gradient(170deg, #ffffff, #f6f8fc);
+  border: 1px solid var(--line);
+  border-top: 1px solid var(--goldline);
+  box-shadow: 0 2px 10px rgba(31, 45, 80, .08);
+}
+html.day .panel {
+  background: linear-gradient(170deg, rgba(255, 255, 255, .94), rgba(246, 248, 252, .88));
+  box-shadow: 0 2px 10px rgba(31, 45, 80, .08);
+}
+html.day .hero {
+  background: linear-gradient(170deg, #ffffff, #f2f6fd);
+  box-shadow: 0 2px 10px rgba(31, 45, 80, .08);
+}
+html.day .tool-popover-panel { background: #ffffff; box-shadow: 0 8px 24px rgba(31, 45, 80, .16); }
+html.day nav button.active { box-shadow: inset 0 0 14px rgba(168, 135, 74, .06); }
+
+/* ---- 顶栏辉光分隔线柔化 ---- */
+html.day header::after {
+  background: linear-gradient(90deg, transparent, rgba(168, 135, 74, .5) 18%, rgba(46, 107, 216, .3) 55%, transparent 92%);
+}
+
+/* ---- 滚动条 ---- */
+html.day main { scrollbar-color: #c4cfe0 transparent; }
+html.day main::-webkit-scrollbar-thumb { background: #c4cfe0; background-clip: content-box; }
+html.day main::-webkit-scrollbar-thumb:hover { background: #a9b8cf; background-clip: content-box; }
+
+/* ---- 3D 全屏页顶部导航条：白玻璃 ---- */
+html.day .twin-floatnav {
+  background: linear-gradient(170deg, rgba(255, 255, 255, .95), rgba(244, 247, 252, .92));
+  border-bottom: 1px solid rgba(168, 135, 74, .5);
+  box-shadow: 0 2px 12px rgba(31, 45, 80, .1);
+}
+html.day .twin-floatnav::after {
+  background: linear-gradient(90deg, transparent, rgba(168, 135, 74, .55) 18%, rgba(46, 107, 216, .3) 55%, transparent 92%);
+}
+html.day .twin-floatnav button { color: #5d6d8a; }
+html.day .twin-floatnav button:hover { color: #22314e; background: rgba(46, 107, 216, .08); }
+html.day .twin-floatnav button.active {
+  color: #8c6c33;
+  background: rgba(168, 135, 74, .12);
+  border-color: rgba(168, 135, 74, .45);
+  text-shadow: none;
+}
+
+/* ---- Element Plus：白天回到浅色组件（夜里由 dark 类驱动） ---- */
+html.day .el-dialog, html.day .el-drawer, html.day .el-message-box {
+  background: #ffffff; border: 1px solid var(--line); color: #22314e;
+  box-shadow: 0 12px 36px rgba(31, 45, 80, .22);
+}
+html.day .el-dialog__title, html.day .el-message-box__title, html.day .el-drawer__title { color: #22314e; }
+html.day .el-dialog__body, html.day .el-message-box__content, html.day .el-drawer__body { color: #3c4c6b; }
+html.day .el-message { background: #ffffff; border: 1px solid var(--line); color: #22314e; }
+html.day .el-popper, html.day .el-select-dropdown, html.day .el-dropdown-menu {
+  background: #ffffff; border: 1px solid var(--line); color: #22314e;
+}
+html.day .el-select-dropdown__item { color: #3c4c6b; }
+html.day .el-select-dropdown__item.is-hovering, html.day .el-select-dropdown__item:hover { background: rgba(46, 107, 216, .08); }
+html.day .el-select-dropdown__item.is-selected { color: #2e6bd8; }
+html.day .el-input__wrapper { background: #ffffff; box-shadow: 0 0 0 1px #c9d4e6 inset; }
+html.day .el-input__wrapper.is-focus { box-shadow: 0 0 0 1px #2e6bd8 inset; }
+html.day .el-select__wrapper, html.day .el-textarea__inner, html.day .el-input-number {
+  background: #ffffff; box-shadow: 0 0 0 1px #c9d4e6 inset;
+}
+html.day .el-select__wrapper:hover, html.day .el-textarea__inner:hover { box-shadow: 0 0 0 1px #2e6bd8 inset; }
+html.day .el-select__wrapper.is-focused { box-shadow: 0 0 0 1px #2e6bd8 inset, 0 0 0 3px rgba(46, 107, 216, .12); }
+html.day .el-select__selected-item, html.day .el-select__placeholder { color: #22314e; }
+html.day .el-select__suffix, html.day .el-input__suffix, html.day .el-input__prefix { color: #8a97b0; }
+html.day .el-input-number { background: #ffffff; }
+html.day .el-input__inner { color: #22314e; }
+html.day .el-input__inner::placeholder { color: #9aa7bf; }
+html.day .el-table { background: #ffffff; color: #22314e; }
+html.day .el-table tr, html.day .el-table th.el-table__cell { background: #ffffff; }
+html.day .el-table th.el-table__cell { color: #5d6d8a; }
+html.day .el-table td.el-table__cell, html.day .el-table th.el-table__cell.is-leaf { border-bottom-color: #dfe6f2; }
+html.day .el-table--enable-row-hover .el-table__body tr:hover > td.el-table__cell { background: rgba(46, 107, 216, .06); }
+html.day .el-tag { background: rgba(46, 107, 216, .08); border-color: rgba(46, 107, 216, .35); color: #2e6bd8; }
+html.day .el-collapse { border-color: #dfe6f2; }
+html.day .el-collapse-item__header { background: #ffffff; color: #22314e; border-bottom-color: #dfe6f2; }
+html.day .el-collapse-item__wrap { background: #ffffff; color: #3c4c6b; border-bottom-color: #dfe6f2; }
+html.day .el-overlay { background: rgba(38, 52, 82, .45); }
+html.day .el-button--primary { --el-button-bg-color: #a8874a; --el-button-border-color: #a8874a; }
+html.day .el-button--primary:hover, html.day .el-button--primary:focus {
+  --el-button-hover-bg-color: #8c6c33; --el-button-hover-border-color: #8c6c33;
+}
+
+/* ---- 登录页：浅色版 ---- */
+html.day .hlogin { color: #22314e; background: #e8edf6; }
+html.day .hlogin .vignette { background: radial-gradient(ellipse at 42% 46%, rgba(255, 255, 255, 0) 38%, rgba(190, 203, 226, .4) 100%); }
+html.day .hlogin .login-card {
+  background: linear-gradient(160deg, rgba(255, 255, 255, .96), rgba(243, 247, 253, .92));
+  border: 1px solid rgba(168, 135, 74, .35);
+  box-shadow: 0 12px 40px rgba(31, 45, 80, .14);
+}
+html.day .hlogin .eyebrow { color: #8a97b0; }
+html.day .hlogin .field { background: rgba(255, 255, 255, .9); border-color: #c9d4e6; }
+html.day .hlogin .field:focus-within { border-color: #2e6bd8; box-shadow: 0 0 10px rgba(46, 107, 216, .25); }
+html.day .hlogin .field input { color: #22314e; }
+html.day .hlogin .field input::placeholder { color: #9aa7bf; }
+html.day .hlogin .msg.err { color: #d5443f; }
+html.day .hlogin .msg.ok { color: #1fa97a; }
+html.day .hlogin .hint { color: #8a97b0; }
+
+/* ============================================================
+   全量浅色文字修正：黑夜版大量 color 写死为浅色（#f0f5ff /
+   #c3d1ea / #f4e3b8 / #aebde0 等），白底下不可见——逐条压深。
+   ============================================================ */
+
+/* 亮白标题类 → 深藏青 */
+html.day h1, html.day .panel-title h2, html.day .result-banner b, html.day .analysis-head b,
+html.day .info-item span, html.day .timeline-head b, html.day .section-title h3, html.day .role-banner b,
+html.day .agent-strip-main b, html.day .agent-placeholder b, html.day .agent-block h3,
+html.day .resource-head b, html.day .course-search-head b, html.day .practice-stem,
+html.day .practice-dialog .el-dialog__title, html.day .signal-stat .metric-value b { color: #1f2b45; }
+
+/* 正文类 → 深灰蓝 */
+html.day .metric > small, html.day .metric span, html.day .form-section-title, html.day .preview-value,
+html.day .template-section > b, html.day .signal-note, html.day table.role-table td, html.day .role-hint,
+html.day .agent-reasons li, html.day .risk-list li, html.day .practice-option, html.day .sop-field label,
+html.day .form-notice, html.day .judge-row, html.day .analysis-list b, html.day .template-label,
+html.day .role-page .role-note, html.day .timeline-item p, html.day .report-form .el-form-item__label,
+html.day .preview-section > b { color: #3c4c6b; }
+
+/* 金色文字类 → 深金 */
+html.day .brand, html.day .hero strong, html.day .agent-verdict b, html.day .exam-open-main b,
+html.day .exam-sheet-item.done { color: #8c6c33; }
+html.day .agent-strip-icon { color: #a8874a; background: rgba(168, 135, 74, .12); }
+
+/* 状态色压深 */
+html.day .chip.warn, html.day .signal-stat.warn .metric-value b, html.day .exam-wait-hint { color: #b06f10; }
+html.day .chip.bad, html.day .sop-field .field-error { color: #c5433d; }
+html.day .exam-wait-hint { border-color: rgba(176, 111, 16, .4); }
+
+/* 深色底纹小面板 → 浅色底 */
+html.day .signal-note, html.day .practice-option { background: rgba(46, 107, 216, .05); border-color: #d4dcea; }
+html.day table.role-table th { color: #5d6d8a; background: rgba(46, 107, 216, .07); }
+html.day .preview-section > b { background: rgba(46, 107, 216, .07); }
+html.day .preview-label { background: #f6f9fd; color: #5d6d8a; }
+html.day .file-input { background: #ffffff; border-color: #c9d4e6; color: #3c4c6b; }
+html.day .file-input::file-selector-button { background: #a8874a; color: #ffffff; }
+html.day .tool-button, html.day .action-button {
+  color: #5d6d8a; background: rgba(46, 107, 216, .06);
+  border-color: #c9d4e6; box-shadow: none;
+}
+html.day .tool-button:hover { color: #2e6bd8; }
+html.day .role-hint { background: var(--gold-soft); }
+
+/* Element Plus 黑夜覆盖的反向：白天全部回浅色 */
+html.day .el-button { background: #ffffff; border-color: #c9d4e6; color: #3c4c6b; box-shadow: none; }
+html.day .el-button:hover, html.day .el-button:focus { background: #f2f6fd; border-color: rgba(168, 135, 74, .6); color: #8c6c33; }
+html.day .el-button--primary { background: #a8874a; border-color: #a8874a; color: #ffffff; }
+html.day .el-button--primary:hover, html.day .el-button--primary:focus { background: #8c6c33; border-color: #8c6c33; color: #ffffff; }
+html.day .el-button.is-disabled, html.day .el-button.is-disabled:hover { background: #f0f3f9; border-color: #dfe6f2; color: #a9b6cd; }
+html.day .el-dialog__headerbtn { background: rgba(46, 107, 216, .06); border-color: #c9d4e6; }
+html.day .el-input__inner, html.day .el-textarea__inner { color: #22314e; }
+html.day .el-select-dropdown__item.is-selected { background: rgba(168, 135, 74, .12); color: #8c6c33; }
+html.day body[class*="role-"] .el-select-dropdown__item.is-hovering { color: #22314e; }
+html.day .el-dropdown-menu { background: #ffffff; border-color: #d4dcea; }
+html.day .el-dropdown-menu__item { color: #3c4c6b; }
+html.day .el-dropdown-menu__item:not(.is-disabled):hover { background: rgba(46, 107, 216, .08); color: #2e6bd8; }
+html.day .el-message { background: #ffffff; border-color: #d4dcea; border-left-color: #a8874a; }
+html.day .el-collapse-item__header { color: #22314e; }
+html.day .el-picker-panel { background: #ffffff; border-color: #d4dcea; color: #22314e; }
+html.day .el-pagination .el-pager li.is-active { background: rgba(168, 135, 74, .14); color: #8c6c33; }
+html.day .el-popper, html.day .el-select__popper { background: #ffffff !important; border-color: #d4dcea !important; color: #22314e; }
+html.day .el-popper.is-light .el-popper__arrow::before,
+html.day .el-select__popper .el-popper__arrow::before { background: #ffffff !important; border-color: #d4dcea !important; }
+
+/* 登录卡标题：白天白卡上用深色（覆盖组件内基色） */
+html.day .hlogin .login-card h1 { color: #22314e; }
+
+/* ============================================================
+   日间全量适配 v2：style.css / roles.css / dialogs.css 里写死的
+   深板岩底（rgba(15,27,55,*) / #0e1d3a 等）在白天全部换浅色。
+   语言统一：浅蓝灰填充 + #d4dcea 描边 + 金色点缀，与白卡同族。
+   ============================================================ */
+
+/* ---- 信息块 / 状态卡 / 时间线（截图里的丑灰块就是这批） ---- */
+html.day .info-item { background: #f6f9fd; border-color: #dfe6f2; }
+html.day .info-item label { color: #5d6d8a; }
+html.day .info-item span { color: #1f2b45; }
+html.day .signal-stat { background: #f6f9fd; border-color: #dfe6f2; border-top-color: rgba(168, 135, 74, .55); }
+html.day .timeline-item { background: #f6f9fd; border-color: #dfe6f2; }
+html.day .timeline-item::before { background: #a8874a; }
+html.day .judgement { background: #f6f9fd; border-left-color: #2e6bd8; }
+html.day .judgement b, html.day .judgement strong { color: #1f2b45; }
+html.day .cert-card { background: #f6f9fd; border-color: #dfe6f2; }
+html.day .form-section { background: #f6f9fd; border-color: #dfe6f2; }
+html.day .resource-card { background: #f6f9fd; border-color: #dfe6f2; }
+html.day .readiness-card { background: linear-gradient(170deg, #ffffff, #f2f6fd); }
+
+/* ---- Agent 建议区 ---- */
+html.day .agent-strip { background: rgba(46, 107, 216, .05); border-color: rgba(46, 107, 216, .35); }
+html.day .agent-panel { background: rgba(46, 107, 216, .04); border-color: rgba(168, 135, 74, .5); }
+html.day .agent-placeholder { background: #f6f9fd; border-color: #dfe6f2; }
+html.day .agent-verdict { background: #f6f9fd; border-color: #dfe6f2; }
+
+/* ---- 学习 / 考试 / 资料 ---- */
+html.day .course-search-panel { background: #f6f9fd; border-color: #dfe6f2; border-left-color: #a8874a; }
+html.day .course-result-card { background: #f6f9fd; border-color: #dfe6f2; }
+html.day .practice-item { background: #f6f9fd; border-color: #dfe6f2; }
+html.day .sop-field { background: #f6f9fd; border-color: #dfe6f2; }
+html.day .sop-field code { color: #2e6bd8; background: rgba(46, 107, 216, .06); border-color: #d4dcea; }
+html.day .material-banner { background: #f6f9fd; border-color: #dfe6f2; }
+html.day .material-question-list .material-options li { background: #ffffff; border-color: #dfe6f2; color: #3c4c6b; }
+html.day .material-answer { color: #1fa97a; }
+html.day .exam-answer-sheet { background: #ffffff; border-color: #dfe6f2; box-shadow: 0 2px 10px rgba(31, 45, 80, .08); }
+html.day .exam-sheet-item { background: #ffffff; border-color: #c9d4e6; color: #3c4c6b; }
+html.day .exam-sheet-item:hover { border-color: rgba(168, 135, 74, .6); }
+
+/* ---- 进度条 / 能力条：轨道变浅，填充保持金色渐变 ---- */
+html.day .bar { background: #e2e9f4; }
+html.day .progress { background: #e2e9f4; }
+html.day .ring { border-color: #d4dcea; border-top-color: var(--gold); border-right-color: #2e6bd8; background: #ffffff; }
+
+/* ---- 侧栏用户卡 / 角色签 / 品牌位 / 分段签 ---- */
+html.day .user-mini { background: #f6f9fd; border-color: #dfe6f2; }
+html.day .brand-mark { background: linear-gradient(170deg, #ffffff, #f2f6fd); border-color: rgba(168, 135, 74, .55); box-shadow: 0 2px 8px rgba(31, 45, 80, .1); }
+html.day .app-shell .role-chip { background: #f6f9fd; }
+html.day .sub-tabs { background: #eef2f9; border-color: #dfe6f2; }
+html.day .sub-tabs button { color: #5d6d8a; }
+html.day .sub-tabs button.active { background: #ffffff; color: #8c6c33; box-shadow: 0 1px 4px rgba(31, 45, 80, .12); }
+
+/* ---- 按钮：禁用态浅色 ---- */
+html.day .action-button:disabled, html.day .action-button:disabled:hover,
+html.day .action-button.active:disabled, html.day .action-button.active:disabled:hover {
+  background: #f0f3f9; border-color: #dfe6f2; color: #a9b6cd;
+}
+html.day .chip-button { background: #ffffff; color: #3c4c6b; border-color: #c9d4e6; }
+html.day .chip-button:hover { color: #8c6c33; border-color: rgba(168, 135, 74, .6); }
+
+/* ---- 弹窗补漏：头部条 / 滚动条（dialogs.css 写死的深色） ---- */
+html.day .el-message-box__header { background: #ffffff; border-bottom-color: #dfe6f2; }
+html.day .el-dialog__body::-webkit-scrollbar-thumb,
+html.day .el-drawer::-webkit-scrollbar-thumb { background: #c4cfe0; background-clip: content-box; }
+
+/* ---- 杂项收尾 ---- */
+html.day .empty-tip { color: #8a97b0; }
+html.day .metric-note { color: #8a97b0; }
+html.day table.role-table td { border-bottom-color: #e6ecf5; }
+html.day .role-table tr:hover td { background: rgba(46, 107, 216, .04); }
+
+/* ---- 第二批浅色文字收尾（逐条压深） ---- */
+html.day .app-shell .greeting, html.day .greeting { color: #1f2b45; }
+html.day .inline-link, html.day .inline-link:hover, html.day .source-link, html.day .source-link:hover { color: #2e6bd8; }
+html.day .doc-text, html.day .doc-excerpt li, html.day .material-analysis,
+html.day .agent-strip-main p, html.day .agent-placeholder p,
+html.day .resource-card p, html.day .course-hit, html.day .role-banner p { color: #3c4c6b; }
+html.day .resource-card small, html.day .course-search-note, html.day .sop-field small,
+html.day .exam-open-main small, html.day .timeline-head time, html.day .signal-note-label { color: #8a97b0; }
+html.day .chip.info { color: #2e6bd8; background: rgba(46, 107, 216, .08); border-color: rgba(46, 107, 216, .35); }
+html.day .template-field code { color: #2e6bd8; background: rgba(46, 107, 216, .06); border-color: #d4dcea; }
+html.day .practice-option.picked { color: #8c6c33; background: rgba(168, 135, 74, .1); border-color: rgba(168, 135, 74, .5); }
+html.day .practice-option input { accent-color: #a8874a; }
+html.day .el-dialog__headerbtn .el-dialog__close { color: #5d6d8a; }
+html.day .el-dialog__headerbtn .el-dialog__close:hover { color: #1f2b45; }
+html.day .el-drawer__header { color: #22314e; }
+html.day .el-button--primary.is-disabled,
+html.day .el-button--primary.is-disabled:hover, html.day .el-button--primary.is-disabled:focus {
+  background: #f0f3f9; border-color: #dfe6f2; color: #a9b6cd;
+}
+
+/* ---- 练习/考试弹窗（fullscreen 后）日间协调：头尾浅色、选项白底细边 ----
+   此前 dialogs.css 的深夜蓝头尾在白天漏出，选项行是淡蓝灰块，与白卡不搭。 */
+html.day .el-dialog__header { background: #f8fafd; border-bottom: 1px solid var(--line); }
+html.day .el-dialog__header::after { background: linear-gradient(90deg, transparent, rgba(168, 135, 74, .55) 20%, transparent 80%); }
+html.day .el-dialog__footer { background: #f8fafd; border-top: 1px solid var(--line); }
+html.day .practice-option { background: #ffffff; border-color: #dfe6f2; }
+html.day .practice-option:hover { background: #faf6ec; border-color: rgba(168, 135, 74, .55); }
+html.day .practice-option.picked { background: rgba(168, 135, 74, .1); border-color: rgba(168, 135, 74, .55); }
+html.day .practice-item { background: #f8fafd; border-color: #e3eaf4; }
+html.day .practice-dialog .el-dialog__body::-webkit-scrollbar-track { background: #f2f5fa; }

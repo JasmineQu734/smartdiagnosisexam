@@ -7,13 +7,13 @@ USE train_system;
 -- ===== 角色与用户 =====
 INSERT INTO role (code, name, scope, modules, members, note, sort_no) VALUES
   ('EMPLOYEE', '员工', 'PERSONAL', 8, 76, '只能看本人完整能力画像、记忆展示、学习建议与本人实操任务', 1),
-  ('TEAM_LEAD', '组长（员工）', 'PERSONAL + TEAM', 9, 9, '员工全部板块 + 班组报告填报（每次实操活动必须上传报告）', 2),
+  ('TEAM_LEAD', '组长', 'PERSONAL + TEAM', 9, 9, '员工全部板块 + 班组报告填报（每次实操活动必须上传报告）', 2),
   ('EXECUTIVE', '公司上级（老总）', 'COMPANY', 4, 1, '全公司人才驾驶舱、技能矩阵、培训看板与运行诊断 Agent；授权高管可加账号', 3),
   ('ADMIN', '系统管理员', 'PLATFORM', 4, 1, '只管理平台数据与配置，看不到员工个人页面与老总页面', 4)
   ON DUPLICATE KEY UPDATE name=VALUES(name), scope=VALUES(scope), modules=VALUES(modules), members=VALUES(members), note=VALUES(note), sort_no=VALUES(sort_no);
 INSERT INTO app_user (id, username, display_name, password_hash, role_code, role_name, position, team, org, page_scope, status, last_login) VALUES
   (1, 'zhangwei', '张伟', '', 'EMPLOYEE', '员工', '变电运维值班员', '变电运维一班', '变电运维中心', 'PERSONAL', 'ACTIVE', '2026-09-19 16:30'),
-  (2, 'limin', '李民', '', 'TEAM_LEAD', '组长（员工）', '变电运维一班班组长', '变电运维一班', '变电运维中心', 'PERSONAL + TEAM', 'ACTIVE', '2026-09-19 20:05'),
+  (2, 'limin', '李民', '', 'TEAM_LEAD', '组长', '变电运维一班班组长', '变电运维一班', '变电运维中心', 'PERSONAL + TEAM', 'ACTIVE', '2026-09-19 20:05'),
   (3, 'wangzong', '王总', '', 'EXECUTIVE', '公司上级（老总）', '分管老总', '中心管理层', '变电运维中心', 'COMPANY', 'ACTIVE', '2026-09-19 19:40'),
   (4, 'admin', '系统管理员', '', 'ADMIN', '系统管理员', '平台管理员', '信息中心', '变电运维中心', 'PLATFORM', 'ACTIVE', '2026-09-20 09:32'),
   (5, 'wangjianguo', '王建国', '', 'EMPLOYEE', '员工', '继电保护主值班员', '继电保护班', '变电运维中心', 'PERSONAL', 'ACTIVE', '2026-09-18 17:20'),

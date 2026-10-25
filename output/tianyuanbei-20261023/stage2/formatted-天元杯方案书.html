@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="docx-page-size" content="A4">
+<title>天元杯参赛项目方案书</title>
+<style>
+  /* 页面规则：正文页脚居中页码，封面目录页无页脚 */
+  @page {
+    @bottom-center { content: "第 " counter(page) " 页"; }
+  }
+  @page coverpage {
+    @bottom-center { content: none; }
+  }
+  section[role="cover"] { page: coverpage; }
+
+  :root {
+    --ff-body: "SimSun", "宋体", serif;
+    --ff-heading: "SimHei", "黑体", sans-serif;
+    --fs-cover-title: 26pt;
+    --fs-cover-badge: 13pt;
+    --fs-cover-sub: 14pt;
+    --fs-cover-date: 11pt;
+    --fs-h1: 16pt;
+    --fs-h2: 14pt;
+    --fs-h3: 12pt;
+    --fs-body: 12pt;
+    --fs-small: 10.5pt;
+    --fs-tiny: 10pt;
+    --lh-body: 1.7;
+    --color-title: #0d2f66;
+    --color-primary: #1a5fb4;
+    --color-text: #000000;
+    --color-heading: #333333;
+    --color-muted: #5f6368;
+    --color-subtitle: #40506b;
+    --color-rule: #000000;
+    --color-highlight: #f4f7fb;
+    --color-bg: #ffffff;
+    --sp-xs: 0.3em;
+    --sp-sm: 0.5em;
+    --sp-md: 0.8em;
+    --sp-lg: 1.2em;
+    --sp-xl: 1.6em;
+    --sp-2xl: 2em;
+    --sp-3xl: 3em;
+    --radius-card: 4px;
+  }
+
+  body {
+    font-family: var(--ff-body);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    color: var(--color-text);
+    background: var(--color-bg);
+    margin: 0;
+  }
+  * { box-sizing: border-box; }
+
+  /* 封面 */
+  .report-cover {
+    min-height: 88vh;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    text-align: center;
+    background: var(--color-highlight);
+    border-bottom: 3px solid var(--color-primary);
+  }
+  .cover-badge {
+    font-size: var(--fs-cover-badge); font-weight: bold; color: var(--color-primary);
+    letter-spacing: 0.15em; margin-bottom: var(--sp-2xl);
+    border: 1px solid var(--color-primary); padding: 0.4em 1.4em; border-radius: var(--radius-card);
+  }
+  .cover-title {
+    font-size: var(--fs-cover-title); font-weight: bold; color: var(--color-title);
+    font-family: var(--ff-heading);
+    margin-bottom: var(--sp-md); line-height: 1.4;
+  }
+  .cover-subtitle {
+    font-size: var(--fs-cover-sub); color: var(--color-subtitle); font-family: var(--ff-heading);
+    margin-bottom: var(--sp-3xl); line-height: 1.6; max-width: 80%;
+  }
+  .cover-meta { font-size: var(--fs-body); color: var(--color-muted); line-height: 2.0; }
+  .cover-meta p { text-indent: 0; margin: 0; }
+  .cover-date { margin-top: var(--sp-3xl); font-size: var(--fs-cover-date); color: var(--color-muted); }
+
+  /* 目录 */
+  .doc-toc { padding: var(--sp-md) var(--sp-sm) var(--sp-2xl) var(--sp-sm); }
+  .toc-title {
+    font-size: var(--fs-h1); font-weight: bold; font-family: var(--ff-heading);
+    text-align: center; margin-bottom: var(--sp-lg); text-indent: 0;
+  }
+  .toc-list, .toc-list ol, .toc-list ul { list-style: none; list-style-type: none; padding-left: 1.5em; margin: 0; }
+  .toc-list > li { margin-bottom: 0.45em; font-weight: bold; }
+  .toc-list ol > li { font-weight: normal; margin-bottom: var(--sp-xs); }
+  .toc-list a { color: var(--color-text); text-decoration: none; }
+  .toc-list li { text-indent: 0; }
+
+  /* 执行摘要 */
+  .executive-summary {
+    margin: var(--sp-lg) 0 var(--sp-xl) 0;
+    padding: var(--sp-lg);
+    border-left: 4px solid var(--color-primary);
+    background: var(--color-highlight);
+    border-radius: 0 var(--radius-card) var(--radius-card) 0;
+  }
+  .executive-summary h2 {
+    font-size: var(--fs-h2); font-family: var(--ff-heading); color: var(--color-title);
+    margin: 0 0 var(--sp-sm) 0; text-indent: 0;
+  }
+  .executive-summary p { text-indent: 2em; margin: var(--sp-xs) 0; }
+
+  /* 正文 */
+  .report-body { padding: var(--sp-sm) 0.2em; }
+  .report-body p { text-indent: 2em; margin: 0.6em 0; }
+  h1.chapter {
+    font-size: var(--fs-h1); font-family: var(--ff-heading); font-weight: bold;
+    color: var(--color-title); margin: var(--sp-xl) 0 var(--sp-md) 0; text-indent: 0;
+    border-left: 5px solid var(--color-primary); padding-left: 0.6em;
+    page-break-after: avoid;
+  }
+  h2.sec {
+    font-size: var(--fs-h2); font-family: var(--ff-heading); font-weight: bold;
+    color: var(--color-primary); margin: var(--sp-lg) 0 var(--sp-sm) 0; text-indent: 0;
+    page-break-after: avoid;
+  }
+  h3.sub {
+    font-size: var(--fs-h3); font-family: var(--ff-heading); font-weight: bold;
+    color: var(--color-heading); margin: var(--sp-md) 0 0.4em 0; text-indent: 0;
+    page-break-after: avoid;
+  }
+
+  /* 三线表：顶线、栏目线、底线，无竖线无底纹 */
+  table.data {
+    width: 100%; border-collapse: collapse; margin: var(--sp-md) 0 var(--sp-md) 0;
+    font-size: var(--fs-small);
+    border-top: 2px solid var(--color-rule);
+    border-bottom: 2px solid var(--color-rule);
+  }
+  table.data th, table.data td {
+    border: none; padding: 0.45em 0.4em; text-align: left; line-height: 1.5;
+  }
+  table.data thead th { border-bottom: 1px solid var(--color-rule); font-family: var(--ff-heading); font-weight: bold; }
+  table.data td { text-indent: 0; }
+
+  /* 图片 */
+  figure.fig { margin: var(--sp-lg) 0; text-align: center; page-break-inside: avoid; }
+  figure.fig img { max-width: 94%; }
+  figure.fig figcaption {
+    font-size: var(--fs-small); color: var(--color-heading); margin-top: 0.4em; text-indent: 0;
+    font-family: var(--ff-heading);
+  }
+
+  /* 摘要框 */
+  .callout {
+    border-left: 4px solid var(--color-primary); background: var(--color-highlight);
+    padding: var(--sp-md) var(--sp-lg); margin: var(--sp-md) 0; border-radius: 0 var(--radius-card) var(--radius-card) 0;
+  }
+  .callout p { text-indent: 0; margin: var(--sp-xs) 0; }
+</style>
+</head>
+<body>
+
+  <section role="cover" class="report-cover">
+    <p class="cover-badge">2026"天元杯"工业软件赋能产业创新大赛 · 参赛项目方案书</p>
+    <p class="cover-title">天枢·变电孪生智训智能体平台</p>
+    <p class="cover-subtitle">3D 孪生 × AI 智能体的电力安全人才培养系统</p>
+    <div class="cover-meta">
+      <p>参赛赛题：赛题 5 通用工业软件与工业 APP</p>
+      <p>申报单位：AIS造梦团队（广东科技学院）</p>
+      <p>项目负责人：渠梓盈</p>
+      <p>联系方式：15917497332</p>
+    </div>
+    <p class="cover-date">2026 年 10 月</p>
+  </section>
+
+  <section role="cover">
+    <nav class="doc-toc" aria-label="文档目录">
+      <p class="toc-title">目　录</p>
+      <ol class="toc-list">
+        <li><a href="#section-1">一、项目概述</a>
+          <ol>
+            <li><a href="#section-1-1">1.1 行业背景</a></li>
+            <li><a href="#section-1-2">1.2 项目定位</a></li>
+            <li><a href="#section-1-3">1.3 项目亮点速览</a></li>
+          </ol>
+        </li>
+        <li><a href="#section-2">二、解决方案总体架构</a>
+          <ol>
+            <li><a href="#section-2-1">2.1 系统总体设计</a></li>
+            <li><a href="#section-2-2">2.2 技术选型</a></li>
+            <li><a href="#section-2-3">2.3 部署形态</a></li>
+          </ol>
+        </li>
+        <li><a href="#section-3">三、核心功能</a>
+          <ol>
+            <li><a href="#section-3-1">3.1 三层协同的业务闭环</a></li>
+            <li><a href="#section-3-2">3.2 考试培训一体化</a></li>
+            <li><a href="#section-3-3">3.3 实操任务与报告归因</a></li>
+            <li><a href="#section-3-4">3.4 安全一票否决</a></li>
+            <li><a href="#section-3-5">3.5 AI 建议"人工确认"闭环</a></li>
+          </ol>
+        </li>
+        <li><a href="#section-4">四、关键技术与创新点</a>
+          <ol>
+            <li><a href="#section-4-1">4.1 声明式规则引擎，安全结论确定性可保证</a></li>
+            <li><a href="#section-4-2">4.2 "规则守底线、模型管表达"的双层智能架构</a></li>
+            <li><a href="#section-4-3">4.3 小样本领域微调，消费级硬件可复现</a></li>
+            <li><a href="#section-4-4">4.4 全链路决策留痕，天然满足审计要求</a></li>
+          </ol>
+        </li>
+        <li><a href="#section-5">五、测试验证与实证结果</a>
+          <ol>
+            <li><a href="#section-5-1">5.1 规则引擎评测</a></li>
+            <li><a href="#section-5-2">5.2 模型实测</a></li>
+            <li><a href="#section-5-3">5.3 双层架构对比验证</a></li>
+          </ol>
+        </li>
+        <li><a href="#section-6">六、应用价值与推广前景</a>
+          <ol>
+            <li><a href="#section-6-1">6.1 应用价值</a></li>
+            <li><a href="#section-6-2">6.2 推广路径</a></li>
+          </ol>
+        </li>
+        <li><a href="#section-7">七、实施基础与后续规划</a>
+          <ol>
+            <li><a href="#section-7-1">7.1 当前完成度</a></li>
+            <li><a href="#section-7-2">7.2 后续规划</a></li>
+          </ol>
+        </li>
+        <li><a href="#section-8">八、结语</a></li>
+      </ol>
+    </nav>
+  </section>
+
+  <section role="body" class="report-body" data-page-restart="1">
+
+    <div class="executive-summary">
+      <h2>项目摘要</h2>
+      <p>本项目面向变电运维等高危工业场景，打造"天枢·变电孪生智训智能体平台"：三维数字孪生园区承载沉浸式巡检演练，声明式规则引擎保证安全结论确定性、可解释、全留痕，本地微调的 3B 智能体承担个性化叙述、消费级 8G 显卡即可训练推理。系统已上线 22 条规则并完成系统化评测（档案覆盖率 100%、安全负例处置 125/125、结论可 100% 溯源），具备轻量化、低成本、易部署、可解释四大特性，直接对应赛题 5"轻量化、低成本、易部署、适配中小制造企业"的征集方向。</p>
+    </div>
+
+    <h1 class="chapter" id="section-1">一、项目概述</h1>
+
+    <h2 class="sec" id="section-1-1">1.1 行业背景</h2>
+    <p>政策与产业两股浪潮，把变电运维推到了转型关口。"双碳"目标下新型电力系统加快构建，新能源大规模并网、电网持续扩张，设备越来越多、越来越密，一线运维队伍却没有同步长大。人才供给的账本同样吃紧：中办、国办《关于加强新时代高技能人才队伍建设的意见》明确要求补上高技能人才短板，而技能人才的求人倍率长期保持在 2 以上——两个岗位抢一个人。行业矛盾集中在三件事上。</p>
+    <p><b>人才账算不清。</b>新员工从进班组到独立值班，快则三年、慢则五年；老师傅的经验全凭口传心授，赶上集中退休潮，人一走，经验就跟着走。继保、高压试验这些关键岗位现在缺几个人、往后还差多少人，多数单位拿不出一个准数。</p>
+    <p><b>培训链条断了。</b>考试只发一个分数：62 分错在哪道题、背后缺哪项技能、接下来补哪门课、由谁带教，没有下文。培训与现场"两张皮"，学了用不上，用了没人评。新修订的《安全生产法》把全员安全生产责任制写进了法律，培训留痕、考核可查从"加分项"变成了"必答题"。</p>
+    <p><b>安全结论说不清。</b>安全不合格凭什么定、用人建议凭什么给？靠经验拍板，监管没法交代；交给"黑盒"模型，事后审计追不到数据。</p>
+    <p>AI 的门槛同样现实。国家已把"人工智能+"行动写进政府工作报告，方向是对的，可通用大模型按调用量收费，数据出网让人心里不踏实，输出飘忽、数字对不上账，安全监管场景不敢直接用。中小企业和基层单位真正想要的，是一套轻量化、低成本、易部署、结论可解释的工业软件——赛题 5 征的正是这一类。</p>
+
+    <h2 class="sec" id="section-1-2">1.2 项目定位</h2>
+    <p>"天枢·变电孪生智训智能体平台"面向变电运维等高危工业场景，是一套<b>"3D 孪生 + 规则引擎 + AI 智能体"三位一体</b>的电力安全人才培养系统。三维数字孪生园区负责"练"，声明式规则引擎当确定性底座，本地消费级显卡上微调的智能体做叙述增强，"员工—组长（部长）—老总"三层协同的技能评估、培训考试、实操归因、人才决策全部搬进系统。</p>
+    <div class="callout">
+      <p><b>一句话概括：让每一个安全结论都可解释到数据，每一条 AI 建议都留痕可审计，每一次培训都有归因、有闭环。</b></p>
+    </div>
+
+    <h2 class="sec" id="section-1-3">1.3 项目亮点速览</h2>
+    <table class="data">
+      <thead>
+        <tr><th style="width:16%">维度</th><th style="width:54%">本项目做法</th><th style="width:30%">对应赛题 5 关键词</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>部署形态</td><td>全栈自研，Docker Compose 一键部署，单库 MySQL</td><td>易部署</td></tr>
+        <tr><td>成本控制</td><td>本地 4-bit 量化微调 3B 模型，消费级 8G 显卡可跑，无按量 API 费用</td><td>低成本</td></tr>
+        <tr><td>架构规模</td><td>Spring Boot + Vue 前后端分离，无外部中间件依赖</td><td>轻量化</td></tr>
+        <tr><td>安全监管</td><td>安全记录一票否决、规则结论全量留痕、决策链可审计</td><td>安全生产数字化监管</td></tr>
+        <tr><td>AI 落地</td><td>本地微调模型只做叙述增强，确定性结论由规则引擎保证</td><td>人工智能+软件</td></tr>
+      </tbody>
+    </table>
+
+    <h1 class="chapter" id="section-2">二、解决方案总体架构</h1>
+
+    <h2 class="sec" id="section-2-1">2.1 系统总体设计</h2>
+    <p>系统分五层，从"个人"一直管到"公司"：个人系统层管员工能力画像、学习资源、考试与任务；考试系统层管题库、组卷、判卷与防作弊；管理决策层给老总看全公司人才结构、培训与用人成本；管理员后台管主数据、规则与审计；最底下的规则与智能层放声明式规则引擎和三个 Agent 服务——个人学习、公司决策、报告归因，规则结论与模型建议统一走建议通道。</p>
+    <figure class="fig">
+      <img src="E:/Intrel-Train Industrial/output/tianyuanbei-20261023/stage2/images/fig1_architecture_zh.png" alt="系统总体架构图">
+      <figcaption>图 1　系统总体架构</figcaption>
+    </figure>
+
+    <h2 class="sec" id="section-2-2">2.2 技术选型</h2>
+    <table class="data">
+      <thead>
+        <tr><th style="width:16%">层次</th><th style="width:42%">技术</th><th style="width:42%">选型理由</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>后端</td><td>Spring Boot 3 + JdbcTemplate</td><td>无 ORM 依赖，SQL 可读可审计，适合安全审计类系统</td></tr>
+        <tr><td>前端</td><td>Vue 3 + Vite + Element Plus</td><td>生态成熟，开发效率高</td></tr>
+        <tr><td>数据库</td><td>MySQL 8 单库</td><td>规则与结果都以 JSON 列存储，不多引一个中间件</td></tr>
+        <tr><td>规则引擎</td><td>自研声明式 DSL，规则以 JSON 入库</td><td>管理员改库即改规则，代码不硬编码</td></tr>
+        <tr><td>AI 模型</td><td>Qwen2.5-3B-Instruct + LoRA 本地微调，4-bit 量化</td><td>8G 消费级显卡可训练可推理，数据不出内网</td></tr>
+      </tbody>
+    </table>
+
+    <h2 class="sec" id="section-2-3">2.3 部署形态</h2>
+    <p>Docker Compose 一键拉起 MySQL、后端 API 与前端 Web；模型服务独立进程跑在内网 GPU 工作站上，走 OpenAI 兼容接口接入。部署不折腾，一套 compose 文件拉起来才算数。全部组件都在单位内网，数据不出网，也没有按量计费这件事。员工端还内嵌了 110kV 变电站的三维数字孪生园区，巡检、演练都能在浏览器里完成。</p>
+    <figure class="fig">
+      <img src="E:/Intrel-Train Industrial/output/tianyuanbei-20261023/stage2/images/shot_twin_3d.png" alt="员工端内嵌的三维数字孪生园区">
+      <figcaption>图 2　员工端内嵌的三维数字孪生园区（浏览器实拍）</figcaption>
+    </figure>
+
+    <h1 class="chapter" id="section-3">三、核心功能</h1>
+
+    <h2 class="sec" id="section-3-1">3.1 三层协同的业务闭环</h2>
+    <p>员工层的能力画像把"我会什么、我缺什么"量化出来：技能雷达对照岗位要求与公司未来需求，继保 L1 对岗位要求 L3 的差距一眼可见；个性化 Agent 的诊断建议直接挂在画像页上，置信度、日期都标得明明白白。</p>
+    <figure class="fig">
+      <img src="E:/Intrel-Train Industrial/output/tianyuanbei-20261023/stage2/images/shot_skill_radar.png" alt="员工技能雷达与个性化诊断建议">
+      <figcaption>图 3　员工技能雷达与个性化 Agent 诊断建议（系统实拍）</figcaption>
+    </figure>
+    <p>组长（部长）发布实操任务、看本班组技能欠缺、给实操报告评分，AI 生成的建议由组长逐条人工确认。老总看全公司：人才驾驶舱上在岗人数、技能达标率、证书有效率、培训完成率、安全风险班组、离职风险一目了然，用人成本按季度摊开。</p>
+    <figure class="fig">
+      <img src="E:/Intrel-Train Industrial/output/tianyuanbei-20261023/stage2/images/shot_exec_dashboard.png" alt="老总端人才驾驶舱">
+      <figcaption>图 4　老总端人才驾驶舱（系统实拍）</figcaption>
+    </figure>
+
+    <h2 class="sec" id="section-3-2">3.2 考试培训一体化</h2>
+    <p>题库、组卷、考试、判卷、错题复盘、证书复审提醒全流程贯通。分数不再是终点：成绩低于合格线自动触发规则引擎，关联错题知识点，推荐课程与带教安排，一条链走完。</p>
+
+    <h2 class="sec" id="section-3-3">3.3 实操任务与报告归因</h2>
+    <p>组长按模板派发实操任务，标准作业指导书、计划工时、技能标签一起下；员工交报告后系统自动分析——工时超时且技能缺失，归因技能原因；没按作业指导书准备，归因人为或流程原因。谁干的、错在哪，白纸黑字摆到明面上。归因结论由规则引擎给出并留痕，组长可以确认，也可以改。</p>
+
+    <h2 class="sec" id="section-3-4">3.4 安全一票否决</h2>
+    <p>安全这条线上没有讨价还价。安全记录里有违章、有事故的员工，在任何晋升、任用建议里被强制否决，否决结论由规则引擎自动生成、写入审计，谁也绕不过去。</p>
+
+    <h2 class="sec" id="section-3-5">3.5 AI 建议"人工确认"闭环</h2>
+    <p>三个 Agent 的输出都以"建议"形态落库，置信度、来源、要不要人工确认、当前状态一并记录；采纳、驳回、修改、执行、回滚全部进决策日志。AI 只出建议，不碰业务数据——这一条是安全监管场景的底线，系统从第一天就按这个规矩设计。</p>
+
+    <h1 class="chapter" id="section-4">四、关键技术与创新点</h1>
+
+    <h2 class="sec" id="section-4-1">4.1 创新点一：声明式规则引擎，安全结论确定性可保证</h2>
+    <p>规则以声明式 JSON 存在数据库里，不依赖外部规则框架。条件算子走白名单，比较、集合、文本、布尔四类受控算子之外一律不认，表达式求值、脚本引擎、SQL 拼接全部禁掉，规则内容当不可信输入处理，规则注入这条路从机制上就堵死了。</p>
+    <p>执行按场景分组：定档判定与关键词补充各判各的，组内短路（stop_on_match）与命中上限（max_hits）只影响本组。动作字段支持引用事实数据，一条规则能服务全部气体检测场景与档位，规则数量压得很省。</p>
+    <p>确定性是实测出来的：450 次执行重跑字节级一致，规则乱序输入结果不变，单次执行 P95 约 0.02 毫秒。说白了，规则就是数据，改规则不用动代码。</p>
+
+    <h2 class="sec" id="section-4-2">4.2 创新点二："规则守底线、模型管表达"的双层智能架构</h2>
+    <p>大模型在安全监管场景的最大麻烦是输出不可控、数字不可信。本项目的答案是责任分层，谁擅长什么就干什么。</p>
+    <p>规则层管确定性：谁进缺口清单、安全是否一票否决、差距等级怎么定档，全部由规则引擎给出，可解释到规则编号与数据点。模型层管表达：本地微调的 3B 模型把结构化事实组织成个性化学习计划、带教安排与归因叙述，只写叙述字段，不产生新事实——也就是说，模型只做它有把握的部分。护栏层管收尾：契约校验通过后，后端统一规范排期合法性、去掉复读文案、把缺口与技能雷达逐条对齐，模型漏写的缺口由后端按权威口径补上。</p>
+    <p>150 份金标档案审计下来：规则层结论数字可溯源率 100%，安全负例处置率 100%，档案覆盖率 100%；模型层在护栏约束下，26 条实测样本十项契约指标全部通过，单次诊断延迟中位数约 105 秒。</p>
+    <figure class="fig">
+      <img src="E:/Intrel-Train Industrial/output/tianyuanbei-20261023/stage2/images/fig2_guardrail_zh.png" alt="双层智能与护栏机制">
+      <figcaption>图 5　"规则—模型—护栏"双层智能与护栏机制</figcaption>
+    </figure>
+
+    <h2 class="sec" id="section-4-3">4.3 创新点三：小样本领域微调，消费级硬件可复现</h2>
+    <p>模型不调 API，用 Qwen2.5-3B-Instruct 底座自己做 LoRA 微调。训练语料逐字复刻线上提示词契约——系统提示、事实清单格式、输出模板一个字都不差，再过"生成器自查、真实契约校验器、训练框架验证"三道工序才准进训练。</p>
+    <p>4-bit 双量化加 LoRA，可训练参数只占 0.96%；训练损失从 11.56 收敛到 0.063，验证损失降到 0.0106 后趋平。整个过程一块 8G 消费级显卡跑了 7.6 小时——换句话说，任何中小企业不用买专业 GPU 服务器，一台游戏本就能复现。显卡不贵，活干得挺干净。</p>
+    <figure class="fig">
+      <img src="E:/Intrel-Train Industrial/output/tianyuanbei-20261023/stage2/images/fig_train_curve.png" alt="训练损失与验证损失收敛曲线">
+      <figcaption>图 6　训练损失与验证损失收敛曲线（300 步，5 epoch）</figcaption>
+    </figure>
+
+    <h2 class="sec" id="section-4-4">4.4 创新点四：全链路决策留痕，天然满足审计要求</h2>
+    <p>一次归因对应一个运行标识，串起"规则执行结果 → Agent 建议 → 人工决策日志"三级证据链。任何一条 AI 建议都能答上三个问题：命中了哪条规则、依据哪个数据点、为什么给这个动作。这套证据链搬到化工、煤矿、轨道交通，一样够用。</p>
+
+    <h1 class="chapter" id="section-5">五、测试验证与实证结果</h1>
+    <p>评测坚持"真实可跑"，不做演示性数据。独立评测框架对规则引擎与模型分别做了系统化验证。</p>
+
+    <h2 class="sec" id="section-5-1">5.1 规则引擎评测（22 条规则、150 份档案、450 次执行）</h2>
+    <p>这一行最怕静默漏报——该报的不报，比报错还危险。校准之后，一次都没漏。</p>
+    <table class="data">
+      <thead>
+        <tr><th style="width:60%">评测项</th><th style="width:40%">结果</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>考试阈值与业务合格线一致性</td><td>漏报 0、误报 0，召回率与精确率均 100%</td></tr>
+        <tr><td>等级差距判定漏报</td><td>0</td></tr>
+        <tr><td>档案覆盖率</td><td>150/150（100%）</td></tr>
+        <tr><td>安全负例处置</td><td>125/125 全部标记处置</td></tr>
+        <tr><td>不可达规则</td><td>0 条</td></tr>
+        <tr><td>确定性（重跑一致/乱序不变）</td><td>100% / 100%</td></tr>
+        <tr><td>气体归因网格（200 组）</td><td>数值阶梯、关键词分组、严重度合并、事实引用全部 100% 正确</td></tr>
+      </tbody>
+    </table>
+
+    <h2 class="sec" id="section-5-2">5.2 模型实测（26 条样本在线评测）</h2>
+    <table class="data">
+      <thead>
+        <tr><th style="width:60%">评测项</th><th style="width:40%">结果</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>JSON 输出格式合规</td><td>100%</td></tr>
+        <tr><td>输出契约校验（缺口集合、等级、优先级、排期、事实引用、安全边界等十项）</td><td>全部 100%</td></tr>
+        <tr><td>事实编号引用正确性</td><td>100%</td></tr>
+        <tr><td>输出数字可溯源率</td><td>100%（对照参考输出口径）</td></tr>
+        <tr><td>单次诊断延迟</td><td>中位数 105 秒，满足离线诊断场景</td></tr>
+      </tbody>
+    </table>
+    <p>延迟够用了——离线诊断不等人在屏幕前，跑完落库即可。</p>
+
+    <h2 class="sec" id="section-5-3">5.3 双层架构对比验证</h2>
+    <p>同口径对照"纯规则路径"与"纯模型路径"，问题就现形了：模型直出的数字可溯源率只有 74.7%，规则层是 100%；安全负例 125 条，只有规则层全部捕获。这笔账算完，"规则守确定性、模型补表达、护栏管取舍"的架构就不是理念，是实测结论。</p>
+
+    <h1 class="chapter" id="section-6">六、应用价值与推广前景</h1>
+
+    <h2 class="sec" id="section-6-1">6.1 应用价值</h2>
+    <p>降本——本地小模型零 API 费用，训练推理复用消费级硬件，AI 门槛从专业 GPU 集群降到一台游戏本，这笔账很划算。提质——培训凭数据归因，人才决策靠"可解释建议 + 人工确认"。合规——安全一票否决加全链路留痕，电力行业的监管与审计要求直接对上。可复制——技能体系、规则集、考试模块全部配置化，换一套数据就能迁走。</p>
+
+    <h2 class="sec" id="section-6-2">6.2 推广路径</h2>
+    <p>电力行业内部，运检、调度、输电专业复制本模式，替换技能体系与规则集即可上线。跨行业看，化工的特种作业资质监管、煤矿的安全生产考核、轨道交通的运维人才梯队，与这套架构高度契合。对已有 ERP、EAM、培训平台，标准 REST 接口加 JSON 契约，当智能增强模块嵌进去就行。</p>
+
+    <h1 class="chapter" id="section-7">七、实施基础与后续规划</h1>
+
+    <h2 class="sec" id="section-7-1">7.1 当前完成度</h2>
+    <p>系统 MVP 已跑通全流程：主数据与权限、考试、个人系统、管理板块、实操任务五大模块落地；规则引擎上线 22 条规则并完成系统化评测；三个 Agent 服务接入"规则 + 本地模型"混合链路，真实环境联调验证通过；接口文档、规则引擎设计文档、评测报告齐备。</p>
+
+    <h2 class="sec" id="section-7-2">7.2 后续规划</h2>
+    <p>路线只有一条：先固化确定性，再渐进增强智能。近期三个月，开放规则在线管理接口，扩展运营归因与资料校验场景的规则接入，相关 Agent 能力随场景数据积累逐步训练完善、分批上线，接口契约全程不动。中期半年，扩充领域微调语料，引入多轮复盘记忆，让员工能力画像随时间自己生长。远期，把"高危行业人才安全监管"的规则模板库与预训练模型沉淀成可对外的行业解决方案。</p>
+
+    <h1 class="chapter" id="section-8">八、结语</h1>
+    <p>安全攸关的工业场景里，AI 落地的正确路径不是让模型直接下结论——规则守住确定性与安全边界，模型把表达做好，护栏把取舍留痕，三条各司其职。系统已在变电运维真实业务场景完成闭环验证，轻量化、低成本、易部署、可解释四个特性都有实测数据背书，与赛题 5"适配中小制造企业的工业软件产品"的征集方向严丝合缝，具备即时的推广落地条件。</p>
+
+  </section>
+</body>
+</html>

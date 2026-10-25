@@ -37,6 +37,10 @@ services:
       AI_MODEL: ${AI_MODEL:-gpt-4o-mini}
       AI_API_KEY: ${AI_API_KEY:-}
       AI_TIMEOUT_SECONDS: ${AI_TIMEOUT_SECONDS:-20}
+      # 公司运行诊断 Agent 专属模型（sft17_exec，宿主机 8002）；不配则回落共用配置
+      AI_EXEC_BASE_URL: ${AI_EXEC_BASE_URL:-}
+      AI_EXEC_MODEL: ${AI_EXEC_MODEL:-}
+      AI_EXEC_TIMEOUT_SECONDS: ${AI_EXEC_TIMEOUT_SECONDS:-300}
       # 上传原件与生成文档落到具名卷：默认值是容器里的 java.io.tmpdir，
       # 容器一重建（up --build、重启）整目录就没了，台账里会留下一堆指向不存在文件的记录。
       MATERIAL_DIR: /var/lib/power-train/materials
@@ -55,6 +59,10 @@ services:
   frontend:
     image: powertrain/frontend:1.0.0
     build: ./frontend
+    # 绕过官方镜像 entrypoint 的 ipv6 检查脚本：该脚本在部分 Docker Desktop
+    # 环境下会卡死在「Getting the checksum」导致 nginx 永远起不来（实测 2026-10-23）。
+    # 直接以 nginx 为主进程，行为等价（default.conf 仍会被 COPY 进镜像生效）。
+    entrypoint: ["nginx", "-g", "daemon off;"]
     restart: unless-stopped
     ports: ["${WEB_PORT:-5173}:80"]
     depends_on: [backend]

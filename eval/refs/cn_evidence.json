@@ -1,0 +1,89 @@
+{
+ "10.12096/j.2096-4528.pgt.260402": {
+  "handle_registered": true,
+  "resolves_to": "http://www.pgtjournal.com/thesisDetails#10.12096/j.2096-4528.pgt.260402",
+  "raw": {
+   "responseCode": 1,
+   "handle": "10.12096/j.2096-4528.pgt.260402",
+   "values": [
+    {
+     "index": 1,
+     "type": "URL",
+     "data": {
+      "format": "string",
+      "value": "http://www.pgtjournal.com/thesisDetails#10.12096/j.2096-4528.pgt.260402"
+     },
+     "ttl": 86400,
+     "timestamp": "2026-09-02T08:29:08Z"
+    },
+    {
+     "index": 100,
+     "type": "HS_ADMIN",
+     "data": {
+      "format": "admin",
+      "value": {
+       "handle": "0.NA/10.3321",
+       "index": 300,
+       "permissions": "111111111111",
+       "legacyByteLength": true
+      }
+     },
+     "ttl": 86400,
+     "timestamp": "2026-09-01T04:20:11Z"
+    }
+   ]
+  }
+ },
+ "10.7500/AEPS20250902005": {
+  "handle_registered": false,
+  "resolves_to": null,
+  "raw": {
+   "responseCode": 100,
+   "handle": "10.7500/AEPS20250902005"
+  }
+ },
+ "10.1088/1742-6596/2213/1/012017": {
+  "handle_registered": true,
+  "resolves_to": "https://iopscience.iop.org/article/10.1088/1742-6596/2213/1/012017",
+  "raw": {
+   "responseCode": 1,
+   "handle": "10.1088/1742-6596/2213/1/012017",
+   "values": [
+    {
+     "index": 1,
+     "type": "URL",
+     "data": {
+      "format": "string",
+      "value": "https://iopscience.iop.org/article/10.1088/1742-6596/2213/1/012017"
+     },
+     "ttl": 86400,
+     "timestamp": "2022-03-25T09:31:56Z"
+    },
+    {
+     "index": 700050,
+     "type": "700050",
+     "data": {
+      "format": "string",
+      "value": "2022032509230600"
+     },
+     "ttl": 86400,
+     "timestamp": "2022-03-25T09:31:56Z"
+    },
+    {
+     "index": 100,
+     "type": "HS_ADMIN",
+     "data": {
+      "format": "admin",
+      "value": {
+       "handle": "0.na/10.1088",
+       "index": 200,
+       "permissions": "111111110010"
+      }
+     },
+     "ttl": 86400,
+     "timestamp": "2022-03-25T09:31:56Z"
+    }
+   ]
+  }
+ }
+}

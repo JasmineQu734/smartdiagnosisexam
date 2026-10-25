@@ -8,9 +8,14 @@ import com.power.train.support.DiagnosisPipeline;
 import com.power.train.support.Texts;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
 
 /**
@@ -31,6 +36,12 @@ public class PersonalDiagnosisService {
     /** 兜底口径：与改造前完全一致的静态结论，保证大模型不可用时前端不变。 */
     private static final String BASELINE_KEY = "personal.diagnosis.core";
     private static final String LABEL_RULE = "个人学习 Agent（规则引擎 v1 · 实时计算）";
+    /** 本 Agent 把结论写回记忆库时用的来源前缀：构事实清单时要排掉它，避免模型引用自己的旧结论。 */
+    private static final String SELF_SOURCE_PREFIX = "个人学习 Agent%";
+    /** gaps.severity 的取值与排序权重（与 DiagnosisContract 的枚举保持一致）。 */
+    private static final List<String> SEVERITIES = List.of("HIGH", "MEDIUM", "LOW");
+    /** 技能等级标签「L3」的解析式：只认 1-5，其余（如「合格」）一律跳过。 */
+    private static final Pattern LEVEL = Pattern.compile("L([1-5])");
 
     private final Sql sql;
     private final DatasetStore datasets;
@@ -49,8 +60,16 @@ public class PersonalDiagnosisService {
 
         // 1. 走一遍公共管道：查事实 → 提示词 → 大模型出结论 → 契约硬校验（不过就回退内置规则结论）
         DiagnosisPipeline.ModelRun run = DiagnosisPipeline.generate(client, "个人诊断", systemPrompt(),
-            userPrompt(DiagnosisPipeline.renderFacts(facts), ranAt), DiagnosisContract::validatePersonal);
-        Map<String, Object> result = new LinkedHashMap<>(run.usable() ? run.payload() : baseline);
+            userPrompt(DiagnosisPipeline.renderFacts(facts), gapHint(facts), ranAt), DiagnosisContract::validatePersonal);
+        Map<String, Object> result;
+        if (run.usable()) {
+            // 契约通过之后再规范：缺口优先级、计划排期、重复文案都由后端兜住，模型的职责只剩事实层面的判断
+            applyRadarPriority(run.payload(), username);
+            DiagnosisPipeline.polishPersonal(run.payload(), todayOf(ranAt));
+            result = new LinkedHashMap<>(run.payload());
+        } else {
+            result = new LinkedHashMap<>(baseline);
+        }
 
         // 2. 运行时字段由后端写死：编号、时间、来源、证据条数、同步板块，模型无权决定
         result.put("diagnosis_id", diagnosisId);
@@ -86,6 +105,8 @@ public class PersonalDiagnosisService {
         }
 
         // 2. 技能雷达现状（当前等级 vs 岗位要求 vs 未来需求）
+        List<String> unmet = new ArrayList<>();
+        List<String> met = new ArrayList<>();
         for (Map<String, Object> row : sql.rows(
             "SELECT skill, level_label, required_label, future_label, state, priority, evidence, radar_note "
                 + "FROM employee_skill WHERE username = ? AND in_radar = 1 ORDER BY sort_no", username)) {
@@ -93,6 +114,16 @@ public class PersonalDiagnosisService {
                 "技能 " + row.get("skill") + "：当前 " + row.get("level_label") + "，岗位要求 "
                     + row.get("required_label") + "，未来需求 " + row.get("future_label") + "（" + Texts.orDash(row.get("state")) + "）",
                 "证据：" + Texts.orDash(row.get("evidence")) + "；雷达评语：" + Texts.orDash(row.get("radar_note")));
+            // 技能雷达的 state 是「谁该进 gaps」的唯一权威口径：模型没有汇总能力，容易少写或多写，
+            // 所以在这里把两类技能分开存下来，由后端拼成一条汇总事实（见方法末尾）。
+            String summary = "（当前 " + row.get("level_label") + "，岗位要求 " + row.get("required_label")
+                + "，未来需求 " + row.get("future_label") + "，" + Texts.orDash(row.get("state"))
+                + "，雷达优先级 " + Texts.orDash(row.get("priority")) + "）";
+            if (Texts.text(row.get("state")).contains("达标")) {
+                met.add(Texts.text(row.get("skill")) + summary);
+            } else {
+                unmet.add(Texts.text(row.get("skill")) + summary);
+            }
         }
 
         // 3. 考试成绩与错题知识点
@@ -107,9 +138,13 @@ public class PersonalDiagnosisService {
         }
 
         // 4. 能力记忆库：考试、实操、带教评价都在这一张表里
+        //    必须排掉本 Agent 自己写回去的诊断结论（source_label = 本 Agent）：否则跑过几次之后，
+        //    记忆库按时间倒序取到的全是「我上次说过什么」，模型会把自己的旧输出当证据引用，形成自我确认。
+        //    只影响推理输入，不影响前端「记忆展示」读同一张表。
         for (Map<String, Object> row : sql.rows(
             "SELECT type_label, title, detail, occurred_at, source_label FROM memory_item "
-                + "WHERE username = ? ORDER BY occurred_at DESC, sort_no DESC LIMIT 6", username)) {
+                + "WHERE username = ? AND (source_label IS NULL OR source_label NOT LIKE ?) "
+                + "ORDER BY occurred_at DESC, sort_no DESC LIMIT 6", username, SELF_SOURCE_PREFIX)) {
             DiagnosisPipeline.addFact(facts, "memory_item", Texts.orDash(row.get("occurred_at")) + " " + Texts.orDash(row.get("type_label")) + "：" + row.get("title"),
                 Texts.orDash(row.get("detail")) + "（来源：" + Texts.orDash(row.get("source_label")) + "）");
         }
@@ -151,6 +186,16 @@ public class PersonalDiagnosisService {
         long abnormal = sql.count("SELECT COUNT(*) FROM task_report WHERE (member = ? OR reporter = ?) AND judgment = ?",
             displayName, displayName, "超限");
         DiagnosisPipeline.addFact(facts, "task_report", "本人相关实操检测报告 " + reports + " 份", "其中判定超限 " + abnormal + " 份");
+
+        // 10. 技能雷达差距汇总：刻意放在最后，保证前面 9 组事实的编号（F1…）保持不变。
+        // 这是唯一一条「结论性」事实，作用是把「谁该进 gaps、谁该写进优势」从模型的归纳变成后端给定：
+        // 实测中模型最容易出的两类错就是 gaps 少写（与 summary 自相矛盾）和多写不该有的技能。
+        // 没有未达标技能时换一个 source，提示词据此不施加「必须覆盖」的约束（否则会逼模型写出空 gaps）。
+        DiagnosisPipeline.addFact(facts, unmet.isEmpty() ? "skill_status_summary" : "skill_gap_summary",
+            unmet.isEmpty() ? "技能雷达差距汇总：没有未达岗位要求的技能"
+                : "技能雷达差距汇总：未达岗位要求的技能共 " + unmet.size() + " 项",
+            (unmet.isEmpty() ? "未达标技能：无" : "未达标技能：" + String.join("；", unmet))
+                + "。已达标技能：" + (met.isEmpty() ? "无" : String.join("；", met)));
         return facts;
     }
 
@@ -169,17 +214,131 @@ public class PersonalDiagnosisService {
         DiagnosisPipeline.line(builder, "7. gaps 只写事实清单中明确未达岗位要求的技能；plan 写 3-4 步；compound_path 写 3-4 个阶段。");
         DiagnosisPipeline.line(builder, "8. summary 先交代岗位与已达标/已持证的基础项（优势），再说最大缺口与方向；只谈缺口、不提已有基础视为不合格。");
         DiagnosisPipeline.line(builder, "9. impact 写清缺口导致的业务后果（现在哪个动作做不了或必须依赖他人），action 写清下一步可执行的动作，不要写成空泛口号。");
+        DiagnosisPipeline.line(builder, "10. verdict.reasons 各条之间不得互相复读，每条必须给出不同的事实依据；plan 各步的 reason 也必须各不相同，并说清这一步在整条路径里的位置。");
+        DiagnosisPipeline.line(builder, "11. summary 里提到的每一个缺口技能，都要能在 gaps 里找到同名条目；不要在 summary 里提一个 gaps 里没有的技能。");
+        DiagnosisPipeline.line(builder, "12. compound_path 的 why 回答「为什么把这几项合在一起学」，benefit 回答「学完之后能做什么」，两者不得互相摘抄或复述。");
+        DiagnosisPipeline.line(builder, "13. plan 的 due_at 必须晚于【今天】并随 step 递增，不要几步挤在同一天。");
         return builder.toString();
     }
 
-    private String userPrompt(String factsText, String ranAt) {
+    /** 诊断基准日：模型不知道今天是几号，【今天】与计划排期都以它为准。 */
+    private String todayOf(String ranAt) {
+        return ranAt == null || ranAt.length() < 10 ? LocalDate.now().toString() : ranAt.substring(0, 10);
+    }
+
+    /** 把「技能雷达差距汇总」那条事实拎出来当【本次缺口清单】，并带上它的事实编号，供提示词直接引用。 */
+    private String gapHint(List<Map<String, Object>> facts) {
+        for (Map<String, Object> fact : facts) {
+            if ("skill_gap_summary".equals(fact.get("source"))) {
+                return fact.get("id") + "：" + fact.get("value");
+            }
+        }
+        return "";
+    }
+
+    /**
+     * gaps 由技能雷达说了算：技能、等级、severity、priority 都是库里的既定口径，模型只该转述。
+     * 实测中模型会把两个缺口都标成 P1/HIGH，也会漏写其中一个（reasons 里提了、gaps 里却没有），
+     * 所以这里按雷达逐条对齐：能对上的覆盖字段；雷达有而模型漏掉的补一条（叙述字段用兜底文案，
+     * 不含任何新事实）；雷达里没有的技能（模型自己加的缺口）原样保留。
+     */
+    private void applyRadarPriority(Map<String, Object> payload, String username) {
+        Object value = payload.get("gaps");
+        List<Map<String, Object>> gaps = new ArrayList<>();
+        if (value instanceof List<?> list) {
+            for (Object item : list) {
+                if (item instanceof Map<?, ?> raw) {
+                    Map<String, Object> gap = new LinkedHashMap<>();
+                    raw.forEach((key, element) -> gap.put(String.valueOf(key), element));
+                    gaps.add(gap);
+                }
+            }
+        }
+
+        // 只有「未达岗位要求」的技能才是 gaps 的合法成员；等级解析不出来（如「合格」）的也跳过
+        Map<String, Map<String, Object>> radar = new LinkedHashMap<>();
+        for (Map<String, Object> row : sql.rows(
+            "SELECT skill, level_label, required_label, future_label, state, priority FROM employee_skill "
+                + "WHERE username = ? AND in_radar = 1 AND state NOT LIKE '%达标%' ORDER BY sort_no", username)) {
+            Integer current = levelNumber(Texts.text(row.get("level_label")));
+            Integer required = levelNumber(Texts.text(row.get("required_label")));
+            Integer future = levelNumber(Texts.text(row.get("future_label")));
+            String severity = Texts.text(row.get("priority"));
+            if (current == null || required == null || future == null || !SEVERITIES.contains(severity)) {
+                continue;
+            }
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("current", current);
+            item.put("required", required);
+            item.put("future", future);
+            item.put("severity", severity);
+            radar.put(Texts.text(row.get("skill")), item);
+        }
+        if (radar.isEmpty()) {
+            return;
+        }
+
+        Set<String> covered = new LinkedHashSet<>();
+        for (Map<String, Object> gap : gaps) {
+            Map<String, Object> item = radar.get(Texts.text(gap.get("skill")));
+            if (item != null) {
+                gap.putAll(item);
+                covered.add(Texts.text(gap.get("skill")));
+            }
+        }
+        for (Map.Entry<String, Map<String, Object>> entry : radar.entrySet()) {
+            if (covered.contains(entry.getKey())) {
+                continue;
+            }
+            Map<String, Object> item = entry.getValue();
+            Map<String, Object> gap = new LinkedHashMap<>();
+            gap.put("skill", entry.getKey());
+            gap.putAll(item);
+            gap.put("priority", "P1");
+            gap.put("impact", entry.getKey() + "当前 L" + item.get("current") + "、岗位要求 L" + item.get("required")
+                + "，该缺口会限制本人在现场作业中的授权范围，关键步骤仍需他人复核。");
+            gap.put("action", "按技能雷达要求补齐" + entry.getKey() + "的课程学习与带教验证，经师傅复核通过后再申请等级评定。");
+            gaps.add(gap);
+        }
+
+        gaps.sort(Comparator.comparingInt((Map<String, Object> gap) -> severityRank(Texts.text(gap.get("severity")))));
+        for (int index = 0; index < gaps.size(); index++) {
+            gaps.get(index).put("priority", "P" + Math.min(index + 1, 3));
+        }
+        payload.put("gaps", gaps);
+    }
+
+    /** 「L3」→ 3；解析不出 1-5 的（如「合格」）返回 null，调用方据此跳过。 */
+    private static Integer levelNumber(String label) {
+        Matcher matcher = LEVEL.matcher(label == null ? "" : label);
+        if (!matcher.find()) {
+            return null;
+        }
+        return Integer.parseInt(matcher.group(1));
+    }
+
+    private static int severityRank(String severity) {
+        int index = SEVERITIES.indexOf(severity);
+        return index < 0 ? SEVERITIES.size() : index;
+    }
+
+    private String userPrompt(String factsText, String gapText, String ranAt) {
         // 模型不知道今天是几号，不给日期它就会把 due_at 写成「现有数据不足以判断」，直接被契约判不合格
-        String today = ranAt == null || ranAt.length() < 10 ? LocalDate.now().toString() : ranAt.substring(0, 10);
+        String today = todayOf(ranAt);
         String dueExample = LocalDate.parse(today).plusDays(14).toString();
         StringBuilder builder = new StringBuilder();
         DiagnosisPipeline.line(builder, "【今天】" + today + "（plan.due_at 是计划日期，从今天往后排，例如 " + dueExample + "；它不参与事实核对）");
         DiagnosisPipeline.line(builder, "【事实清单】（结论里出现的每个数字都必须在这里找到出处）");
         DiagnosisPipeline.line(builder, factsText);
+        // 缺口清单由后端直接从技能雷达给出。实测中模型最容易犯的错就是 gaps 少写一项（与 summary 自相矛盾）
+        // 或把已达标技能也写进 gaps；给死清单比给「写作示例」可靠 —— 示例会被模型整段照抄，连事实编号一起抄错。
+        if (gapText != null && !gapText.isBlank()) {
+            DiagnosisPipeline.line(builder, "【本次缺口清单】（来自技能雷达，是 gaps 的唯一来源，不要另找技能）");
+            DiagnosisPipeline.line(builder, "  " + gapText);
+            DiagnosisPipeline.line(builder, "  gaps 必须正好覆盖「未达标技能」，一项不多、一项不少，顺序照清单排；");
+            DiagnosisPipeline.line(builder, "  「已达标技能」必须写进 summary，并至少出现在一条 reasons 里作为优势项；");
+            DiagnosisPipeline.line(builder, "  写等级差距、考试分数这类句子时，句末标出对应的事实编号。");
+        }
         DiagnosisPipeline.line(builder, "【输出模板】");
         DiagnosisPipeline.line(builder, "{");
         DiagnosisPipeline.line(builder, "  \"summary\": \"2-3 句总述：属于能力空白还是在岗技能不足，最大缺口是什么\",");
@@ -193,7 +352,7 @@ public class PersonalDiagnosisService {
         DiagnosisPipeline.line(builder, "     \"stages\": [{\"phase\": \"第 1 阶段 · 0-2 个月\", \"focus\": \"聚焦点\", \"skills\": \"学什么\", \"milestone\": \"达标标志\"}],");
         DiagnosisPipeline.line(builder, "     \"benefit\": \"收益\"}");
         DiagnosisPipeline.line(builder, "}");
-        DiagnosisPipeline.line(builder, "只输出上面这个 JSON，字段名照抄，取值按事实清单填写。");
+        DiagnosisPipeline.line(builder, "照【输出模板】的字段名填写，只输出一个 JSON 对象，不要输出任何解释文字。");
         return builder.toString();
     }
 }

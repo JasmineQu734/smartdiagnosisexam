@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理控制台 · 变电运维技能培训与考试管理系统</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #02040c;
+    color: #e8f1ff;
+    overflow: hidden;
+  }
+  #bg { position: fixed; inset: 0; display: block; cursor: grab; }
+  #bg:active { cursor: grabbing; }
+
+  /* 暗角，压住四周让中心更聚焦 */
+  .vignette {
+    position: fixed; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at 42% 46%, rgba(0,0,0,0) 38%, rgba(1,3,12,.62) 100%);
+  }
+
+  .page {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: flex-end;
+    padding: 0 9vw 0 4vw;
+    pointer-events: none;
+  }
+
+  /* ---------- 玻璃质感登录卡片 ---------- */
+  .login-card {
+    position: relative;
+    width: 384px;
+    padding: 42px 38px 34px;
+    border-radius: 14px;
+    background: linear-gradient(160deg, rgba(24, 42, 80, .55), rgba(9, 18, 38, .72));
+    border: 1px solid rgba(110, 170, 255, .30);
+    box-shadow: 0 0 60px rgba(30, 90, 210, .30), inset 0 0 30px rgba(50, 110, 255, .07);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    pointer-events: auto;
+  }
+  .corner { position: absolute; width: 16px; height: 16px; border: 2px solid #5b9bff; }
+  .c1 { top: -2px; left: -2px; border-right: none; border-bottom: none; border-radius: 4px 0 0 0; }
+  .c2 { top: -2px; right: -2px; border-left: none; border-bottom: none; border-radius: 0 4px 0 0; }
+  .c3 { bottom: -2px; left: -2px; border-right: none; border-top: none; border-radius: 0 0 0 4px; }
+  .c4 { bottom: -2px; right: -2px; border-left: none; border-top: none; border-radius: 0 0 4px 0; }
+
+  .login-card h1 {
+    text-align: center;
+    font-size: 24px;
+    letter-spacing: 4px;
+    font-weight: 600;
+    text-shadow: 0 0 18px rgba(80, 150, 255, .75);
+  }
+  .subtitle {
+    text-align: center;
+    margin: 8px 0 30px;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: #5d7bb0;
+    text-transform: uppercase;
+  }
+
+  .field {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(9, 20, 42, .72);
+    border: 1px solid rgba(80, 130, 225, .38);
+    border-radius: 8px;
+    padding: 0 12px; height: 44px;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .field:focus-within {
+    border-color: #3d7fff;
+    box-shadow: 0 0 10px rgba(61, 127, 255, .40);
+  }
+  .field svg { flex: none; opacity: .65; }
+  .field input {
+    flex: 1; min-width: 0;
+    background: none; border: none; outline: none;
+    color: #dce8ff; font-size: 14px;
+  }
+  .field input::placeholder { color: #587099; }
+
+  .field-row { display: flex; gap: 12px; }
+  .field-row .field { flex: 1; }
+  .field-row + .field { margin-top: 16px; }
+
+  #captcha {
+    flex: none; width: 96px; height: 44px;
+    border-radius: 8px; cursor: pointer;
+    border: 1px solid rgba(80, 130, 225, .38);
+  }
+
+  .msg { height: 20px; font-size: 12px; margin: 4px 2px 6px; }
+  .msg.err { color: #ff7d7d; }
+  .msg.ok { color: #4de0a5; }
+
+  .btn {
+    width: 100%; height: 44px;
+    border: none; border-radius: 8px;
+    font-size: 16px; color: #fff; cursor: pointer;
+    letter-spacing: 8px; text-indent: 8px;
+    background: linear-gradient(90deg, #1c56e8, #3d8bff);
+    box-shadow: 0 4px 22px rgba(40, 110, 255, .5);
+    transition: filter .2s, transform .1s;
+  }
+  .btn:hover { filter: brightness(1.14); }
+  .btn:active { transform: translateY(1px); }
+
+  .hint { margin-top: 14px; text-align: center; font-size: 11px; color: #46608f; }
+
+  .brand {
+    position: fixed; left: 34px; bottom: 28px;
+    font-size: 14px; letter-spacing: 3px;
+    color: #9db8e8;
+    text-shadow: 0 0 12px rgba(60, 130, 255, .55);
+    pointer-events: none;
+  }
+
+  @media (max-width: 900px) {
+    .page { justify-content: center; padding: 0 20px; }
+    .brand { display: none; }
+  }
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="vignette"></div>
+
+<div class="brand">变电运维 · 技能与考试管理平台</div>
+
+<div class="page">
+  <form class="login-card" id="loginForm" autocomplete="off">
+    <i class="corner c1"></i><i class="corner c2"></i><i class="corner c3"></i><i class="corner c4"></i>
+    <h1>管理控制台</h1>
+    <div class="subtitle">Substation Operation &amp; Training Management Platform</div>
+
+    <div class="field">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8fb0e8" stroke-width="2">
+        <circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/>
+      </svg>
+      <input id="account" type="text" placeholder="管理员账号" />
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8fb0e8" stroke-width="2">
+          <rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>
+        </svg>
+        <input id="password" type="password" placeholder="密码" />
+      </div>
+      <canvas id="captcha" width="96" height="44" title="点击刷新验证码"></canvas>
+    </div>
+
+    <div class="msg" id="msg"></div>
+    <button class="btn" type="submit">立即登录</button>
+    <div class="hint">演示页面 · 点击验证码可刷新</div>
+  </form>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* ================= 验证码 ================= */
+const capCanvas = document.getElementById('captcha');
+function drawCaptcha() {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 4; i++) code += chars[(Math.random() * chars.length) | 0];
+  const ctx = capCanvas.getContext('2d');
+  ctx.fillStyle = '#0d1a33';
+  ctx.fillRect(0, 0, 96, 44);
+  for (let i = 0; i < 5; i++) {
+    ctx.strokeStyle = `rgba(90,150,255,${0.15 + Math.random() * 0.3})`;
+    ctx.beginPath();
+    ctx.moveTo(Math.random() * 96, Math.random() * 44);
+    ctx.lineTo(Math.random() * 96, Math.random() * 44);
+    ctx.stroke();
+  }
+  const colors = ['#4d8dff', '#37d0ff', '#8fb4ff', '#3ddcff'];
+  code.split('').forEach((ch, i) => {
+    ctx.save();
+    ctx.translate(14 + i * 21, 29);
+    ctx.rotate((Math.random() - 0.5) * 0.5);
+    ctx.font = 'bold 24px Consolas, monospace';
+    ctx.fillStyle = colors[i % 4];
+    ctx.fillText(ch, 0, 0);
+    ctx.restore();
+  });
+  capCanvas.dataset.code = code;
+}
+capCanvas.addEventListener('click', drawCaptcha);
+drawCaptcha();
+
+/* ================= 表单 ================= */
+const form = document.getElementById('loginForm');
+const msg = document.getElementById('msg');
+function show(text, cls) { msg.textContent = text; msg.className = 'msg ' + cls; }
+form.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const account = document.getElementById('account').value.trim();
+  const password = document.getElementById('password').value;
+  const capField = document.getElementById('capInput');
+  if (!account) return show('请输入管理员账号', 'err');
+  if (!password) return show('请输入密码', 'err');
+  if (capField.value.toUpperCase() !== capCanvas.dataset.code) {
+    drawCaptcha(); capField.value = '';
+    return show('验证码不正确', 'err');
+  }
+  show('登录成功（演示环境，未接后端接口）', 'ok');
+});
+(function addCaptchaInput() {
+  const row = document.querySelector('.field-row');
+  const field = document.createElement('div');
+  field.className = 'field';
+  field.style.maxWidth = '140px';
+  const input = document.createElement('input');
+  input.id = 'capInput';
+  input.type = 'text';
+  input.placeholder = '验证码';
+  input.maxLength = 4;
+  field.appendChild(input);
+  row.parentNode.insertBefore(field, row.nextSibling);
+})();
+
+/* ==================================================================== */
+/* ======================== Three.js 全息城市 ========================== */
+/* ==================================================================== */
+
+const canvas = document.getElementById('bg');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x02040c);
+scene.fog = new THREE.Fog(0x02040c, 40, 110);
+
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.1, 300);
+const CAM_BASE = new THREE.Vector3(8.2, 13.5, 20.5);   // 等轴测感视角
+camera.position.copy(CAM_BASE);
+const LOOK_AT = new THREE.Vector3(-4.0, 3.6, 0);       // 场景中心
+const RIGHT = new THREE.Vector3(0.813, 0, -0.583);     // 屏幕右方向（随当前机位近似）
+let camShift = 0;                                      // 相机向右平移量 = 场景在画面中向左的偏移
+
+/* ---------- 后期：Bloom 辉光（画面质感的钥匙） ---------- */
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.42, 0.45, 0.30);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+scene.add(new THREE.AmbientLight(0x44577a, 1.6));
+const pt = new THREE.PointLight(0x4fa9ff, 220, 60);
+pt.position.set(-3, 16, 2);
+scene.add(pt);
+const dir = new THREE.DirectionalLight(0x88aaff, 1.2);
+dir.position.set(10, 18, 8);
+scene.add(dir);
+
+const world = new THREE.Group();
+world.position.set(-4.0, -1.6, 0);
+scene.add(world);
+
+/* ---------- 常用材质 / 纹理工具 ---------- */
+const EDGE = new THREE.LineBasicMaterial({ color: 0x5fd8ff, transparent: true, opacity: 0.85 });
+
+function canvasTex(w, h, draw) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/* 楼体亮窗纹理：一栋一个，窗格随机点亮 */
+function buildingTexture() {
+  return canvasTex(128, 256, (x) => {
+    x.fillStyle = '#0a1c3f';
+    x.fillRect(0, 0, 128, 256);
+    const cols = 6, rows = 16, cw = 128 / cols, ch = 256 / rows;
+    for (let i = 0; i < cols; i++) {
+      for (let j = 0; j < rows; j++) {
+        if (Math.random() < 0.40) {
+          const r = Math.random();
+          x.fillStyle = r < 0.08 ? 'rgba(255,205,140,.95)'      // 少量暖色窗，打破纯蓝
+                      : r < 0.60 ? 'rgba(150,205,255,.95)'
+                      : r < 0.88 ? 'rgba(80,160,255,.9)'
+                                 : 'rgba(225,245,255,.95)';
+          x.fillRect(i * cw + cw * 0.22, j * ch + ch * 0.26, cw * 0.56, ch * 0.4);
+        }
+      }
+    }
+  });
+}
+
+/* 数据面板纹理：表头 + 柱状图 + 折线 */
+function panelTexture(title) {
+  return canvasTex(256, 160, (x) => {
+    x.fillStyle = 'rgba(6,18,42,.92)';
+    x.fillRect(0, 0, 256, 160);
+    const grad = x.createLinearGradient(0, 0, 0, 26);
+    grad.addColorStop(0, 'rgba(60,130,255,.55)');
+    grad.addColorStop(1, 'rgba(30,80,200,.2)');
+    x.fillStyle = grad;
+    x.fillRect(2, 2, 252, 26);
+    x.strokeStyle = '#3ea8ff';
+    x.lineWidth = 2;
+    x.strokeRect(2, 2, 252, 156);
+    x.fillStyle = '#cfe8ff';
+    x.font = 'bold 14px sans-serif';
+    x.fillText(title, 12, 20);
+    x.strokeStyle = 'rgba(90,150,230,.18)';
+    x.lineWidth = 1;
+    for (let i = 1; i < 4; i++) {
+      x.beginPath(); x.moveTo(10, 32 + i * 30); x.lineTo(246, 32 + i * 30); x.stroke();
+    }
+    const hs = [40, 66, 52, 88, 62, 80, 46];
+    hs.forEach((h, i) => {
+      const g2 = x.createLinearGradient(0, 142 - h, 0, 142);
+      g2.addColorStop(0, 'rgba(120,220,255,.95)');
+      g2.addColorStop(1, 'rgba(40,110,255,.45)');
+      x.fillStyle = g2;
+      x.fillRect(18 + i * 32, 142 - h, 16, h);
+    });
+    x.strokeStyle = '#6ff3ff';
+    x.lineWidth = 2.5;
+    x.shadowColor = '#6ff3ff';
+    x.shadowBlur = 6;
+    x.beginPath();
+    hs.forEach((h, i) => {
+      const px = 26 + i * 32, py = 142 - h - 10;
+      i ? x.lineTo(px, py) : x.moveTo(px, py);
+    });
+    x.stroke();
+  });
+}
+
+/* 光轨纹理：亮头 → 拖尾 */
+function trailTexture() {
+  return canvasTex(256, 16, (x) => {
+    const g = x.createLinearGradient(0, 0, 256, 0);
+    g.addColorStop(0, 'rgba(70,170,255,0)');
+    g.addColorStop(0.75, 'rgba(100,195,255,.65)');
+    g.addColorStop(1, 'rgba(230,250,255,1)');
+    x.fillStyle = g;
+    x.fillRect(0, 0, 256, 16);
+  });
+}
+
+/* 大范围环境辉光（贴在场景后面的蓝色光晕） */
+function glowSpriteTexture() {
+  return canvasTex(256, 256, (x) => {
+    const g = x.createRadialGradient(128, 128, 0, 128, 128, 128);
+    g.addColorStop(0, 'rgba(45,115,235,.50)');
+    g.addColorStop(0.45, 'rgba(28,75,170,.20)');
+    g.addColorStop(1, 'rgba(0,0,20,0)');
+    x.fillStyle = g;
+    x.fillRect(0, 0, 256, 256);
+  });
+}
+
+/* 车辆：车身 + 座舱 + 四轮 + 头灯/尾灯 + 路面光斑（车头朝局部 +x） */
+function makeCar(color, opts = {}) {
+  const g = new THREE.Group();
+  const L = opts.bus ? 0.52 : 0.3;
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(L, 0.07, 0.15),
+    new THREE.MeshBasicMaterial({ color })
+  );
+  body.position.y = 0.05;
+  g.add(body);
+  const cabin = new THREE.Mesh(
+    new THREE.BoxGeometry(opts.bus ? L * 0.85 : L * 0.5, 0.05, 0.13),
+    new THREE.MeshBasicMaterial({ color: 0x14294d })
+  );
+  cabin.position.set(opts.bus ? -0.02 : -0.03, 0.10, 0);
+  g.add(cabin);
+  const wheelMat = new THREE.MeshBasicMaterial({ color: 0x05080f });
+  [[-1, 1], [1, 1], [-1, -1], [1, -1]].forEach(([sx, sz]) => {
+    const w = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.05, 0.03), wheelMat);
+    w.position.set(sx * (L * 0.32), 0.025, sz * 0.08);
+    g.add(w);
+  });
+  const headMat = new THREE.MeshBasicMaterial({ color: 0xfff6d8 });
+  const tailMat = new THREE.MeshBasicMaterial({ color: 0xff5a4d });
+  [-1, 1].forEach((sz) => {
+    const h = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.02, 0.03), headMat);
+    h.position.set(L * 0.5, 0.05, sz * 0.05);
+    g.add(h);
+    const t = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.02, 0.03), tailMat);
+    t.position.set(-L * 0.5, 0.05, sz * 0.05);
+    g.add(t);
+  });
+  const pool = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.5, 0.28),
+    new THREE.MeshBasicMaterial({ color: 0xfff2c0, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false })
+  );
+  pool.rotation.x = -Math.PI / 2;
+  pool.position.set(L * 0.5 + 0.22, 0.005, 0);
+  g.add(pool);
+  return g;
+}
+
+/* ====================================================================
+   底部基座（设备台）+ 同心光环 + 投射光束
+==================================================================== */
+const base = new THREE.Group();
+
+const baseBody = new THREE.Mesh(
+  new THREE.BoxGeometry(6.8, 1.1, 6.8),
+  new THREE.MeshStandardMaterial({ color: 0x070d1c, metalness: 0.85, roughness: 0.28 })
+);
+baseBody.position.y = 0.55;
+const baseTop = new THREE.Mesh(
+  new THREE.BoxGeometry(7.5, 0.18, 7.5),
+  new THREE.MeshStandardMaterial({ color: 0x0b1830, metalness: 0.7, roughness: 0.3 })
+);
+baseTop.position.y = 1.19;
+const baseEdgesTop = new THREE.LineSegments(new THREE.EdgesGeometry(baseTop.geometry), EDGE);
+baseEdgesTop.position.y = 1.19;
+const baseEdgesBody = new THREE.LineSegments(
+  new THREE.EdgesGeometry(baseBody.geometry),
+  new THREE.LineBasicMaterial({ color: 0x2f8fd8, transparent: true, opacity: 0.55 })
+);
+baseEdgesBody.position.y = 0.55;
+
+/* 基座侧面的发光饰条 */
+const trimMat = new THREE.MeshBasicMaterial({ color: 0x35c8ff, transparent: true, opacity: 0.9 });
+[[7.0, 0.035, 0.03, 0, 3.51], [7.0, 0.035, 0.03, 0, -3.51], [0.03, 0.035, 7.0, 3.51, 0], [0.03, 0.035, 7.0, -3.51, 0]]
+  .forEach(([w, h, d, x, z]) => {
+    const t = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), trimMat);
+    t.position.set(x, 1.02, z);
+    base.add(t);
+  });
+
+base.add(baseBody, baseTop, baseEdgesTop, baseEdgesBody);
+
+/* 同心光环：一圈比一圈大，厚度用 Torus 才有参考图那种"实体圈"感 */
+const rings = [];
+[[2.45, 0.055], [1.85, 0.045], [1.25, 0.04]].forEach(([r, tube], i) => {
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(r, tube, 12, 96),
+    new THREE.MeshBasicMaterial({ color: i === 0 ? 0x5ff0ff : 0x35d0ff, transparent: true, opacity: 0.95 })
+  );
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = 1.30;
+  rings.push(ring);
+  base.add(ring);
+});
+const coreGlow = new THREE.Mesh(
+  new THREE.CircleGeometry(1.05, 48),
+  new THREE.MeshBasicMaterial({ color: 0x1f9dff, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false })
+);
+coreGlow.rotation.x = -Math.PI / 2;
+coreGlow.position.y = 1.31;
+base.add(coreGlow);
+
+/* 投射光束：外层宽 + 内层亮 */
+function beamCylinder(rTop, rBot, opacity) {
+  const m = new THREE.Mesh(
+    new THREE.CylinderGeometry(rTop, rBot, 3.4, 48, 1, true),
+    new THREE.MeshBasicMaterial({ color: 0x35b4ff, transparent: true, opacity, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })
+  );
+  m.position.y = 1.3 + 1.7;
+  return m;
+}
+const beamOuter = beamCylinder(2.7, 1.15, 0.05);
+const beamInner = beamCylinder(1.7, 0.65, 0.06);
+base.add(beamOuter, beamInner);
+world.add(base);
+
+/* ====================================================================
+   悬浮城市沙盘（上半部分）
+==================================================================== */
+const city = new THREE.Group();
+city.position.y = 5.2;
+world.add(city);
+const CITY_TOP = 0.35;   // 沙盘面板顶面(相对 city)
+
+/* 玻璃沙盘：两层错位的半透明板 + 亮边 */
+const slabLower = new THREE.Mesh(
+  new THREE.BoxGeometry(10.3, 0.22, 10.3),
+  new THREE.MeshBasicMaterial({ color: 0x123363, transparent: true, opacity: 0.30, depthWrite: false })
+);
+slabLower.position.y = -0.28;
+const slabUpper = new THREE.Mesh(
+  new THREE.BoxGeometry(9.5, 0.30, 9.5),
+  new THREE.MeshBasicMaterial({ color: 0x173a70, transparent: true, opacity: 0.5, depthWrite: false })
+);
+slabUpper.position.y = 0.05;
+const slabEdges = new THREE.LineSegments(new THREE.EdgesGeometry(slabUpper.geometry), EDGE);
+slabEdges.position.y = 0.05;
+city.add(slabLower, slabUpper, slabEdges);
+
+/* ---------- 道路：沥青贴图（边线+虚线）+ 路缘石 ---------- */
+function roadTexture() {
+  const t = canvasTex(256, 32, (x) => {
+    x.fillStyle = '#0a1526';
+    x.fillRect(0, 0, 256, 32);
+    x.fillStyle = 'rgba(140,200,255,.7)';       // 两侧实线边线
+    x.fillRect(0, 2, 256, 2);
+    x.fillRect(0, 28, 256, 2);
+    x.fillStyle = 'rgba(170,220,255,.8)';       // 中央虚线
+    for (let i = 0; i < 256; i += 32) x.fillRect(i, 15, 16, 2);
+  });
+  t.wrapS = THREE.RepeatWrapping;
+  t.repeat.set(4, 1);
+  return t;
+}
+const curbMat = new THREE.MeshBasicMaterial({ color: 0x182c4e });
+function roadAlongX(z) {
+  const g = new THREE.Group();
+  const r = new THREE.Mesh(
+    new THREE.PlaneGeometry(9.2, 0.95),
+    new THREE.MeshBasicMaterial({ map: roadTexture() })
+  );
+  r.rotation.x = -Math.PI / 2;
+  r.position.set(0, CITY_TOP + 0.004, z);
+  g.add(r);
+  [-0.55, 0.55].forEach((dz) => {
+    const curb = new THREE.Mesh(new THREE.BoxGeometry(9.2, 0.045, 0.1), curbMat);
+    curb.position.set(0, CITY_TOP + 0.022, z + dz);
+    g.add(curb);
+  });
+  return g;
+}
+function roadAlongZ(x) {
+  const g = new THREE.Group();
+  g.rotation.y = Math.PI / 2;                  // 复用横向道路，整体转 90°
+  const r = new THREE.Mesh(
+    new THREE.PlaneGeometry(9.2, 0.95),
+    new THREE.MeshBasicMaterial({ map: roadTexture() })
+  );
+  r.rotation.x = -Math.PI / 2;
+  r.position.set(0, CITY_TOP + 0.004, 0);
+  g.add(r);
+  [-0.55, 0.55].forEach((dx) => {
+    const curb = new THREE.Mesh(new THREE.BoxGeometry(9.2, 0.045, 0.1), curbMat);
+    curb.position.set(0, CITY_TOP + 0.022, dx);
+    g.add(curb);
+  });
+  g.position.x = x;
+  return g;
+}
+city.add(roadAlongX(1.7), roadAlongZ(1.7));
+
+/* ---------- 斑马线（长边顺着车行方向，横排铺过路面） ---------- */
+const zebraMat = new THREE.MeshBasicMaterial({ color: 0xd8ecff, transparent: true, opacity: 0.85 });
+function crosswalk(alongX, at) {
+  for (let i = -2; i <= 2; i++) {
+    const s = new THREE.Mesh(
+      new THREE.PlaneGeometry(alongX ? 0.55 : 0.09, alongX ? 0.09 : 0.55),
+      zebraMat
+    );
+    s.rotation.x = -Math.PI / 2;
+    if (alongX) s.position.set(at, CITY_TOP + 0.012, 1.7 + i * 0.19);
+    else s.position.set(1.7 + i * 0.19, CITY_TOP + 0.012, at);
+    city.add(s);
+  }
+}
+crosswalk(true, 0.2);
+crosswalk(true, 3.2);
+crosswalk(false, 0.2);
+crosswalk(false, 3.2);
+
+/* ---------- 路灯（弯臂 + 暖白灯头） ---------- */
+const lampPoleMat = new THREE.MeshBasicMaterial({ color: 0x33507c });
+const lampGlowMat = new THREE.MeshBasicMaterial({ color: 0xfff0c0 });
+function lamp(x, z, dx, dz) {
+  const g = new THREE.Group();
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.032, 0.6, 6), lampPoleMat);
+  pole.position.y = CITY_TOP + 0.3;
+  const arm = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.02, 0.02), lampPoleMat);
+  arm.position.set(dx * 0.12, CITY_TOP + 0.58, dz * 0.12);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), lampGlowMat);
+  head.position.set(dx * 0.24, CITY_TOP + 0.56, dz * 0.24);
+  g.add(pole, arm, head);
+  g.position.set(x, 0, z);
+  city.add(g);
+}
+[[-3.6, 1.0, 0, 1], [-1.2, 1.0, 0, 1], [3.2, 2.4, 0, -1], [4.4, 1.0, 0, 1],
+ [1.0, -3.6, 1, 0], [1.0, -1.2, 1, 0], [2.4, 3.2, -1, 0], [1.0, 4.4, 1, 0]
+].forEach(([x, z, dx, dz]) => lamp(x, z, dx, dz));
+
+/* ---------- 楼群（带亮窗纹理） ---------- */
+const roofMat = new THREE.MeshBasicMaterial({ color: 0x0b1e42 });
+const buildingDefs = [
+  // [x, z, 宽, 深, 高]
+  [-3.2, -2.8, 1.0, 1.0, 1.6], [-1.8, -3.2, 0.8, 0.8, 2.4], [-0.4, -2.4, 0.9, 0.9, 1.2],
+  [-2.9, -1.2, 0.7, 0.7, 1.0], [-1.2, -1.5, 1.1, 1.1, 3.0], [-0.2, -0.6, 0.6, 0.6, 1.8],
+  [3.4, -2.6, 1.0, 1.0, 1.4], [2.6, -1.4, 0.8, 0.8, 2.0], [3.8, -0.9, 0.7, 0.7, 1.1],
+  [-3.3, 2.6, 0.9, 0.9, 1.2], [-1.0, 2.8, 0.7, 0.7, 1.0], [-0.1, 3.9, 0.8, 0.8, 0.9],
+  [3.2, 3.0, 1.1, 1.1, 2.2], [2.4, 3.9, 0.7, 0.7, 1.3], [3.9, 2.1, 0.6, 0.6, 0.9],
+  [2.8, 2.3, 0.5, 0.5, 0.7]
+];
+buildingDefs.forEach(([x, z, w, d, h]) => {
+  const geo = new THREE.BoxGeometry(w, h, d);
+  const win = new THREE.MeshBasicMaterial({ map: buildingTexture() });
+  const m = new THREE.Mesh(geo, [win, win, roofMat, roofMat, win, win]);
+  const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo), EDGE);
+  const g = new THREE.Group();
+  g.add(m, e);
+  g.position.set(x, CITY_TOP + h / 2, z);
+  city.add(g);
+});
+
+/* ---------- 环形高架 ---------- */
+const overpass = new THREE.Group();
+const ringRoad = new THREE.Mesh(
+  new THREE.TorusGeometry(1.55, 0.075, 10, 72, Math.PI * 1.65),
+  new THREE.MeshBasicMaterial({ color: 0x49c9ff, transparent: true, opacity: 0.9 })
+);
+ringRoad.rotation.x = -Math.PI / 2;
+overpass.add(ringRoad);
+for (let i = 0; i < 4; i++) {
+  const a = (i / 4) * Math.PI * 1.65;
+  const p = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.045, 0.045, 1.5, 8),
+    new THREE.MeshBasicMaterial({ color: 0x2f8fd8, transparent: true, opacity: 0.8 })
+  );
+  p.position.set(Math.cos(a) * 1.55, -0.72, Math.sin(a) * 1.55);
+  overpass.add(p);
+}
+overpass.position.set(-0.3, CITY_TOP + 1.45, 3.3);
+city.add(overpass);
+/* 高架上跑的车（缩小版，带车灯） */
+const overCar = makeCar(0xf2fbff);
+overCar.scale.set(0.8, 0.8, 0.8);
+overpass.add(overCar);
+
+/* ---------- 信号灯 ---------- */
+(function trafficLight() {
+  const g = new THREE.Group();
+  const pole = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.045, 0.045, 1.5, 8),
+    new THREE.MeshStandardMaterial({ color: 0x22344f, metalness: 0.6, roughness: 0.4 })
+  );
+  pole.position.y = CITY_TOP + 0.75;
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.6, 0.2),
+    new THREE.MeshStandardMaterial({ color: 0x0d1626 }));
+  head.position.y = CITY_TOP + 1.65;
+  const lamp = new THREE.Mesh(
+    new THREE.SphereGeometry(0.07, 12, 12),
+    new THREE.MeshBasicMaterial({ color: 0x3bff8f })
+  );
+  lamp.position.set(0, CITY_TOP + 1.78, 0.12);
+  g.add(pole, head, lamp);
+  g.position.set(1.15, 0, 0.85);
+  city.add(g);
+})();
+
+/* ---------- 路边树 ---------- */
+const treeLeaf = new THREE.MeshBasicMaterial({ color: 0x1f7a5e });
+const treeTrunk = new THREE.MeshBasicMaterial({ color: 0x27415c });
+[[-4.0, 0.4], [-4.0, 1.0], [0.4, -4.0], [1.0, -4.0], [4.1, 1.0], [4.1, 1.6],
+ [-4.1, 3.9], [-3.6, 4.3], [0.4, 4.2], [1.0, 4.2], [4.2, 4.0], [4.2, -3.4], [-0.4, -4.1], [3.4, -4.1]
+].forEach(([x, z]) => {
+  const t = new THREE.Group();
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.16, 6), treeTrunk);
+  trunk.position.y = CITY_TOP + 0.08;
+  const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 10), treeLeaf);
+  leaf.position.y = CITY_TOP + 0.24;
+  leaf.scale.y = 1.25;
+  t.add(trunk, leaf);
+  t.position.set(x, 0, z);
+  city.add(t);
+});
+
+/* ---------- 输电铁塔 + 导线 + 变压器（变电运维项目元素，暖色点缀） ---------- */
+const steelMat = new THREE.MeshBasicMaterial({ color: 0x4a6f9e });
+function pylon(h) {
+  const g = new THREE.Group();
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.16, h, 6), steelMat);
+  mast.position.y = CITY_TOP + h / 2;
+  g.add(mast);
+  [0.55, 0.72, 0.89].forEach((f, i) => {
+    const armW = 1.5 - i * 0.4;
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(armW, 0.035, 0.035), steelMat);
+    arm.position.y = CITY_TOP + h * f;
+    g.add(arm);
+  });
+  const tip = new THREE.Mesh(
+    new THREE.SphereGeometry(0.05, 8, 8),
+    new THREE.MeshBasicMaterial({ color: 0xff6b5a })
+  );
+  tip.position.y = CITY_TOP + h + 0.06;
+  g.add(tip);
+  return g;
+}
+const PYLON_H = 2.5;
+const pylonA = pylon(PYLON_H); pylonA.position.set(-3.7, 0, -3.7);
+const pylonB = pylon(PYLON_H); pylonB.position.set(3.8, 0, -3.7);
+city.add(pylonA, pylonB);
+
+/* 导线：三点插值出弧垂，暖橙色在蓝色场景里做颜色对比 */
+function wire(from, to) {
+  const pts = [];
+  for (let i = 0; i <= 24; i++) {
+    const k = i / 24;
+    const p = new THREE.Vector3().lerpVectors(from, to, k);
+    p.y -= Math.sin(k * Math.PI) * 0.35;
+    pts.push(p);
+  }
+  return new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({ color: 0xffb45a, transparent: true, opacity: 0.85 })
+  );
+}
+const wireY = CITY_TOP + PYLON_H * 0.55;
+[-0.55, 0, 0.55].forEach((off) => {
+  city.add(wire(
+    new THREE.Vector3(-3.7 + off, wireY, -3.7),
+    new THREE.Vector3(3.8 + off, wireY, -3.7)
+  ));
+});
+
+/* 主变：油箱 + 三支套管（套管顶亮暖色） */
+(function transformer() {
+  const g = new THREE.Group();
+  const tank = new THREE.Mesh(
+    new THREE.BoxGeometry(0.55, 0.34, 0.42),
+    new THREE.MeshBasicMaterial({ color: 0x2a4a70 })
+  );
+  tank.position.y = CITY_TOP + 0.17;
+  g.add(tank);
+  for (let i = -1; i <= 1; i++) {
+    const bush = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.028, 0.04, 0.24, 8),
+      new THREE.MeshBasicMaterial({ color: 0x8fb0d8 })
+    );
+    bush.position.set(i * 0.16, CITY_TOP + 0.44, 0);
+    g.add(bush);
+    const cap = new THREE.Mesh(
+      new THREE.SphereGeometry(0.035, 8, 8),
+      new THREE.MeshBasicMaterial({ color: 0xffc36b })
+    );
+    cap.position.set(i * 0.16, CITY_TOP + 0.58, 0);
+    g.add(cap);
+  }
+  g.position.set(0.9, 0, -4.1);
+  city.add(g);
+})();
+
+/* ---------- 悬浮数据面板 ---------- */
+const panels = [];
+[["技能达标率分析", -2.6, 3.6, -2.0, 0.45, 2.5],
+ ["考试成绩统计", 2.6, 4.6, 1.6, -0.5, 1.9],
+ ["安全运行监测", 0.2, 5.6, -3.6, 0.1, 1.6]].forEach(([t, x, y, z, ry, s]) => {
+  const p = new THREE.Mesh(
+    new THREE.PlaneGeometry(2.6 * s * 0.64, 1.62 * s * 0.64),
+    new THREE.MeshBasicMaterial({ map: panelTexture(t), transparent: true, side: THREE.DoubleSide, depthWrite: false })
+  );
+  p.position.set(x, y, z);
+  p.rotation.y = ry;
+  p.userData = { baseY: y };
+  panels.push(p);
+  city.add(p);
+});
+
+/* ---------- 城市道路上跑的车 ---------- */
+const cars = [];
+const carColors = [0xdff6ff, 0x9fd8ff, 0x35d8ff, 0xffc36b, 0xb8ffd9, 0xff9fb2];
+[ // [轴向, 固定坐标, 方向, 初相, 速度, 颜色序号]
+  ['x', 1.52, 1, 0.0, 1.6, 0], ['x', 1.88, -1, 2.2, 1.4, 1],
+  ['z', 1.52, 1, 4.0, 1.5, 2], ['z', 1.88, -1, 1.1, 1.7, 3],
+  ['x', 1.52, 1, 5.5, 1.25, 4], ['z', 1.88, -1, 6.5, 1.2, 5]
+].forEach(([axis, fixed, dirv, phase, speed, ci]) => {
+  const c = makeCar(carColors[ci]);
+  c.userData = { axis, fixed, dirv, phase, speed };
+  cars.push(c);
+  city.add(c);
+});
+/* 一辆公交 */
+const bus = makeCar(0xbfe9ff, { bus: true });
+bus.userData = { axis: 'x', fixed: 1.52, dirv: 1, phase: 5.2, speed: 1.1 };
+cars.push(bus);
+city.add(bus);
+
+/* ====================================================================
+   地面环境：涟漪 + 光轨 + 星尘 + 背景辉光
+==================================================================== */
+const GROUND_Y = -2.5;
+
+/* 涟漪：从基座向外扩散的圆环 */
+const ripples = [];
+for (let i = 0; i < 3; i++) {
+  const r = new THREE.Mesh(
+    new THREE.RingGeometry(3.6, 3.78, 80),
+    new THREE.MeshBasicMaterial({ color: 0x2f9fd8, transparent: true, opacity: 0.4, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })
+  );
+  r.rotation.x = -Math.PI / 2;
+  r.position.set(-8.0, GROUND_Y + 0.01, 0);
+  r.userData = { phase: i / 3 };
+  ripples.push(r);
+  scene.add(r);
+}
+
+/* 地面光轨（模拟远处车流长曝光） */
+const trails = [];
+const tTex = trailTexture();
+for (let i = 0; i < 10; i++) {
+  const alongX = i % 2 === 0;
+  const t = new THREE.Mesh(
+    new THREE.PlaneGeometry(4.2, 0.12),
+    new THREE.MeshBasicMaterial({ map: tTex, transparent: true, opacity: 0.65, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide })
+  );
+  if (!alongX) t.rotation.y = Math.PI / 2;
+  const lane = (4.5 + (i >> 1) * 2.6) * (i % 4 < 2 ? 1 : -1);
+  t.userData = { alongX, lane, speed: (7 + (i % 4) * 2.2) * (alongX ? 1 : 0.8), offset: i * 9.3, dirv: i % 3 === 0 ? -1 : 1 };
+  trails.push(t);
+  scene.add(t);
+}
+/* 光轨所在的地板 */
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(140, 140),
+  new THREE.MeshBasicMaterial({ color: 0x030711 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = GROUND_Y - 0.02;
+scene.add(ground);
+
+/* 星尘 */
+const starGeo = new THREE.BufferGeometry();
+const starN = 380;
+const pos = new Float32Array(starN * 3);
+for (let i = 0; i < starN; i++) {
+  pos[i * 3] = (Math.random() - 0.5) * 90;
+  pos[i * 3 + 1] = Math.random() * 26 - 3;
+  pos[i * 3 + 2] = (Math.random() - 0.5) * 90;
+}
+starGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({
+  color: 0x88bbff, size: 0.06, transparent: true, opacity: 0.45, depthWrite: false
+}));
+scene.add(stars);
+
+/* 背景大光晕 */
+const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+  map: glowSpriteTexture(), transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending
+}));
+glow.scale.set(46, 34, 1);
+glow.position.set(-8, 6, -14);
+scene.add(glow);
+
+/* ---------- 交互与动画 ---------- */
+/* ---------- 小范围环绕观察（拖拽只在初始视角附近小幅转动） ---------- */
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;        // 阻尼，转动有惯性更顺滑
+controls.dampingFactor = 0.06;
+controls.enablePan = false;           // 关闭平移，防止把场景拖丢
+controls.minDistance = 10;
+controls.maxDistance = 45;
+// 初始方位角 atan2(12.2, 20.5) ≈ 0.54 rad，左右各放开约 0.55 rad（±30°）
+controls.minAzimuthAngle = -0.05;
+controls.maxAzimuthAngle = 1.13;
+// 俯仰限制在初始视角附近小幅上下
+controls.minPolarAngle = 0.85;
+controls.maxPolarAngle = 1.5;
+controls.autoRotate = false;          // 不自动转圈，只响应用户拖拽
+
+/* ---------- 响应式布局：宽屏把场景平移到画面左侧，窄屏回中 ---------- */
+function layout() {
+  const w = innerWidth;
+  camShift = w > 1400 ? 9.5 : w > 1100 ? 7.5 : w > 900 ? 4.5 : 0;
+  world.position.x = -4.0;
+  glow.position.x = -4.0;
+  ripples.forEach((r) => { r.position.x = -4.0; });
+  // 旋转中心跟随场景当前位置（含相机右移量）
+  controls.target.copy(LOOK_AT).addScaledVector(RIGHT, camShift);
+}
+layout();
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+  layout();
+});
+
+const clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+
+  /* 光环脉冲 */
+  rings.forEach((r, i) => {
+    const s = 1 + 0.045 * Math.sin(t * 1.7 + i * 1.3);
+    r.scale.set(s, s, 1);
+    r.material.opacity = 0.75 + 0.25 * Math.sin(t * 2.1 + i);
+  });
+  coreGlow.material.opacity = 0.26 + 0.12 * Math.sin(t * 2.3);
+  beamOuter.material.opacity = 0.04 + 0.012 * Math.sin(t * 1.9);
+  beamInner.material.opacity = 0.05 + 0.015 * Math.sin(t * 2.4 + 1);
+
+  /* 城市整体轻微悬浮 + 摆动 */
+  city.position.y = 5.2 + Math.sin(t * 0.7) * 0.16;
+  city.rotation.y = Math.sin(t * 0.12) * 0.10;
+
+  /* 面板浮动 */
+  panels.forEach((p, i) => {
+    p.position.y = p.userData.baseY + Math.sin(t * 1.0 + i * 2.1) * 0.13;
+  });
+
+  /* 城市道路车流：直线往返 */
+  cars.forEach((c) => {
+    const u = c.userData;
+    const p = ((t * u.speed + u.phase) % 11) - 5.5;
+    if (u.axis === 'x') {
+      c.position.set(p * u.dirv, CITY_TOP + 0.005, u.fixed);
+      c.rotation.y = u.dirv > 0 ? 0 : Math.PI;
+    } else {
+      c.position.set(u.fixed, CITY_TOP + 0.005, p * u.dirv);
+      // 车头在局部 +x：rotation.y=-PI/2 才朝 +z（此前符号反了，车在倒着开）
+      c.rotation.y = u.dirv > 0 ? -Math.PI / 2 : Math.PI / 2;
+    }
+  });
+  /* 高架上的车：沿圆环切线方向前进 */
+  {
+    const a = t * 0.9;
+    overCar.position.set(Math.cos(a) * 1.55, 0.09, Math.sin(a) * 1.55);
+    overCar.rotation.y = -a - Math.PI / 2;
+  }
+
+  /* 地面涟漪扩散 */
+  ripples.forEach((r) => {
+    const k = (t * 0.22 + r.userData.phase) % 1;
+    const s = 0.4 + k * 2.6;
+    r.scale.set(s, s, 1);
+    r.material.opacity = 0.42 * (1 - k);
+  });
+
+  /* 地面光轨 */
+  trails.forEach((tr) => {
+    const u = tr.userData;
+    const range = 46;
+    let p = ((t * u.speed + u.offset) % range);
+    if (u.dirv > 0) p = p - range / 2; else p = range / 2 - p;
+    if (u.alongX) tr.position.set(p, GROUND_Y + 0.05, u.lane);
+    else tr.position.set(u.lane, GROUND_Y + 0.05, p);
+  });
+
+  stars.rotation.y = t * 0.006;
+
+  /* 相机视差 */
+  /* 相机：交给 OrbitControls（阻尼 + 自转 + 用户拖拽） */
+  controls.update();
+
+  composer.render();
+}
+animate();
+</script>
+</body>
+</html>

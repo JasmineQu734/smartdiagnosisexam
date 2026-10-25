@@ -1,0 +1,23 @@
+{
+ "overall": {
+  "n": 26,
+  "any_cite_rate": 1.0,
+  "three_plus_rate": 1.0,
+  "cited_share_of_reasons": 1.0,
+  "mean_factors_cited": 4.73
+ },
+ "heldout": {
+  "n": 20,
+  "any_cite_rate": 1.0,
+  "three_plus_rate": 1.0,
+  "cited_share_of_reasons": 1.0,
+  "mean_factors_cited": 4.75
+ },
+ "verbatim": {
+  "n": 6,
+  "any_cite_rate": 1.0,
+  "three_plus_rate": 1.0,
+  "cited_share_of_reasons": 1.0,
+  "mean_factors_cited": 4.67
+ }
+}

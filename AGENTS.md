@@ -101,11 +101,36 @@ rule (rule_code, rule_name, scene, rule_group, condition_json, action_json,
   报告 `analysis` 结构未变，`rule_refs` 是**真规则编号**（旧实现里的 `RULE-GAS-ABOVE` 之类是 Java 拼的假编号，已清掉）。
 - **决策留痕链已通**：一次归因 = 一个 `run_id`，串起 `rule_result` → `agent_suggestion` →（人工确认）`decision_log`；
   确认接口在 `POST /api/v1/tasks/reports/{reportId}/attribution/confirm`（班组长，只改建议状态、不改业务数据）。
+- **本机自训练模型已接入**（2026-10-16，接口/DTO/表结构一行未动）：`启动Agent.bat` → `tools/agent/start-agent.ps1`
+  用 **`llamafactory-cli api`**（不是 `webui`：webui 只有网页界面、没有 HTTP 接口，后端调不到）把
+  `Qwen2.5-7B-Instruct` + `saves/Qwen2.5-7B-Instruct/lora/train_2026-10-12-23-22-24`（QLoRA，rank 8，
+  dataset `my_data15`，train_loss 1.99 / eval_loss 1.42）以 4-bit 跑在 `127.0.0.1:8000`；
+  `.env` 的 `AI_BASE_URL/AI_MODEL/AI_API_KEY/AI_TIMEOUT_SECONDS` 指向它，个人诊断与公司诊断由此走 `source=model`
+  （实测单次个性化诊断约 80 秒，故 `AI_TIMEOUT_SECONDS=300`）。`停止Agent.bat` 停止；两者只碰 8000 端口那一个进程。
+- **诊断结论的「事后规范」已进管道**（2026-10-16 晚，接口/DTO/表结构仍未动）：模型擅长事实层面的判断，
+  不擅长排期、去重和汇总，所以契约校验**通过之后**再统一兜住四件事——
+  `DiagnosisPipeline.polishPersonal`：plan 的 `due_at`（必须晚于今天且严格递增，否则整列按今天起每 14 天重排）、
+  plan 的 `reason` 与 `compound_path.benefit`（与已出现的文案复读就改写成该条目自己的说法）；
+  `PersonalDiagnosisService.applyRadarPriority`：gaps 的 skill/等级/severity/priority 一律以 `employee_skill`
+  的技能雷达为权威口径逐条对齐，模型漏写的缺口由后端补一条（叙述字段用兜底文案，不引入新事实）。
+  事实清单另加一条**结论性事实** `skill_gap_summary`（放在最末，`F1…` 编号不变），把「谁该进 gaps」
+  从模型的归纳变成后端给定；没有未达标技能时它的 source 换成 `skill_status_summary`，提示词据此不施加
+  「必须覆盖」约束（否则会逼模型写出空 gaps、被契约判不合格）。
+  记忆库取数排掉了本 Agent 自己写回的诊断结论（`source_label NOT LIKE '个人学习 Agent%'`），
+  否则跑几次之后模型会把「自己上次说过什么」当成证据引用、形成自我确认（实测发生过，F10–F15 全是旧诊断）。
 
 还没做的（别误以为已有）：
 
-- **三个 Agent 桩仍是写死的**：`ApiController` 里 `/api/v1/agent/{agentType}/{action}` 返回固定的 3 条建议，
-  **尚未接上 `RuleEngine`**。按约定**先不动**，等模型训练好再接（只换 Service 实现 + 把 `source` 从 `rule` 换 `model`）。
+- **三个 Agent 桩已接规则引擎**（2026-10-17，接口/DTO/表结构一行未动）：`ApiController` 的
+  `/api/v1/agent/{agentType}/{action}` 只剩一行委托，实现搬到 `agent/AgentDispatchService`——
+  `personal` 逐技能执行 `PERSONAL_GAP`（一个员工可能同时缺多种技能，只报一项会漏）、
+  `management` 用 `position` 的备份/编制与 `app_user` 在岗一线人数组装 `TALENT_GAP` 事实（`future_demand` 目前是编制近似，见 `docs/issues/004`）、
+  `report` 复用 `ReportAttributionService` 跑 `REPORT_GAS`。建议文案末尾带规则编号（如 `SKILL_GAP_L3`），
+  `source` / `confidence` 来自实际执行；无命中时落一条 `0.30` 置信度的结论并写明原因，不报错、不装确信。
+  **仍未做**：`EXAM_RESULT` 场景没有线上消费方（交卷后不调引擎），所以 `exam_pass_line` 这条事实目前无人产生。
+
+原来那条「三个 Agent 桩仍是写死的」已随本次改造失效，保留这句话是为了提醒：
+**通用桩与 `/personal/agent-diagnose` 不是同一条链路**，后者走 3B 模型，前者走规则。
 - **运营归因与资料校验还没接**：`OPS_ATTRIBUTION`（`CompanyController.runDiagnosis` 的 `inputs` 有 4 条与整段 `summary` 是硬编码文案）、
   `MATERIAL_CHECK`（只有抽取、没有校验）都没走引擎；接线方案见 `docs/rule-engine-integration.md`。
 - **鉴权已改成令牌制**：`rbac/AuthToken` 签发 + `rbac/AuthFilter` 校验，`/api/v1/**` 除登录/登出/`/health` 外都要求 `Authorization: Bearer <token>`；

@@ -297,13 +297,41 @@ if ($tars.Count -gt 0 -and -not $Rebuild) {
     if ($LASTEXITCODE -ne 0) { Die 'docker compose up --build 失败，请把上面的报错发给维护者。' }
 }
 
+# ---------------------------------------------------------------- 4.5 启动两个本地 Agent
+# 两个 3B 4-bit 推理各占约 2.3GB 显存，8G 卡可以并存；
+# 后端 .env 里 AI_BASE_URL / AI_EXEC_BASE_URL 已指向 host.docker.internal:8000 / 8002。
+Step '4.5/6 启动两个本地 Agent（8000 个人诊断 / 8002 公司诊断）'
+
+$agentPs1 = Join-Path $Root 'tools\agent\start-agent.ps1'
+if (-not (Test-Path $agentPs1)) {
+    Warn 'tools\agent\start-agent.ps1 不存在，跳过 Agent 启动（诊断将自动回退内置规则结论，不报错）。'
+} else {
+    $busyNow = Get-BusyPorts
+    $agents = @(
+        @{ Title = 'agent-8000-personal'; Name = '个人学习 Agent (sft16_3b)'; Extra = @(); Port = 8000 },
+        @{ Title = 'agent-8002-exec';     Name = '公司运行 Agent (sft17_exec)'; Extra = @('-Exec'); Port = 8002 }
+    )
+    foreach ($a in $agents) {
+        if ($busyNow.ContainsKey([int]$a.Port)) {
+            Warn "$($a.Name)：端口 $($a.Port) 已被占用，视为已在运行，跳过。"
+            continue
+        }
+        $argList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $agentPs1) + $a.Extra
+        Start-Process -FilePath 'powershell.exe' -WindowStyle Normal -WorkingDirectory $Root -ArgumentList $argList
+        Ok "$($a.Name) 已在新窗口启动（端口 $($a.Port)，模型加载约 2 分钟后可用）"
+    }
+    Warn '两个 Agent 窗口不要关，关掉即停该模型（对应诊断会回退规则结论）。'
+}
+
 # ---------------------------------------------------------------- 5 等待就绪
 Step '5/6 等待服务就绪'
 
 $url = "http://127.0.0.1:$webPort/"
 Say "正在等待 $url 响应（首次启动会初始化数据库并跑完 11 个建库脚本，请耐心等）…"
 if (Wait-Http $url 600) {
-    Ok '服务已就绪'
+    Ok '服务已就绪，正在打开浏览器…'
+    Start-Process $url
+    Ok "已打开 $url"
 } else {
     Warn '等待超时，服务可能还在初始化。可以先执行下面命令看日志：'
     Say '   docker compose logs -f --tail 50'

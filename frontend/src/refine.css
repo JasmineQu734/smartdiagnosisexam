@@ -1,0 +1,297 @@
+/* ============================================================
+   视觉精修层（最后加载，压过前面所有层的同类规则）
+   目标：字体系统统一、层级清晰、色彩克制、去廉价感。
+   ============================================================ */
+
+/* ---- 1. 数字字体：Consolas 的点阵感与中文雅黑打架，换 Bahnschrift（Windows 自带 DIN 工业体，与变电 HMI 气质一致） ---- */
+:root {
+  --font-num: 'Bahnschrift', 'Segoe UI Semibold', 'Roboto Condensed', 'Consolas', monospace;
+}
+
+/* ---- 2. 页头区：四个层级挤在一屏，降字号、去辉光、收节奏 ---- */
+h1 { font-size: 22px !important; font-weight: 700; letter-spacing: 0; text-shadow: none; margin: 5px 0 2px; }
+.greeting { font-size: 13.5px; }
+.greeting b { text-shadow: none; font-weight: 700; }
+.eyebrow { font-size: 11px; letter-spacing: 1.5px; }
+.welcome, .role-hint { font-size: 13px; }
+header::after { opacity: .7; }
+
+/* ---- 3. 侧栏导航：Unicode 杂符（◌◈▤☺）统一换成几何小菱形标记 ---- */
+nav button { position: relative; font-size: 13.5px; letter-spacing: .5px; gap: 0; padding: 10px 12px 10px 24px; }
+nav button span { display: none; }
+nav button::before {
+  content: ''; position: absolute; left: 11px; top: 50%;
+  width: 5px; height: 5px; margin-top: -3px;
+  transform: rotate(45deg);
+  background: var(--faint); opacity: .5;
+  transition: background .15s, opacity .15s, box-shadow .15s;
+}
+nav button:hover::before { background: var(--blue); opacity: .9; }
+nav button.active { font-weight: 600; }
+nav button.active::before { background: var(--gold); opacity: 1; box-shadow: 0 0 6px rgba(217, 189, 138, .55); }
+
+/* 窄屏折叠模式：标记居中代替图标 */
+@media (max-width: 1420px) {
+  nav button { padding: 12px 4px; }
+  nav button::before { position: static; margin: 0; display: inline-block; }
+}
+
+/* 3D 顶部导航条同步：去图标、字距收敛 */
+.twin-floatnav button { padding: 7px 15px; letter-spacing: .5px; }
+.twin-floatnav button span { display: none; }
+
+/* ---- 4. 指标数字：去辉光、收敛字号、统一字重 ---- */
+.metric b { font-size: 29px; font-weight: 600; letter-spacing: .5px; text-shadow: none; }
+.metric > small { font-size: 13.5px; font-weight: 600; letter-spacing: .3px; }
+.metric span { font-size: 12.5px; }
+.hero strong { font-size: 42px; font-weight: 600; text-shadow: none; margin: 10px 0 4px; }
+.ring b { text-shadow: none; }
+.metric-value b { text-shadow: none; font-size: 26px; }
+.signal-stat .metric-value b { font-size: 26px; }
+
+/* ---- 5. 面板标题：19px/800/宽字距 → 15.5px/700，层级退到 h1 之下 ---- */
+.panel-title h2 { font-size: 15.5px; font-weight: 700; letter-spacing: .5px; }
+
+/* ---- 6. 徽标与品牌：去辉光 ---- */
+.brand, .brand-sub { text-shadow: none; }
+
+/* ---- 7. chips/状态签：字距、字重、字号收敛（密集彩色签是噪音源） ---- */
+.chip { font-family: var(--font-num); font-size: 12px; font-weight: 600; padding: 3px 9px; letter-spacing: .3px; }
+
+/* ---- 8. 表格/列表正文：字号统一 13.5px、行高放宽，避免忽大忽小 ---- */
+table.role-table td { font-size: 13.5px; }
+.agent-reasons li, .risk-list li { font-size: 13.5px; }
+
+/* ---- 9. 图表辅助文字：轴标/图例统一小号 ---- */
+.chart-caption, .chart-legend { font-size: 11.5px; color: var(--sub); }
+
+/* ---- 10. 全局按钮字距收敛 ---- */
+.action-button { letter-spacing: .3px; font-size: 13px; }
+
+/* 白天主题下 Bahnschrift 数字同样生效（token 已继承，无需额外处理） */
+
+/* ============================================================
+   v5 去装饰化 + 提亮：边边框框横横条条全部拿掉，
+   底色提亮一档，重点字加重，logo 立起来。
+   ============================================================ */
+
+/* ---- 1. 夜色令牌整体提亮：近黑→海军蓝，文字对比度拉高 ---- */
+:root {
+  --bg: #0e1626;
+  --ink: #e9effa;
+  --sub: #96a7c9;
+  --faint: #7083ab;
+  --line: #26355a;
+  --line-soft: rgba(48, 66, 106, .55);
+  --card-hi: rgba(24, 39, 72, .82);
+  --card-lo: rgba(14, 24, 46, .74);
+  --card-solid: #16233f;
+}
+
+/* ---- 2. 装饰全部拆除：四角刻线 / 顶边金线 / 辉光分隔线 / 网格底纹 ---- */
+body::before { content: none; }
+.panel::before, .panel::after, aside::before { content: none; }
+.panel, aside, .hero { border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+.panel { border: 1px solid var(--line); }
+header::after { content: none; }
+header { border-bottom: 1px solid var(--line-soft); }
+.panel-title h2::before { width: 3px; height: 12px; box-shadow: none; opacity: .8; }
+.twin-floatnav::after { content: none; }
+
+/* ---- 3. 重点字加重：关键数字白色加粗，页面主标题纯白 ---- */
+h1 { color: #ffffff; }
+.metric b { color: #ffffff; font-weight: 700; font-size: 30px; }
+.metric b em, .metric em { color: var(--sub); }
+.hero strong { color: var(--gold); font-weight: 700; }
+.panel-title h2 { color: #f4f7ff; }
+.greeting b { color: var(--gold); font-weight: 700; }
+.result-banner b, .analysis-head b { color: #ffffff; }
+
+/* ---- 4. logo 立起来：金底衬托 + 品牌字加重 ---- */
+.brand-mark {
+  width: 52px; height: 52px; padding: 7px;
+  background: linear-gradient(170deg, #22375f, #16233f);
+  border: 1px solid rgba(217, 189, 138, .65);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
+}
+.brand { font-size: 17px; font-weight: 700; letter-spacing: 3px; text-indent: 3px; color: #f4e3b8; }
+.brand-sub { color: var(--faint); }
+
+/* ---- 5. 面板底色更实（少了金线补偿，用微渐变撑质感） ---- */
+.panel { background: linear-gradient(175deg, var(--card-hi), var(--card-lo)); }
+.hero { background: linear-gradient(175deg, rgba(30, 48, 88, .85), rgba(16, 28, 54, .78)); }
+
+/* ---- 6. 状态签去框感：填色为主、描边弱化 ---- */
+.chip { border-color: transparent; }
+
+/* ---- 7. 白天主题同样去装饰（刻线/网格在白天也要消失） ---- */
+html.day .panel::before, html.day .panel::after, html.day aside::before { content: none; }
+html.day .panel, html.day aside, html.day .hero { border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+html.day .panel { border: 1px solid var(--line); }
+
+/* ============================================================
+   v6 白天模式三色纪律：全站限定三个色相——
+   深藏青（正文与数字）/ 香槟金（品牌与强调）/ 中性灰（辅助），
+   仅保留弱红做警示语义。彩虹标签、白字白底问题在此根治。
+   ============================================================ */
+
+/* 数字与关键值：深藏青（v5 的白色只适用于夜间） */
+html.day .metric b, html.day .metric-value b, html.day .ring b,
+html.day .result-banner b, html.day .analysis-head b { color: #1a2438; }
+html.day .metric b em, html.day .metric-value em, html.day .metric em { color: #5d6d8a; }
+html.day .metric > small, html.day .metric span { color: #3c4c6b; }
+
+/* 状态字统一深金（.good/.warn 基础规则带 !important，同级覆盖） */
+html.day .good, html.day .warn { color: #8c6c33 !important; }
+
+/* 标签去彩虹：ok / info / warn 一律中性灰底灰字，bad 保留弱红 */
+html.day .chip, html.day .chip.ok, html.day .chip.info, html.day .chip.warn {
+  color: #4a5a7a; background: #eef2f8; border-color: transparent; box-shadow: none; }
+html.day .chip.bad { color: #b23f39; background: rgba(178, 63, 57, .08); border-color: transparent; }
+
+/* 问候与品牌：名字金色可读，辅助字中灰 */
+html.day .greeting b { color: #8c6c33; }
+html.day .greeting, html.day .greeting small, html.day .welcome, html.day .role-note { color: #5d6d8a; }
+
+/* 侧栏激活项：金字加深加重，底色金 tint 加实 */
+html.day nav button.active { color: #8c6c33; background: rgba(168, 135, 74, .14); font-weight: 700; }
+
+/* ============================================================
+   v7 形状柔化：告别方方正正——卡片大圆角、按钮胶囊、
+   头像圆形、悬停浮起；两套主题统一，视觉更轻盈。
+   ============================================================ */
+
+/* 面板：16px 大圆角 + 轻投影（拆顶边金线，只留简洁细边） */
+.panel, .hero { border-radius: 16px; border-top: 1px solid var(--line); box-shadow: 0 4px 18px rgba(24, 39, 72, .07); }
+.hero { min-height: 0; padding: 24px 28px; }
+
+/* 指标卡：14px 圆角、内距加大、悬停轻微浮起 */
+.metric { border-radius: 14px; padding: 20px 22px; transition: transform .18s ease, box-shadow .18s ease; }
+.metric:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(24, 39, 72, .12); }
+.metrics { gap: 16px; }
+
+/* 侧栏：大圆角，导航改胶囊高亮（去左侧竖线） */
+aside { border-radius: 18px; }
+nav button { border-radius: 10px; border-left: none; }
+nav button.active { border-left: none; }
+.brand-mark { border-radius: 12px; }
+.user-mini { border-radius: 14px; }
+.avatar { border-radius: 50%; }
+
+/* 按钮 / 工具钮 / 标签：圆润 */
+.action-button, .tool-button, .el-button { border-radius: 10px; }
+.chip { border-radius: 999px; padding: 4px 13px; }
+.role-badge { border-radius: 12px; }
+
+/* 引导条（一线成长视角等）：软胶囊 */
+.eyebrow, .growth-note { border-radius: 999px; }
+
+/* 输入与下拉：10px 圆角 */
+.field input, .el-input__wrapper, .el-select__wrapper, .el-textarea__inner { border-radius: 10px; }
+
+/* 角色引导条：软胶囊化 */
+.role-hint { display: inline-flex; align-items: center; align-self: flex-start; border-radius: 999px; padding: 7px 16px; }
+
+/* 头像圆形（压过 roles.css 的角色方角规则） */
+.app-shell .avatar, .app-shell .role-chip-avatar { border-radius: 50%; box-shadow: none; }
+
+/* ============================================================
+   v8 白天模式三处突兀深色块：logo 块 / 右上用户徽章 / 左下用户条
+   ============================================================ */
+/* 左上 logo：白天用浅金底衬托（夜里保留深底） */
+html.day .brand-mark { background: linear-gradient(170deg, #fbf7ee, #f5eede); border-color: rgba(168, 135, 74, .45); box-shadow: 0 3px 10px rgba(140, 108, 51, .12); }
+
+/* 右上用户徽章（张 / 员工）：白天白底金圈 */
+html.day .app-shell .role-chip { background: #ffffff; border-color: #d4dcea; box-shadow: 0 2px 10px rgba(31, 45, 80, .08); }
+html.day .app-shell .role-chip-avatar { background: var(--gold-deep, #a8874a); color: #ffffff; border-radius: 50%; }
+html.day .app-shell .role-chip b { color: #1a2438; }
+
+/* 左下用户条：白天浅底 */
+html.day .user-mini { background: #f6f8fc; border-color: #d4dcea; }
+html.day .user-mini b { color: #1a2438; }
+html.day .user-mini small { color: #5d6d8a; }
+html.day .avatar { background: var(--gold-deep, #a8874a); color: #ffffff; }
+
+/* 头像统一圆形（压过 role-employee 方角特例） */
+.app-shell .avatar, .app-shell.role-employee .avatar, .app-shell .role-chip-avatar { border-radius: 50%; }
+
+/* ============================================================
+   v9 角色识别色回归：四个角色各一个专属强调色——
+   员工=香槟金 · 组长=孪生绿 · 老总=科技蓝 · 管理员=琥珀。
+   只出现在身份点缀（侧栏选中项 / 身份徽章 / 头像 / 用户名），
+   布局与基底底色不变：白天浅灰蓝、夜间深夜航蓝。
+   ============================================================ */
+
+/* 白天模式角色 token（白天版加深，保证白底可读） */
+html.day .role-employee { --role-accent: #a8874a; --role-deep: #8c6c33; --role-hi: #8c6c33; --role-soft: rgba(168, 135, 74, .1); --role-tint: rgba(168, 135, 74, .14); --role-line: rgba(168, 135, 74, .4); }
+html.day .role-teamLead { --role-accent: #1fa97a; --role-deep: #168a62; --role-hi: #168a62; --role-soft: rgba(31, 169, 122, .1); --role-tint: rgba(31, 169, 122, .12); --role-line: rgba(31, 169, 122, .4); }
+html.day .role-executive { --role-accent: #2e6bd8; --role-deep: #2257b8; --role-hi: #2257b8; --role-soft: rgba(46, 107, 216, .09); --role-tint: rgba(46, 107, 216, .11); --role-line: rgba(46, 107, 216, .4); }
+html.day .role-admin { --role-accent: #d98a1f; --role-deep: #b06f10; --role-hi: #b06f10; --role-soft: rgba(217, 138, 31, .1); --role-tint: rgba(217, 138, 31, .12); --role-line: rgba(217, 138, 31, .4); }
+
+/* 白天：以下元素跟随角色色（压过 v6 的金色一刀切，特异性对齐） */
+html.day .app-shell nav button.active { color: var(--role-deep); background: var(--role-soft); font-weight: 700; box-shadow: none; }
+html.day .app-shell .role-badge { color: var(--role-hi); }
+html.day .app-shell .role-chip-avatar, html.day .app-shell .avatar { background: var(--role-deep); color: #ffffff; }
+html.day .app-shell .greeting b { color: var(--role-deep); }
+html.day .app-shell .user-mini b { color: var(--role-deep); }
+
+/* ============================================================
+   v10 角色页单色纪律：页面内强调色唯一 = 角色色；
+   文字数字深藏青、辅助中性灰、对比线灰阶——不多不少三色。
+   ============================================================ */
+
+/* 状态字（持续成长中 / 待补考 / 重点提升数字）→ 角色色 */
+.good, .warn { color: var(--role-deep, #8c6c33) !important; }
+html.day .good, html.day .warn { color: var(--role-deep, #8c6c33) !important; }
+
+/* 大数字强调（hero）→ 角色色 */
+.hero strong { color: var(--role-accent, #d9bd8a); text-shadow: none; }
+html.day .hero strong { color: var(--role-deep, #8c6c33); }
+
+/* 面板标题色块 / 准备度环 / 进度条 → 角色色 */
+.panel-title h2::before { background: var(--role-accent, var(--gold)); box-shadow: none; }
+.ring { border-top-color: var(--role-accent, var(--gold)); border-right-color: #b6c1d4; color: var(--role-accent, var(--gold)); }
+.bar > i { background: linear-gradient(90deg, var(--role-deep, #b9964f), var(--role-accent, #d9bd8a)); }
+.bar.warn > i { background: linear-gradient(90deg, var(--role-deep, #b9964f), var(--role-accent, #d9bd8a)); }
+
+/* 雷达图：当前等级=角色色（已有），岗位要求/未来需求=灰阶虚线（不再红蓝抢戏） */
+.required-line { stroke: #8a97ad; }
+.future-line { stroke: #bcc7da; }
+.legend-required { background: #8a97ad; }
+.legend-future { background: #bcc7da; }
+
+/* 提示类标签 → 角色淡底角色字（bad 警示红保留） */
+html.day .chip.warn { color: var(--role-deep, #8c6c33); background: var(--role-soft, #eef2f8); }
+
+/* ============================================================
+   v11 金色清零：白天模式 --gold 直接跟随角色色，
+   页面上不再存在独立的"员工金"；logo 底改中性白 + 角色细边。
+   ============================================================ */
+html.day .role-employee { --gold: #a8874a; --gold-deep: #8c6c33; }
+html.day .role-teamLead { --gold: #1fa97a; --gold-deep: #168a62; }
+html.day .role-executive { --gold: #2e6bd8; --gold-deep: #2257b8; }
+html.day .role-admin { --gold: #d98a1f; --gold-deep: #b06f10; }
+
+/* 写死的金色点缀改角色变量 */
+html.day .agent-strip-icon { color: var(--role-deep, #8c6c33); background: var(--role-soft, #eef2f8); }
+html.day .el-button--primary { background: var(--role-deep, #8c6c33); border-color: var(--role-deep, #8c6c33); }
+html.day .el-button--primary:hover, html.day .el-button--primary:focus { background: var(--role-accent, #a8874a); border-color: var(--role-accent, #a8874a); }
+html.day .twin-floatnav button.active { color: var(--role-deep, #8c6c33); background: var(--role-soft, #eef2f8); border-color: var(--role-line, #d4dcea); }
+
+/* logo：白底 + 角色色细边（不再是金色补丁） */
+html.day .brand-mark { background: #ffffff; border-color: var(--role-line, #d4dcea); box-shadow: 0 3px 10px rgba(31, 45, 80, .08); }
+
+/* ============================================================
+   v12 logo 纳入统一色调：原 logo 是 PNG 位图，齿轮深藏青、
+   箭头青绿都烧死在像素里，之前所有 CSS 改色对它无效。
+   现改用 alpha 蒙版（logo-mark-mask.png）+ mask-image 上色：
+   夜间跟随 --gold（香槟金），白天跟随 --role-deep（角色色）。
+   ============================================================ */
+.brand-mark .brand-logo {
+  display: block; width: 100%; height: 100%;
+  background-color: var(--gold, #d9bd8a);
+  -webkit-mask: url('./assets/brand/logo-mark-mask.png') center / contain no-repeat;
+          mask: url('./assets/brand/logo-mark-mask.png') center / contain no-repeat;
+}
+html.day .brand-mark .brand-logo { background-color: var(--role-deep, #8c6c33); }
+html.day .brand { color: var(--role-deep, #8c6c33); }

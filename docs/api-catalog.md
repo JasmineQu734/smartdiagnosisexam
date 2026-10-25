@@ -6,7 +6,7 @@
 
 `POST /auth/login`、`POST /auth/logout`、`GET /auth/me`；`/users`、`/roles`、`/orgs`、`/positions`、`/skills`、`/position-skills`、`/employee-skills`、`/courses`、`/course-skills`。
 
-`POST /auth/login` body `{username}`，成功返回 `data.token`（服务端 HMAC 签名的令牌，默认 12 小时有效）+`data.token_type=Bearer`+`data.user`（`username` / `display_name` / `role` / `role_name` / `position` / `team` / `org` / `page_scope`）；账号不存在返回 `401`。此后所有 `/api/v1/**` 请求（除登录、登出与 `/health`）都要带 `Authorization: Bearer <token>`，缺失或过期返回 `401`；请求头里的 `X-User` / `X-Role` 不再被采信。
+`POST /auth/login` body `{username, password}`，成功返回 `data.token`（服务端 HMAC 签名的令牌，默认 12 小时有效）+`data.token_type=Bearer`+`data.user`（`username` / `display_name` / `role` / `role_name` / `position` / `team` / `org` / `page_scope`）；账号不存在或密码错误统一返回 `401 账号或密码不正确`，账号 `status != ACTIVE` 返回 `403`。口令校验口径：`SHA-256(username + ':' + password)` 十六进制与 `app_user.password_hash` 比对，初始口令由 `db/init/013_login_password.sql` 写入（`123456`）。此后所有 `/api/v1/**` 请求（除登录、登出与 `/health`）都要带 `Authorization: Bearer <token>`，缺失或过期返回 `401`；请求头里的 `X-User` / `X-Role` 不再被采信。
 
 ## 个人系统
 
@@ -84,6 +84,13 @@
 - `POST /api/v1/agent/report/analyze`
 
 请求统一为 `{ agent_type, target_id, context, options }`，响应包含 `suggestion_id`、`suggestions`、`confidence`、`source`、`need_human_confirm`、`status`。当前 `source=rule`。
+
+实现说明（2026-10-17，契约未变）：`ApiController` 只做一行委托，分派逻辑在 `agent/AgentDispatchService`。
+`personal/recommend` 逐技能执行 `PERSONAL_GAP`（事实来自 `employee_skill`，建议文案带 `rule_code`）；
+`management/decision` 用 `position.backup_count` / `headcount` 与 `app_user` 在岗一线人数（`EMPLOYEE` + `TEAM_LEAD`）执行 `TALENT_GAP`；
+`report/analyze` 按 `target_id` 或 `context.report_id` 复用 `ReportAttributionService` 执行 `REPORT_GAS`。
+每次调用都写 `rule_result`（`run_id`）与 `agent_suggestion`（`suggestion_id = run_id`），
+无命中时返回 `0.30` 置信度并写明原因，不返回写死文案。
 
 ## 前端页面
 登录页；员工侧：技能雷达、个人自画像、个人能力、记忆展示、成长轨迹、差距与建议、学习与考试（学习总版 + 考试中心）、实操任务与报告填报（标准化框格表单）；组长侧：员工全部板块 + 班组报告；老总侧：人才驾驶舱、全公司技能矩阵、培训看板、运行诊断 Agent；管理员侧四个板块（左侧导航切换，无页内标签）：用户与权限（平台数据规模、用户与角色、组织、岗位与备份、权限矩阵、员工档案）、技能与课程（上传资料 + Agent 识别 + 资料/课程审核：待审核行点开弹窗查看原件信息、原件摘录与 Agent 检索出的题目（题干 / 选项 / 答案 / 解析）或知识章节，管理员核对后点「确认入库」才写入课程库 / 题库；岗位技能要求（依据真实国标，可点开国家标准全文公开系统核对）、标准依据库（官网抓取）、技能字典、题库、课程技能关联）、考试配置（考试清单统一开考、发放试卷、组卷/防作弊/评分/及格线）、审计与审核（按类别、关键词、时间范围搜索，清除筛选与清除留痕）。

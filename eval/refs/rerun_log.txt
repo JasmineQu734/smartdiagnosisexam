@@ -1,0 +1,69 @@
+EN-01          VERIFIED           arXiv:2005.11401   Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks
+EN-02          VERIFIED           arXiv:2106.09685   LoRA: Low-Rank Adaptation of Large Language Models
+EN-03          VERIFIED           arXiv:2210.03629   ReAct: Synergizing Reasoning and Acting in Language Models
+EN-04          VERIFIED           arXiv:2201.11903   Chain-of-Thought Prompting Elicits Reasoning in Large Language Models
+EN-05          VERIFIED           arXiv:2203.02155   Training language models to follow instructions with human feedback
+EN-06          VERIFIED           arXiv:2212.08073   Constitutional AI: Harmlessness from AI Feedback
+EN-07          VERIFIED           arXiv:2303.11366   Reflexion: Language Agents with Verbal Reinforcement Learning
+EN-08          VERIFIED           arXiv:2310.10501   NeMo Guardrails: A Toolkit for Controllable and Safe LLM Applications 
+EN-09          VERIFIED           CrossRef           Survey of Hallucination in Natural Language Generation
+EN-10          VERIFIED           arXiv:2303.18223   A Survey of Large Language Models
+EN-11          VERIFIED           arXiv:2312.10997   Retrieval-Augmented Generation for Large Language Models: A Survey
+EN-12          VERIFIED           arXiv:2412.15115   Qwen2.5 Technical Report
+EN-13          VERIFIED           arXiv:2403.13372   LlamaFactory: Unified Efficient Fine-Tuning of 100+ Language Models
+EN-14          VERIFIED           CrossRef           Rete: A fast algorithm for the many pattern/many object pattern match 
+EN-15          VERIFIED           CrossRef           Exploring the capabilities and limitations of large language models in
+EN-16          VERIFIED           arXiv:1506.05908   Deep Knowledge Tracing
+EN-17          VERIFIED           arXiv:2403.14661   Towards Modeling Learner Performance with Large Language Models
+EN-18          VERIFIED           arXiv:2412.09248   A Systematic Review of Knowledge Tracing and Large Language Models in 
+EN-19          VERIFIED           CrossRef           TutorLLM: Customizing Learning Recommendations with Knowledge Tracing 
+EN-20          VERIFIED           arXiv:2203.11171   Self-Consistency Improves Chain of Thought Reasoning in Language Model
+EN-21          VERIFIED           arXiv:2309.07864   The Rise and Potential of Large Language Model Based Agents: A Survey
+EN-22          VERIFIED           CrossRef           A Survey on Hallucination in Large Language Models: Principles, Taxono
+EN-23          DOI_NOT_RESOLVED   -                  
+EN-24          DOI_NOT_RESOLVED   -                  
+EN-25          VERIFIED           CrossRef           Study on the Adaptive Test Modelling Based on Knowledge Graph in the D
+ZH-01          VERIFIED           arXiv:2005.11401   Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks
+ZH-02          VERIFIED           arXiv:2106.09685   LoRA: Low-Rank Adaptation of Large Language Models
+ZH-03          VERIFIED           arXiv:2210.03629   ReAct: Synergizing Reasoning and Acting in Language Models
+ZH-04          VERIFIED           arXiv:2201.11903   Chain-of-Thought Prompting Elicits Reasoning in Large Language Models
+ZH-05          VERIFIED           arXiv:2203.02155   Training language models to follow instructions with human feedback
+ZH-06          VERIFIED           arXiv:2212.08073   Constitutional AI: Harmlessness from AI Feedback
+ZH-07          VERIFIED           arXiv:2303.11366   Reflexion: Language Agents with Verbal Reinforcement Learning
+ZH-08          VERIFIED           arXiv:2310.10501   NeMo Guardrails: A Toolkit for Controllable and Safe LLM Applications 
+ZH-09          VERIFIED           CrossRef           Survey of Hallucination in Natural Language Generation
+ZH-10          VERIFIED           arXiv:2303.18223   A Survey of Large Language Models
+ZH-11          VERIFIED           arXiv:2312.10997   Retrieval-Augmented Generation for Large Language Models: A Survey
+ZH-12          VERIFIED           arXiv:2412.15115   Qwen2.5 Technical Report
+ZH-13          VERIFIED           arXiv:2403.13372   LlamaFactory: Unified Efficient Fine-Tuning of 100+ Language Models
+ZH-14          VERIFIED           CrossRef           Rete: A fast algorithm for the many pattern/many object pattern match 
+ZH-15          VERIFIED           CrossRef           Exploring the capabilities and limitations of large language models in
+ZH-16          VERIFIED           arXiv:1506.05908   Deep Knowledge Tracing
+ZH-17          VERIFIED           arXiv:2403.14661   Towards Modeling Learner Performance with Large Language Models
+ZH-18          VERIFIED           arXiv:2412.09248   A Systematic Review of Knowledge Tracing and Large Language Models in 
+ZH-19          VERIFIED           CrossRef           TutorLLM: Customizing Learning Recommendations with Knowledge Tracing 
+ZH-20          VERIFIED           arXiv:2203.11171   Self-Consistency Improves Chain of Thought Reasoning in Language Model
+ZH-21          VERIFIED           arXiv:2309.07864   The Rise and Potential of Large Language Model Based Agents: A Survey
+ZH-22          VERIFIED           CrossRef           A Survey on Hallucination in Large Language Models: Principles, Taxono
+ZH-23          DOI_NOT_RESOLVED   -                  
+ZH-24          DOI_NOT_RESOLVED   -                  
+ZH-25          TITLE_MISMATCH     CrossRef           Study on the Adaptive Test Modelling Based on Knowledge Graph in the D
+CONF-01        VERIFIED           arXiv:2005.11401   Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks
+CONF-02        VERIFIED           arXiv:2106.09685   LoRA: Low-Rank Adaptation of Large Language Models
+CONF-03        VERIFIED           arXiv:2305.14314   QLoRA: Efficient Finetuning of Quantized LLMs
+CONF-04        VERIFIED           arXiv:2210.03629   ReAct: Synergizing Reasoning and Acting in Language Models
+CONF-05        VERIFIED           arXiv:2203.02155   Training language models to follow instructions with human feedback
+CONF-06        VERIFIED           CrossRef           NeMo Guardrails: A Toolkit for Controllable and Safe LLM Applications 
+CONF-07        VERIFIED           CrossRef           Survey of Hallucination in Natural Language Generation
+CONF-08        VERIFIED           arXiv:2303.18223   A Survey of Large Language Models
+CONF-09        VERIFIED           arXiv:2312.10997   Retrieval-Augmented Generation for Large Language Models: A Survey
+CONF-10        VERIFIED           arXiv:2412.15115   Qwen2.5 Technical Report
+CONF-11        VERIFIED_TITLE_ONLY CrossRef-title     LlamaFactory: Unified Efficient Fine-Tuning of 100+ Language Models
+CONF-12        DOI_NOT_RESOLVED   -                  
+CONF-13        VERIFIED           CrossRef           Exploring the capabilities and limitations of large language models in
+
+[en] 25 条，异常 2: ['EN-23', 'EN-24']
+
+[zh] 25 条，异常 3: ['ZH-23', 'ZH-24', 'ZH-25']
+
+[conf] 13 条，异常 1: ['CONF-12']

@@ -4,7 +4,10 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { api, downloadFile, getData, postData, setApiUser } from './api';
 import './layout.css';
 import './roles.css';
-import './login.css';
+/* 深色科技工业风全局覆盖层（视觉基准 = 3D 数字孪生页）：
+   必须放在 layout/roles 之后引入，同权重选择器后到先胜 */
+import './twin-dark.css';
+import './refine.css';
 import SelfPortraitView from './views/SelfPortraitView.vue';
 import AbilityView from './views/AbilityView.vue';
 import MemoryView from './views/MemoryView.vue';
@@ -15,32 +18,33 @@ import CompanyView from './views/CompanyView.vue';
 import AdminView from './views/AdminView.vue';
 import AgentStrip from './views/AgentStrip.vue';
 import LoginStage from './views/LoginStage.vue';
+import DigitalTwinView from './views/DigitalTwinView.vue';
 const navItems = computed(() => NAV_BY_ROLE[currentUser.value.role] || EMPLOYEE_NAV);
 const active = ref('skills');
+
+/* 全局昼夜主题：night = 深夜航蓝（默认），day = 浅色工作台。
+   通过 html 根元素类切换（day/dark），dark 类同时驱动 Element Plus 深色变量。 */
+const theme = ref(localStorage.getItem('wb-theme') === 'day' ? 'day' : 'night');
+watch(theme, (t) => {
+  const day = t === 'day';
+  const el = document.documentElement;
+  el.classList.toggle('day', day);
+  el.classList.toggle('dark', !day);
+  localStorage.setItem('wb-theme', t);
+  // 3D 孪生 iframe 同步：白天换 UI 浅色 + 场景日照，黑夜反之
+  const frame = document.querySelector('.twin-frame');
+  if (frame && frame.contentWindow) {
+    try { frame.contentWindow.postMessage({ type: 'wb-theme', theme: t }, '*'); } catch (err) { /* 跨域降级 */ }
+  }
+}, { immediate: true });
+const toggleTheme = () => { theme.value = theme.value === 'day' ? 'night' : 'day'; };
 const loggedIn = ref(false);
 const loginError = ref('');
-const loginForm = ref({ username: 'zhangwei' });
-// 登录页视差：鼠标位置换算成 --tilt-x / --tilt-y（-0.5 ~ 0.5 的无量纲数），
-// 卡片与沙盘各自读这两个变量做倾斜和位移；JS 只写变量，缓动交给 CSS。
-const loginShell = ref(null);
-let loginTilt = { x: 0, y: 0 };
-const applyLoginTilt = (x, y) => {
-  const node = loginShell.value;
-  if (!node) return;
-  // 变化太小就不写，省掉每次鼠标事件的样式重算
-  if (Math.abs(x - loginTilt.x) < 0.004 && Math.abs(y - loginTilt.y) < 0.004) return;
-  loginTilt = { x, y };
-  node.style.setProperty('--tilt-x', x.toFixed(4));
-  node.style.setProperty('--tilt-y', y.toFixed(4));
-};
-const onLoginMove = (event) => {
-  applyLoginTilt((event.clientY / (window.innerHeight || 1)) - 0.5, (event.clientX / (window.innerWidth || 1)) - 0.5);
-};
-const resetLoginMove = () => applyLoginTilt(0, 0);
+const loggingIn = ref(false);
 const currentUser = ref({ username: '', display_name: '', role: '', position: '' });
 const demoUsers = [
   { username: 'zhangwei', display_name: '张伟', role: 'EMPLOYEE', roleName: '员工', position: '变电运维值班员', team: '变电运维一班' },
-  { username: 'limin', display_name: '李民', role: 'TEAM_LEAD', roleName: '组长（员工）', position: '变电运维一班班组长', team: '变电运维一班' },
+  { username: 'limin', display_name: '李民', role: 'TEAM_LEAD', roleName: '组长', position: '变电运维一班班组长', team: '变电运维一班' },
   { username: 'wangzong', display_name: '王总', role: 'EXECUTIVE', roleName: '公司上级（老总）', position: '分管老总', team: '中心管理层' },
   { username: 'admin', display_name: '系统管理员', role: 'ADMIN', roleName: '系统管理员', position: '平台管理员', team: '信息中心' }
 ];
@@ -48,7 +52,7 @@ const demoUsers = [
 // 四个身份的识别色与视图说明：同一套设计系统，只换主色、徽标与头像形态，保证一眼看出当前是谁在看
 const ROLE_THEME = {
   EMPLOYEE: { key: 'employee', view: '员工视图', scope: '仅本人数据', hint: '一线成长视角：只看自己的技能雷达、个人画像与考试成绩' },
-  TEAM_LEAD: { key: 'teamLead', view: '组长视图', scope: '本人 + 班组数据', hint: '班组带教视角：员工板块 + 班组检测报告填报' },
+  TEAM_LEAD: { key: 'teamLead', view: '组长视图', scope: '本人 + 班组数据', hint: '班组带教视角：班组管理 + 检测报告填报与审核' },
   EXECUTIVE: { key: 'executive', view: '老总视图', scope: '全公司数据', hint: '经营决策视角：全公司人才总览、技能矩阵与运行诊断' },
   ADMIN: { key: 'admin', view: '管理员视图', scope: '平台数据', hint: '平台运维视角：只管数据、权限与考试配置，不看个人画像' }
 };
@@ -56,7 +60,8 @@ const themeOf = (role) => ROLE_THEME[role] || ROLE_THEME.EMPLOYEE;
 const roleTheme = computed(() => themeOf(currentUser.value.role));
 const shellClass = computed(() => 'role-' + roleTheme.value.key);
 // 登录卡跟随所选身份换色：选谁就是谁的配色
-const loginTheme = computed(() => themeOf((demoUsers.find((item) => item.username === loginForm.value.username) || demoUsers[0]).role));
+// 登录页已换成账号口令制（3D 全息城市登录卡），登录阶段统一用员工主题色
+const loginTheme = computed(() => ROLE_THEME.EMPLOYEE);
 // 身份色同时挂到 <body>：下拉、二次确认、轻提示这些被送到 body 下的浮层也在主壳之外，
 // 靠 body 上的身份类同样能拿到当前身份的主色，换身份整页（含浮层）一起换色。
 const ROLE_KEYS = ['employee', 'teamLead', 'executive', 'admin'];
@@ -67,33 +72,35 @@ watch(
 );
 
 // 角色决定导航：员工与组长是个人页面（组长多一个班组报告），老总看全公司，管理员只做平台数据
-const SELF_PORTRAIT_ITEM = { key: 'selfPortrait', icon: '☺', label: '个人自画像' };
+const SELF_PORTRAIT_ITEM = { key: 'selfPortrait', icon: '', label: '个人自画像' };
+const TWIN_ITEM = { key: 'twin', icon: '', label: '3D 数字孪生' };
 const EMPLOYEE_NAV = [
-  { key: 'skills', icon: '◌', label: '技能雷达' },
-  { key: 'abilities', icon: '◈', label: '个人能力' },
-  { key: 'memories', icon: '▤', label: '记忆展示' },
-  { key: 'growth', icon: '↗', label: '成长轨迹' },
-  { key: 'advice', icon: '✦', label: '差距与建议' },
-  { key: 'learning', icon: '▥', label: '学习与考试' },
-  { key: 'tasks', icon: '□', label: '实操任务' }
+  { key: 'skills', icon: '', label: '技能雷达' },
+  { key: 'abilities', icon: '', label: '个人能力' },
+  { key: 'memories', icon: '', label: '记忆展示' },
+  { key: 'growth', icon: '', label: '成长轨迹' },
+  { key: 'advice', icon: '', label: '差距与建议' },
+  { key: 'learning', icon: '', label: '学习与考试' },
+  { key: 'tasks', icon: '', label: '实操任务' },
+  TWIN_ITEM
 ];
 const NAV_BY_ROLE = {
   EMPLOYEE: [...EMPLOYEE_NAV, SELF_PORTRAIT_ITEM],
-  TEAM_LEAD: [...EMPLOYEE_NAV, { key: 'team', icon: '⚑', label: '班组报告' }, SELF_PORTRAIT_ITEM],
+  TEAM_LEAD: [...EMPLOYEE_NAV, { key: 'team', icon: '', label: '班组报告' }, SELF_PORTRAIT_ITEM],
   EXECUTIVE: [
-    { key: 'company', icon: '▦', label: '人才驾驶舱' },
-    { key: 'skillMatrix', icon: '▩', label: '全公司技能矩阵' },
-    { key: 'training', icon: '▤', label: '培训看板' },
-    { key: 'diagnosis', icon: '✦', label: '运行诊断 Agent' }
+    { key: 'company', icon: '', label: '人才驾驶舱' },
+    { key: 'skillMatrix', icon: '', label: '全公司技能矩阵' },
+    { key: 'training', icon: '', label: '培训看板' },
+    { key: 'diagnosis', icon: '', label: '运行诊断 Agent' }
   ],
   ADMIN: [
-    { key: 'adminIam', icon: '⚙', label: '用户与权限' },
-    { key: 'adminContent', icon: '▤', label: '技能与课程' },
-    { key: 'adminExam', icon: '◫', label: '考试配置' },
-    { key: 'adminAudit', icon: '▥', label: '审计日志' }
+    { key: 'adminIam', icon: '', label: '用户与权限' },
+    { key: 'adminContent', icon: '', label: '技能与课程' },
+    { key: 'adminExam', icon: '', label: '考试配置' },
+    { key: 'adminAudit', icon: '', label: '审计日志' }
   ]
 };
-const LANDING_BY_ROLE = { EMPLOYEE: 'skills', TEAM_LEAD: 'skills', EXECUTIVE: 'company', ADMIN: 'adminIam' };
+const LANDING_BY_ROLE = { EMPLOYEE: 'twin', TEAM_LEAD: 'twin', EXECUTIVE: 'company', ADMIN: 'adminIam' };
 
 // 演示兜底数据：接口不可用时保证页面结构完整，接口返回后会被覆盖
 const demoProfile = { name: '张伟', position: '变电运维值班员', org: '变电运维中心', years: 6, readiness: 68 };
@@ -443,6 +450,23 @@ const answeredCount = computed(() => Object.values(practiceAnswers.value).filter
 const questionCountOf = (skill) => {
   const row = practiceSkills.value.find((item) => item.skill === skill);
   return row ? row.count : 0;
+};
+// 站内资源「去对应板块」：目标就是当前页时也要给出可见反馈，否则看起来像“点了没反应”
+const resourceJumpLabels = { learning: '学习与考试', tasks: '实操任务', advice: '差距与建议', skills: '技能雷达' };
+const goResourceBoard = async (item) => {
+  const navKeys = (NAV_BY_ROLE[currentUser.value.role] || EMPLOYEE_NAV).map((row) => row.key);
+  let target = item.jump || 'learning';
+  if (!navKeys.includes(target)) target = 'learning';
+  const label = resourceJumpLabels[target] || target;
+  if (active.value === target) {
+    // 已经在目标板块：切回该板块的概要子页签并把内容滚回顶部，配合提示让用户知道点到了
+    if (target === 'learning') learningTab.value = 'summary';
+    await scrollMainTop();
+    ElMessage.info('当前就在「' + label + '」板块，已定位到板块顶部');
+    return;
+  }
+  active.value = target;
+  ElMessage.success('已跳转到「' + label + '」板块');
 };
 const loadPractice = async () => { practice.value = await getData('/personal/practice/overview', null); };
 // 弹窗在“作答 / 解析”之间切换时把内容滚回顶部，保证先看到得分与第一题
@@ -876,6 +900,8 @@ const pageCopy = computed(() => {
       return { title: '审计与审核', subtitle: '登录、修改、审批、决策、执行、回滚全留痕；支持关键词搜索、类别筛选、清除筛选与清除留痕。' };
     case 'learning':
       return { title: '学习与考试', subtitle: '学习总版与考试中心：计划、记录、资源与考试状态，缺口驱动的学习闭环。' };
+    case 'twin':
+      return { title: '110kV 城东变电站 · 三维数字孪生园区', subtitle: '拖拽环绕视角，点击任意设备查看台账与结构拆解；左 H 面板可切换巡检、演练与教学模式。' };
     case 'tasks':
       return canFillReport.value
         ? { title: '实操任务与报告', subtitle: '你负责填报班组检测报告：按框格填数据与异常现象，提交后自动生成 PDF/Word 并执行 AI 归因。' }
@@ -885,12 +911,14 @@ const pageCopy = computed(() => {
   }
 });
 
-const selectDemoUser = (user) => { loginForm.value.username = user.username; loginError.value = ''; };
-const login = async () => {
+/* 登录：账号 + 口令（LoginStage 表单校验与验证码通过后触发）。
+   成功后签发的令牌存进请求头，失败时把后端信息回显到登录卡。 */
+const login = async (credentials) => {
+  loggingIn.value = true;
   try {
-    const response = await api.post('/auth/login', { username: loginForm.value.username });
+    const response = await api.post('/auth/login', { username: credentials.username, password: credentials.password });
     const result = response.data.data;
-    const user = demoUsers.find((item) => item.username === loginForm.value.username);
+    const user = demoUsers.find((item) => item.username === credentials.username);
     // 令牌由后端签发，后续请求靠它认证；界面展示仍用 user 里的字段
     currentUser.value = { ...user, ...result.user, token: result.token };
     setApiUser(currentUser.value);
@@ -899,7 +927,10 @@ const login = async () => {
     loginError.value = '';
     await load();
   } catch (error) {
-    loginError.value = '登录失败，请确认后端服务已启动。';
+    const message = error.response && error.response.data && error.response.data.message;
+    loginError.value = message || '登录失败，请确认后端服务已启动。';
+  } finally {
+    loggingIn.value = false;
   }
 };
 const logout = async () => {
@@ -935,35 +966,13 @@ const load = async () => {
 };
 </script>
 <template>
-  <div v-if="!loggedIn" ref="loginShell" class="login-shell" :class="'role-' + loginTheme.key" @mousemove="onLoginMove" @mouseleave="resetLoginMove">
-    <LoginStage />
-    <div class="login-card">
-      <div class="login-brand">
-        <span class="brand-mark"><img src="./assets/brand/logo-mark.png" alt="工业智训" /></span>
-        <h1>工业智训</h1>
-        <span class="eyebrow">Industrial Intelligent Training</span>
-      </div>
-      <p class=login-lead>请选择演示身份进入系统</p>
-      <div class="account-list">
-        <button v-for="user in demoUsers" :key="user.username" :class="[{ selected: loginForm.username === user.username }, 'role-' + themeOf(user.role).key]" @click="selectDemoUser(user)">
-          <span class="avatar">{{ user.display_name.slice(0, 1) }}</span>
-          <span class="account-name">
-            <b>{{ user.display_name }}</b>
-            <small>{{ user.roleName }} · {{ user.position }}</small>
-            <em>{{ themeOf(user.role).view }}｜{{ themeOf(user.role).scope }}</em>
-          </span>
-          <i>›</i>
-        </button>
-      </div>
-      <el-button class="login-button" type="primary" @click="login">进入系统</el-button>
-      <p v-if="loginError" class="login-error">{{ loginError }}</p>
-      <p class="login-role-hint">{{ loginTheme.hint }}</p>
-    </div>
+  <div v-if="!loggedIn" class="login-host">
+    <LoginStage :error="loginError" :loading="loggingIn" @submit="login" />
   </div>
 
-  <div v-else class="app-shell" :class="shellClass">
+  <div v-else class="app-shell" :class="[shellClass, { 'shell-twin': active === 'twin' }]">
     <aside>
-      <div class="brand-mark"><img src="./assets/brand/logo-mark.png" alt="工业智训" /></div>
+      <div class="brand-mark"><span class="brand-logo" role="img" aria-label="工业智训"></span></div>
       <div class="brand">工业智训</div>
       <div class="brand-sub">INDUSTRIAL INTELLIGENT TRAINING</div>
       <div class="role-badge"><i></i><span>{{ roleTheme.view }}</span><small>{{ roleTheme.scope }}</small></div>
@@ -989,6 +998,15 @@ const load = async () => {
         </div>
         <div class="header-tools">
           <div class="tool-cluster">
+            <button class="tool-button theme-button" :title="theme === 'day' ? '切换黑夜模式' : '切换白天模式'" aria-label="切换昼夜主题" @click="toggleTheme">
+              <svg v-if="theme === 'day'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" />
+              </svg>
+              <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7" />
+              </svg>
+            </button>
             <div class="tool-popover">
               <button
                 class="tool-button notification-button"
@@ -1157,7 +1175,7 @@ const load = async () => {
                   <div class="row-main"><b>{{ item.title }}</b><small>{{ item.source }} · {{ item.type }} · {{ item.duration }} · {{ item.skill }} · {{ item.level }}</small></div>
                   <div class="row-actions">
                     <a v-if="item.url" class="action-button" :href="item.url" target="_blank" rel="noopener">打开外网资料 ↗</a>
-                    <button v-else type="button" class="action-button" @click="active = item.jump || 'learning'">去对应板块 →</button>
+                    <button v-else type="button" class="action-button" @click="goResourceBoard(item)">去对应板块 →</button>
                   </div>
                 </div>
               </div>
@@ -1176,7 +1194,7 @@ const load = async () => {
                   <div class="role-toolbar">
                     <button v-if="questionCountOf(item.skill)" type="button" class="action-button" @click="drawPractice(item.skill)">配套练习（{{ questionCountOf(item.skill) }} 题）</button>
                     <a v-if="item.url" class="action-button" :href="item.url" target="_blank" rel="noopener">打开外网资料 ↗</a>
-                    <button v-else type="button" class="action-button" @click="active = item.jump || 'learning'">去对应板块 →</button>
+                    <button v-else type="button" class="action-button" @click="goResourceBoard(item)">去对应板块 →</button>
                   </div>
                 </div>
               </div>
@@ -1485,6 +1503,21 @@ const load = async () => {
         </div>
       </section>
 
+      <section v-if="active === 'twin'" class="twin-section">
+        <nav class="twin-floatnav" aria-label="页面导航">
+          <button v-for="item in navItems" :key="item.key" :class="{ active: active === item.key }" @click="active = item.key"><span>{{ item.icon }}</span>{{ item.label }}</button>
+          <button class="nav-theme" :title="theme === 'day' ? '切换黑夜模式' : '切换白天模式'" aria-label="切换昼夜主题" @click="toggleTheme">
+            <svg v-if="theme === 'day'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" />
+            </svg>
+            <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7" />
+            </svg>
+          </button>
+        </nav>
+        <DigitalTwinView :initial-theme="theme" />
+      </section>
       <section v-if="active === 'selfPortrait'" class="role-page"><SelfPortraitView /></section>
       <section v-if="active === 'abilities'" class="role-page"><AbilityView :diagnosis="agentDiagnosis" /></section>
       <section v-if="active === 'memories'" class="role-page"><MemoryView :diagnosis="agentDiagnosis" @go="active = $event" /></section>
@@ -1690,7 +1723,8 @@ const load = async () => {
           <el-button v-if="examDialog.item && examCanEnter(examDialog.item)" type="primary" :loading="examRunning" @click="examDialog.visible = false; startExam(examDialog.item)">进入考试</el-button>
         </template>
       </el-dialog>
-      <el-dialog v-model="practiceDialog.visible" :title="practiceDialog.mode === 'result' ? '练习解析' : '练习题作答'" width="880px" top="4vh" class="practice-dialog">
+      <!-- 练习作答全屏弹窗：题干与选项需要大版面（与考试作答弹窗同一 fullscreen 口径） -->
+      <el-dialog v-model="practiceDialog.visible" :title="practiceDialog.mode === 'result' ? '练习解析' : '练习题作答'" fullscreen class="practice-dialog">
         <div class="practice-note-row">
           <span class="chip info">{{ practiceDialog.mode === 'quiz' ? '共 ' + practiceQuestions.length + ' 题（弹窗内作答，交卷后直接看到解析）' : '本次交卷 ' + practiceResult.total + ' 题' }}</span>
           <span class="metric-note" v-if="practiceDialog.mode === 'quiz'">单选题选字母，判断题选“对 / 错” · 已作答 {{ answeredCount }} / {{ practiceQuestions.length }} 题</span>

@@ -659,10 +659,10 @@ onMounted(load);
 .file-input {
   width: 100%;
   padding: 10px 12px;
-  border: 1px dashed #b9c7dd;
-  border-radius: 10px;
-  background: #f7f9fd;
-  color: #22365c;
+  border: 1px dashed rgba(90, 130, 200, .45);
+  border-radius: 2px;
+  background: rgba(10, 20, 42, .8);
+  color: #d7e2f6;
   font-size: 14px;
   cursor: pointer;
 }
@@ -670,11 +670,11 @@ onMounted(load);
   margin-right: 12px;
   padding: 6px 14px;
   border: 0;
-  border-radius: 8px;
-  background: #3b4fc0;
-  color: #fff;
+  border-radius: 2px;
+  background: #b9964f;
+  color: #0a1226;
   font-size: 13.5px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
 }
 </style>

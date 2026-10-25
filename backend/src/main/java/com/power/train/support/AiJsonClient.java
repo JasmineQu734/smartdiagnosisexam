@@ -42,6 +42,15 @@ public class AiJsonClient {
     @Value("${ai.api-key:}") private String aiApiKey;
     @Value("${ai.timeout-seconds:20}") private int aiTimeoutSeconds;
 
+    /**
+     * 公司运行诊断 Agent 的专属大模型配置（可选）：本地为 sft17_exec 专用 adapter，
+     * 与个人诊断（sft16_3b）分端口部署。三个值都不配时自动回落到上面那份共用配置，
+     * 行为与改造前完全一致 —— 未配置 exec 时不影响任何既有调用方。
+     */
+    @Value("${ai.exec-base-url:}") private String execBaseUrl;
+    @Value("${ai.exec-model:}") private String execModel;
+    @Value("${ai.exec-timeout-seconds:300}") private int execTimeoutSeconds;
+
     public AiJsonClient(Sql sql) {
         this.sql = sql;
     }
@@ -55,46 +64,92 @@ public class AiJsonClient {
         return aiModel;
     }
 
-    /** 调用大模型并解析成 JSON 对象；任何环节失败都抛异常，由调用方决定回退。 */
-    @SuppressWarnings("unchecked")
+    /** 公司诊断用的模型名（未配 exec 专属模型时与主模型相同，只用于日志与界面标注）。 */
+    public String execModelName() {
+        return execBaseUrl == null || execBaseUrl.isBlank() ? aiModel : execModel;
+    }
+
+    /**
+     * 公司运行诊断 Agent 的 JSON 调用入口：配置了 ai.exec-base-url 时走专属端点，
+     * 否则与 completeJson 完全同路。重试语义与主链路一致（形状不合格重试一次）。
+     */
+    public Map<String, Object> completeJsonExec(String systemPrompt, String userPrompt) {
+        boolean dedicated = execBaseUrl != null && !execBaseUrl.isBlank();
+        String baseUrl = dedicated ? execBaseUrl : aiBaseUrl;
+        String model = dedicated ? execModel : aiModel;
+        int timeout = dedicated ? execTimeoutSeconds : aiTimeoutSeconds;
+        try {
+            return completeJsonOnce(systemPrompt, userPrompt, baseUrl, model, aiApiKey, timeout);
+        } catch (IllegalStateException first) {
+            if (!String.valueOf(first.getMessage()).contains("JSON")) {
+                throw first;
+            }
+
+            log.warn("公司诊断大模型返回形状不合格，重试一次：{}", first.getMessage());
+            return completeJsonOnce(systemPrompt, userPrompt, baseUrl, model, aiApiKey, timeout);
+        }
+    }
+
+    /**
+     * 调用大模型并解析成 JSON 对象；任何环节失败都抛异常，由调用方决定回退。
+     *
+     * 小参数量模型（如 3B）偶发「前置一句解释 / 输出两个 JSON / 尾部闲聊」，整段不是合法 JSON。
+     * 这类形状问题只重试一次即可把命中率拉回来（实测 3B 4 次里 1 次不合格）；
+     * 网络、鉴权、超时一类错误不重试，直接交给调用方回退，避免把超时翻倍。
+     */
     public Map<String, Object> completeJson(String systemPrompt, String userPrompt) {
+        try {
+            return completeJsonOnce(systemPrompt, userPrompt, aiBaseUrl, aiModel, aiApiKey, aiTimeoutSeconds);
+        } catch (IllegalStateException first) {
+            if (!String.valueOf(first.getMessage()).contains("JSON")) {
+                throw first;
+            }
+
+            log.warn("大模型返回形状不合格，重试一次：{}", first.getMessage());
+            return completeJsonOnce(systemPrompt, userPrompt, aiBaseUrl, aiModel, aiApiKey, aiTimeoutSeconds);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> completeJsonOnce(String systemPrompt, String userPrompt,
+                                                 String baseUrl, String model, String apiKey, int timeoutSeconds) {
         if (!available()) {
             throw new IllegalStateException("未配置大模型（ai.enabled=false 或 ai.api-key 为空）");
         }
 
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(Duration.ofSeconds(aiTimeoutSeconds));
-        factory.setReadTimeout(Duration.ofSeconds(aiTimeoutSeconds));
+        factory.setConnectTimeout(Duration.ofSeconds(timeoutSeconds));
+        factory.setReadTimeout(Duration.ofSeconds(timeoutSeconds));
         RestClient client = RestClient.builder().requestFactory(factory).build();
 
         // 两套协议：地址是 Anthropic 形状（如 https://…/apps/anthropic、api.anthropic.com）走 /v1/messages，
         // 其余按 OpenAI 兼容（/chat/completions）。判定只看地址，不新增配置项，换地址即换协议。
-        boolean anthropic = anthropic();
+        boolean anthropic = anthropic(baseUrl);
 
         Map<String, Object> body = new LinkedHashMap<>();
         RestClient.RequestBodySpec spec;
         if (anthropic) {
             // Anthropic 没有 response_format，靠提示词约束 + 契约校验 + 兜底保证形状
-            body.put("model", aiModel);
+            body.put("model", model);
             body.put("max_tokens", ANTHROPIC_MAX_TOKENS);
             body.put("temperature", 0.2);
             body.put("system", systemPrompt);
             body.put("messages", List.of(Map.of("role", "user", "content", userPrompt)));
             spec = client.post()
-                .uri(aiBaseUrl + "/v1/messages")
-                .header("x-api-key", aiApiKey)
+                .uri(baseUrl + "/v1/messages")
+                .header("x-api-key", apiKey)
                 .header("anthropic-version", ANTHROPIC_VERSION)
                 .contentType(MediaType.APPLICATION_JSON);
         } else {
-            body.put("model", aiModel);
+            body.put("model", model);
             body.put("temperature", 0.2);
             body.put("response_format", Map.of("type", "json_object"));
             body.put("messages", List.of(
                 Map.of("role", "system", "content", systemPrompt),
                 Map.of("role", "user", "content", userPrompt)));
             spec = client.post()
-                .uri(aiBaseUrl + "/chat/completions")
-                .header("Authorization", "Bearer " + aiApiKey)
+                .uri(baseUrl + "/chat/completions")
+                .header("Authorization", "Bearer " + apiKey)
                 .contentType(MediaType.APPLICATION_JSON);
         }
 
@@ -122,21 +177,21 @@ public class AiJsonClient {
 
         String content = anthropic ? anthropicText(response) : openAiText(response);
 
-        Object parsed = sql.parse(stripFence(String.valueOf(content)));
-        if (!(parsed instanceof Map<?, ?> map)) {
+        Map<?, ?> map = parseJsonObject(String.valueOf(content));
+        if (map == null) {
             String preview = raw.length() <= 400 ? raw : raw.substring(raw.length() - 400);
             log.warn("大模型未返回 JSON 对象，响应长度 {}，结尾 400 字：{}", raw.length(), preview);
             throw new IllegalStateException("大模型未返回 JSON 对象");
         }
         Map<String, Object> result = new LinkedHashMap<>();
         map.forEach((key, value) -> result.put(String.valueOf(key), value));
-        log.info("大模型 {} 返回 JSON，顶层字段 {} 个", aiModel, result.size());
+        log.info("大模型 {} 返回 JSON，顶层字段 {} 个", model, result.size());
         return result;
     }
 
     /** 地址是 Anthropic 形状时走 /v1/messages；其余按 OpenAI 兼容处理。 */
-    private boolean anthropic() {
-        String base = aiBaseUrl == null ? "" : aiBaseUrl.toLowerCase();
+    private boolean anthropic(String base0) {
+        String base = base0 == null ? "" : base0.toLowerCase();
         return base.endsWith("/anthropic") || base.contains("anthropic.com");
     }
 
@@ -198,5 +253,65 @@ public class AiJsonClient {
             return text;
         }
         return text.substring(firstBreak + 1, lastFence).trim();
+    }
+
+    /**
+     * 解析出 JSON 对象：先整段解析；不成就退一步截取第一个配平的 {@code {...}}。
+     * 后者专门救「前面多说了一句话」「输出了两个对象」「结尾还有一句话」这三种小模型常见偏差，
+     * 不至于因为一句废话就把整个结论降级成规则兜底。
+     */
+    private Map<?, ?> parseJsonObject(String content) {
+        String text = stripFence(content);
+        Map<?, ?> direct = tryParseObject(text);
+        if (direct != null) {
+            return direct;
+        }
+
+        String balanced = firstJsonObject(text);
+        return balanced == null || balanced.equals(text) ? null : tryParseObject(balanced);
+    }
+
+    private Map<?, ?> tryParseObject(String text) {
+        try {
+            Object parsed = sql.parse(text);
+            return parsed instanceof Map<?, ?> map ? map : null;
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+    /** 扫出第一个左右花括号配平的对象，跳过字符串内部的括号与转义。 */
+    private static String firstJsonObject(String text) {
+        int start = text.indexOf('{');
+        if (start < 0) {
+            return null;
+        }
+        int depth = 0;
+        boolean inString = false;
+        boolean escaped = false;
+        for (int i = start; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (inString) {
+                if (escaped) {
+                    escaped = false;
+                } else if (c == '\\') {
+                    escaped = true;
+                } else if (c == '"') {
+                    inString = false;
+                }
+                continue;
+            }
+            if (c == '"') {
+                inString = true;
+            } else if (c == '{') {
+                depth++;
+            } else if (c == '}') {
+                depth--;
+                if (depth == 0) {
+                    return text.substring(start, i + 1);
+                }
+            }
+        }
+        return null;
     }
 }

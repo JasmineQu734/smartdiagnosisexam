@@ -1,0 +1,236 @@
+{
+  "meta": {
+    "generated_at": "2026-10-17 22:19:00",
+    "rule_count": 18,
+    "rule_sources": [
+      "002_seed.sql: 6 行",
+      "008_rule_engine.sql: 6 行",
+      "009_report_gas_rules.sql: 12 行"
+    ],
+    "corpus": "my_data15.json",
+    "corpus_size": 150,
+    "rule_table": [
+      [
+        "EXAM_RESULT",
+        1,
+        [
+          "(默认)"
+        ],
+        "groups"
+      ],
+      [
+        "PERSONAL_GAP",
+        1,
+        [
+          "(默认)"
+        ],
+        "groups"
+      ],
+      [
+        "REPORT_ANALYSIS",
+        2,
+        [
+          "(默认)"
+        ],
+        "groups"
+      ],
+      [
+        "REPORT_GAS",
+        12,
+        [
+          "VALUE",
+          "KEYWORD"
+        ],
+        "groups"
+      ],
+      [
+        "TALENT_GAP",
+        2,
+        [
+          "(默认)"
+        ],
+        "groups"
+      ]
+    ]
+  },
+  "E1": {
+    "executions": 450,
+    "matched": 165,
+    "per_scene": {
+      "PERSONAL_GAP": {
+        "n": 150,
+        "matched": 26,
+        "rule_hits": {
+          "SKILL_GAP_L3": 26
+        }
+      },
+      "EXAM_RESULT": {
+        "n": 150,
+        "matched": 12,
+        "rule_hits": {
+          "EXAM_LOW_SCORE": 12
+        }
+      },
+      "REPORT_ANALYSIS": {
+        "n": 150,
+        "matched": 127,
+        "rule_hits": {
+          "PRACTICE_SKILL_CAUSE": 52,
+          "PRACTICE_HUMAN_CAUSE": 75
+        }
+      }
+    },
+    "rule_hits": {
+      "EXAM_LOW_SCORE": 12,
+      "PRACTICE_SKILL_CAUSE": 52,
+      "PRACTICE_HUMAN_CAUSE": 75,
+      "SKILL_GAP_L3": 26
+    },
+    "skip_reasons": {
+      "分组 (默认) 已收敛": 75
+    },
+    "profiles_with_any_hit": 132,
+    "exam_threshold_drift": {
+      "true_positive": 12,
+      "false_negative": 120,
+      "false_positive": 0,
+      "silent_failure_rate": 0.8,
+      "recall_vs_business_pass_line": 0.0909,
+      "precision": 1.0
+    },
+    "level_hardcoding": {
+      "hit": 26,
+      "missed_because_level_not_3": 94,
+      "missed_because_undecidable": 0,
+      "no_gap_expected": 30,
+      "future_axis_gap_with_no_rule": 120
+    },
+    "safety_negative_profiles": 125,
+    "safety_auth_violation_profiles": 75,
+    "safety_unflagged": 125,
+    "coverage_profiles_with_any_hit": 132,
+    "coverage_rate": 0.88,
+    "rules_never_fired": [],
+    "rules_in_covered_scenes": 4
+  },
+  "E2": {
+    "runs": 450,
+    "byte_identical_reruns": 450,
+    "identical_after_rule_shuffle": 450,
+    "determinism_rate": 1.0,
+    "order_invariance_rate": 1.0
+  },
+  "E3": {
+    "n": 150,
+    "schema_conformance": 1.0,
+    "level_arithmetic_consistency": 1.0,
+    "std_mapping_consistency": 1.0,
+    "priority_order_consistency": 1.0,
+    "deadline_monotonicity": 1.0,
+    "safety_boundary_completeness": 1.0,
+    "baseline_fact_consistency": 1.0,
+    "model_profile_fact_consistency": 0.7467,
+    "safety_negative_handled_rate": 1.0,
+    "safety_negative_profiles": 125,
+    "evidence_category_coverage": 1.0,
+    "numbers_total": 2324,
+    "numbers_unverified": 4,
+    "number_unverified_rate": 0.0017,
+    "outputs_with_unverified_number_rate": 0.0267,
+    "evidence_grounding_rate": 1.0,
+    "issue_examples": {
+      "fact_mismatch": [
+        {
+          "idx": 0,
+          "cert": 1,
+          "goal": 4,
+          "task": 4,
+          "g0": {
+            "current": "L1",
+            "job_req": "L3",
+            "future_req": "L4"
+          }
+        },
+        {
+          "idx": 3,
+          "cert": 3,
+          "goal": 5,
+          "task": 5,
+          "g0": {
+            "current": "L3",
+            "job_req": "L4",
+            "future_req": "L5"
+          }
+        },
+        {
+          "idx": 8,
+          "cert": 5,
+          "goal": 5,
+          "task": 5,
+          "g0": {
+            "current": "L4",
+            "job_req": "L5",
+            "future_req": "L5"
+          }
+        }
+      ],
+      "unverified_number": [
+        {
+          "idx": 88,
+          "nums": [
+            "43.7"
+          ]
+        },
+        {
+          "idx": 97,
+          "nums": [
+            "3.2"
+          ]
+        },
+        {
+          "idx": 121,
+          "nums": [
+            "3.9"
+          ]
+        }
+      ]
+    }
+  },
+  "E4": {
+    "executions": 450,
+    "total_s": 0.0038,
+    "mean_ms": 0.0082,
+    "p50_ms": 0.0076,
+    "p95_ms": 0.0133,
+    "max_ms": 0.0368
+  },
+  "E5": {
+    "grid_cases": 200,
+    "value_ladder_accuracy_vs_intent": 0.8,
+    "value_ladder_accuracy_vs_implementation": 1.0,
+    "keyword_group_correct": 200,
+    "keyword_accuracy": 1.0,
+    "severity_merge_correct": 200,
+    "severity_accuracy": 1.0,
+    "fact_reference_correct": 120,
+    "fact_reference_cases": 120,
+    "fact_reference_accuracy": 1.0,
+    "unreachable_rules": [
+      "REPORT_GAS_WITHIN"
+    ],
+    "comfortable_cases": 40,
+    "false_escalation_cases": 40,
+    "false_escalation_rate": 1.0
+  },
+  "E6": {
+    "baseline_unverified_number_rate": 0.0267,
+    "baseline_safety_boundary_fail": 0.0,
+    "baseline_level_arithmetic_fail": 0.0,
+    "rule_layer_unverified_number_rate": 0.0,
+    "rule_layer_safety_boundary_fail": 0.0,
+    "safety_negative_flagged_by_baseline": 0,
+    "safety_negative_flagged_by_rule_layer": 0,
+    "safety_negative_profiles": 125,
+    "note": "两条路径的强项互补：模型输出在**数字可溯源**上不如规则层（2.7% 的输出含无出处数字），在**等级算术**上两者都达标，但在**差距项与档案等级一致**上模型只有 74.7%；反过来，规则层虽然 100% 确定、100% 可溯源，却因为规则集没消费安全事实、且合格线与等级门槛写死在条件里，漏报率高达 80.0% / 62.7%。结论：护栏层保证「不出错」，覆盖面仍必须由可配置规则 + 模型表达共同承担。"
+  }
+}

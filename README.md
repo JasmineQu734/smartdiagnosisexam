@@ -9,7 +9,7 @@ MVP 按项目书顺序落地：主数据与权限、考试、个人系统、管�
 ```text
 backend/                 Spring Boot 3 API（spring-boot-starter-jdbc + JdbcTemplate，无 ORM）
 frontend/                Vue 3 + Vite + Element Plus
-db/init/                 MySQL 8+ DDL 与种子数据（001 结构 → 002~009 种子 → 010 / 011 增量脚本，按序执行）
+db/init/                 MySQL 8+ DDL 与种子数据（001 结构 → 002~009 种子 → 010~013 增量脚本，按序执行）
 docker-compose.yml       MySQL、API、Web
 ```
 
@@ -38,7 +38,7 @@ docker compose up --build
 - **`.env` 永远不进包**（里面有数据库密码、令牌签名密钥、大模型 key）：打包脚本主动排除，并在包里出现 `.env` 时直接中止。开箱即用的默认是 `AI_ENABLED=false`，诊断走内置规则引擎，照样出结论。（Windows 免安装版是例外，见下一节：它随包预置一份 `AI_API_KEY` 留空的 `.env`。）
 - 局域网地址取自 `route print -4` 里 metric 最小的那条默认路由的 Interface 列，不是 `ipconfig` 的第一条——VMware / Hyper-V / WSL / 手机热点这些虚拟网卡也有 IP，挑错了对方连不上。脚本另外会把其余候选 IP 列出来兜底。
 - 别人打不开时的排查顺序：是否同一网段 → 用的是局域网地址而不是 `localhost` → Windows 防火墙是否放行入站 TCP `${WEB_PORT}`（以管理员身份运行脚本会自动加规则，否则屏幕会打印现成的 `netsh` 命令）→ 路由器/热点是否开了终端隔离。
-- 对外演示前必知：登录仍不校验密码、只认账号名，任何能访问到这个地址的人都能以管理员身份进入，因此只能放在可信内网，不要直接映射公网。
+- 对外演示前必知：登录已校验账号口令（SHA-256 散列比对，初始密码见「演示账号」表），但仍无验证码防爆破与登录失败锁定，且账号无真实身份源，只能放在可信内网，不要直接映射公网。
 
 ### 分发包（Windows 免安装版，收件人什么都不用装）
 
@@ -53,13 +53,13 @@ docker compose up --build
 - 端口默认 Web `8080` / MySQL `3307`（刻意避开本机常见的 3306），被占用就自动往后挑并写回 `.env`。停止用 `stop.bat`，数据在 `data\` 里。
 - 打包前会比对 `jar` 与源码时间戳，`jar` 比源码旧就直接中止，避免把旧代码打进包。
 - 改这套脚本时别踩回去的两个坑：① `data\my.ini` 里**不能加** `skip-name-resolve` —— 加了之后 MySQL 不再把 `127.0.0.1` 当成 `localhost`，`'root'@'localhost'` 匹配不上，任何连接都报 `1130 Host is not allowed to connect`；② 建库脚本要用 `Start-Process -RedirectStandardInput` 喂进 mysql 客户端 —— `mysql -e "source x.sql"` 在当前客户端版本上会把 `source` 当 SQL 发给服务器报 `1064`，而 PowerShell 管道在 PS 5.1 下默认按 ASCII 编码，会让中文种子数据变成问号。
-- 对外演示前必知：登录仍不校验密码、只认账号名，任何能访问到该地址的人都能以管理员身份进入，因此只能放在可信内网。
+- 对外演示前必知：登录已校验账号口令，但仍无防爆破锁定与真实身份源，只能放在可信内网。
 
 ### 数据库（只用 MySQL）
 
 连接参数在 `backend/src/main/resources/application.yml`，默认 `jdbc:mysql://localhost:3306/train_system`、`root` / `123456`，可用 `SPRING_DATASOURCE_URL` / `SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD` 覆盖。
 
-建库按顺序执行 `db/init` 下的十一个脚本（001 建库建表 → 002 规则与内容种子：气体规则 / 报告模板框格 / 归因关键词 / 知识点 / 练习题 → 003 主数据与数据集：账号角色 / 技能课程 / 考试 / 展示数据集 → 004 口径细化 → 005 标准依据 → 006 外网课程搜索的来源平台与课程库 → 007 组长资料导入台账：`material_doc` 原件留档 / `material_item` 候选题台账 → 008 规则引擎：`rule` 补公共字段与匹配开关 / `rule_result` 执行留痕 / 6 条规则种子改成声明式条件 → 009 气体检测归因：`rule` 补匹配分组与组内命中上限 / 场景 `REPORT_GAS` 的 12 条归因规则（原先写在 Java 里的判定搬进表） → 010 报告 SOP 填报字段：给 `task_report` 补 `sop_status`（空 = 未填报 / FOLLOWED / DEVIATED / NOT_APPLICABLE）与 `sop_deviation`（偏差说明），让归因能区分「技能不够」与「没按规程做」 → 011 公司运行诊断兜底口径：把原先写在 `CompanyController` 里的总述与同步板块文案搬进 `dataset_meta`，顺序不可调换）：
+建库按顺序执行 `db/init` 下的十一个脚本（001 建库建表 → 002 规则与内容种子：气体规则 / 报告模板框格 / 归因关键词 / 知识点 / 练习题 → 003 主数据与数据集：账号角色 / 技能课程 / 考试 / 展示数据集 → 004 口径细化 → 005 标准依据 → 006 外网课程搜索的来源平台与课程库 → 007 组长资料导入台账：`material_doc` 原件留档 / `material_item` 候选题台账 → 008 规则引擎：`rule` 补公共字段与匹配开关 / `rule_result` 执行留痕 / 6 条规则种子改成声明式条件 → 009 气体检测归因：`rule` 补匹配分组与组内命中上限 / 场景 `REPORT_GAS` 的 12 条归因规则（原先写在 Java 里的判定搬进表） → 010 报告 SOP 填报字段：给 `task_report` 补 `sop_status`（空 = 未填报 / FOLLOWED / DEVIATED / NOT_APPLICABLE）与 `sop_deviation`（偏差说明），让归因能区分「技能不够」与「没按规程做」 → 011 公司运行诊断兜底口径：把原先写在 `CompanyController` 里的总述与同步板块文案搬进 `dataset_meta`，顺序不可调换） → 012 规则校准：考试阈值与等级差距规则按评测结论校准 → 013 登录口令初始化：给全部账号写入初始口令散列（SHA-256(username + ':' + password)，初始密码 = `123456`））：
 
 ```powershell
 $env:MYSQL_PWD = '123456'
@@ -70,7 +70,7 @@ foreach ($f in '002_seed.sql','003_seed_datasets.sql','004_seed_refine.sql','005
 ```
 
 `005_standard_ref.sql` 由 `tools/fetch-standards.mjs` 抓取国家标准全文公开系统后生成，可重复执行刷新标准依据库。
-`006_external_course.sql` 由 `tools/fetch-courses.mjs` 生成（同时核验各平台检索地址的 HTTP 状态并写入 `http_code` / `checked_at`），可重复执行刷新外网课程搜索的平台与课程库。`007_material_import.sql` 为组长导入文档 / SOP 填报补齐两张台账表（`material_doc` 记录原件留档与正文摘录，`material_item` 记录 Agent 识别出的每条候选题及其审核状态与入库题号），并刷新 SOP 模板与「导入文档」入口的库内口径；全部为 `CREATE TABLE IF NOT EXISTS` / `ON DUPLICATE KEY UPDATE`，对已有库直接补跑即可。`008_rule_engine.sql` 是规则引擎的补列 + `rule_result` 建表 + 规则种子规范化（补列前先查 `information_schema`，MySQL 8 没有 `ADD COLUMN IF NOT EXISTS`；重跑只覆盖规则定义，不动 `enabled` / `status`，不会把管理员手工停用的规则又打开）。`009_report_gas_rules.sql` 给 `rule` 表补 `rule_group`（匹配分组）与 `max_hits`（组内命中上限）两列，并把气体检测归因的判定从 `ReportAnalysisService` 的硬编码搬进 `rule` 表（场景 `REPORT_GAS`，12 条：定档 5 条 + 关键词 7 条），同 008 一样可重复执行、不重开手工停用的规则。`010_report_sop_field.sql` 给 `task_report` 补 `sop_status` / `sop_deviation` 两列并在报告模板里新增「SOP 执行情况」一节：报告归因要区分「技能不够」与「没按规程做」，这两件事在现象描述里都是自然语言、规则判不了，得让组长填报时给出一个可枚举的答案；字段缺失只判为「未知」，绝不默认成「未按 SOP」，否则缺数据会自动变成「人为问题」的结论。`011_exec_diagnosis_baseline.sql` 给 `dataset_meta` 的 `exec.diagnosis` 行补 `summary`（总述段落）与 `updated_modules`（本次同步板块）：这两段文案原先写死在 `CompanyController` 里，改成「大模型出结论、不合格回退内置结论」后兜底路径直接下发库里的 payload，文案必须入库，管理员改库即改兜底结论。两段脚本都是补列 / 补口径，不覆盖其他内容，可直接对已有库补跑。`010` 还会把仓库自带的那 4 份演示报告的 SOP 执行情况按报告正文本身补上（只有 `RPT-20260919-0003` 的正文写明「先行进入的作业人员出现头晕、胸闷不适」，据实记为未按 SOP，其余 3 份记为已按 SOP），并且只在字段为空时补：这样已有数据卷与空卷跑出来的演示数据才一致。
+`006_external_course.sql` 由 `tools/fetch-courses.mjs` 生成（同时核验各平台检索地址的 HTTP 状态并写入 `http_code` / `checked_at`），可重复执行刷新外网课程搜索的平台与课程库。`007_material_import.sql` 为组长导入文档 / SOP 填报补齐两张台账表（`material_doc` 记录原件留档与正文摘录，`material_item` 记录 Agent 识别出的每条候选题及其审核状态与入库题号），并刷新 SOP 模板与「导入文档」入口的库内口径；全部为 `CREATE TABLE IF NOT EXISTS` / `ON DUPLICATE KEY UPDATE`，对已有库直接补跑即可。`008_rule_engine.sql` 是规则引擎的补列 + `rule_result` 建表 + 规则种子规范化（补列前先查 `information_schema`，MySQL 8 没有 `ADD COLUMN IF NOT EXISTS`；重跑只覆盖规则定义，不动 `enabled` / `status`，不会把管理员手工停用的规则又打开）。`009_report_gas_rules.sql` 给 `rule` 表补 `rule_group`（匹配分组）与 `max_hits`（组内命中上限）两列，并把气体检测归因的判定从 `ReportAnalysisService` 的硬编码搬进 `rule` 表（场景 `REPORT_GAS`，12 条：定档 5 条 + 关键词 7 条），同 008 一样可重复执行、不重开手工停用的规则。`010_report_sop_field.sql` 给 `task_report` 补 `sop_status` / `sop_deviation` 两列并在报告模板里新增「SOP 执行情况」一节：报告归因要区分「技能不够」与「没按规程做」，这两件事在现象描述里都是自然语言、规则判不了，得让组长填报时给出一个可枚举的答案；字段缺失只判为「未知」，绝不默认成「未按 SOP」，否则缺数据会自动变成「人为问题」的结论。`011_exec_diagnosis_baseline.sql` 给 `dataset_meta` 的 `exec.diagnosis` 行补 `summary`（总述段落）与 `updated_modules`（本次同步板块）：这两段文案原先写死在 `CompanyController` 里，改成「大模型出结论、不合格回退内置结论」后兜底路径直接下发库里的 payload，文案必须入库，管理员改库即改兜底结论。两段脚本都是补列 / 补口径，不覆盖其他内容，可直接对已有库补跑。`010` 还会把仓库自带的那 4 份演示报告的 SOP 执行情况按报告正文本身补上（只有 `RPT-20260919-0003` 的正文写明「先行进入的作业人员出现头晕、胸闷不适」，据实记为未按 SOP，其余 3 份记为已按 SOP），并且只在字段为空时补：这样已有数据卷与空卷跑出来的演示数据才一致。 `012_rule_calibration.sql` 做规则集校准：把 `EXAM_LOW_SCORE` 的 `score < 60` 与 `SKILL_GAP_L3` 的 `required_level = 3` 两处字面量改成引用事实（`EXAM_BELOW_PASS`、`SKILL_BELOW_REQUIRED`，比较 `pass_score` 与 `required_level`），补 `SAFETY` 分组的两条安全规则（授权类违规一票否决、扣分记录判中），并给 `REPORT_GAS_WITHIN_NEAR` 补下界 `ratio > -0.10`，使余量充足时终端规则可达。被取代的两条保留定义但置 `enabled = 0`，供历史结论回溯。规则总数 22 条，其中 20 条参与求值。
 
 ### 部署
 
@@ -113,12 +113,14 @@ cmd /c "docker compose exec -T mysql mysql -uroot -p123456 --default-character-s
 
 ## 演示账号与角色权限
 
-| 账号 | 角色 | 页面范围 | 可见内容 |
-|---|---|---|---|
-| zhangwei | EMPLOYEE | PERSONAL（本人） | 技能雷达 / 个人自画像 / 个人能力 / 记忆展示 / 成长轨迹 / 差距与建议 / 学习与考试 / 实操任务，全部只返回本人数据 |
-| limin | TEAM_LEAD | PERSONAL（本人 + 班组） | 员工全部板块 + 班组报告（每次实操活动上传报告，作为运行诊断 Agent 的输入之一） |
-| wangzong | EXECUTIVE | COMPANY（全公司） | 公司总览 / 运行诊断 Agent，看全体员工汇总数据，没有个人画像页面 |
-| admin | ADMIN | PLATFORM（平台） | 数据与运维 / 审计日志：员工档案、考试配置、试卷发放、审计，既看不到个人画像也看不到老总页面 |
+| 账号 | 初始密码 | 角色 | 页面范围 | 可见内容 |
+|---|---|---|---|---|
+| zhangwei | 123456 | EMPLOYEE | PERSONAL（本人） | 技能雷达 / 个人自画像 / 个人能力 / 记忆展示 / 成长轨迹 / 差距与建议 / 学习与考试 / 实操任务，全部只返回本人数据 |
+| limin | 123456 | TEAM_LEAD | PERSONAL（本人 + 班组） | 员工全部板块 + 班组报告（每次实操活动上传报告，作为运行诊断 Agent 的输入之一） |
+| wangzong | 123456 | EXECUTIVE | COMPANY（全公司） | 公司总览 / 运行诊断 Agent，看全体员工汇总数据，没有个人画像页面 |
+| admin | 123456 | ADMIN | PLATFORM（平台） | 数据与运维 / 审计日志：员工档案、考试配置、试卷发放、审计，既看不到个人画像也看不到老总页面 |
+
+初始密码统一为 `123456`（含未在表中列出的 `wangjianguo` / `sunqian`，由 `db/init/013_login_password.sql` 写入散列；`sunqian` 状态为 PENDING，登录返回 403）。修改口令即更新 `app_user.password_hash`（口径：`SHA-256(username + ':' + password)` 十六进制）。
 
 员工登录后只能看到自己的完整能力画像、记忆展示与学习建议；组长本身也是员工，板块全上再多一个班组报告；老总看全公司总数据与运行诊断；系统管理员只看平台数据，不做业务决策。
 
@@ -129,7 +131,7 @@ cmd /c "docker compose exec -T mysql mysql -uroot -p123456 --default-character-s
 | 身份 | 识别色 | 侧边栏徽标 | 头像形态 | 顶栏铭牌 |
 |---|---|---|---|---|
 | 张伟 `zhangwei` | 工业青 `#12909a` | 员工视图 · 仅本人数据 | 圆角方 | 员工 · 变电运维一班 |
-| 李民 `limin` | 班组琥珀 `#c2740c` | 组长视图 · 本人 + 班组数据 | 圆形 + 同色光圈 | 组长（员工） · 变电运维一班 |
+| 李民 `limin` | 班组琥珀 `#c2740c` | 组长视图 · 本人 + 班组数据 | 圆形 + 同色光圈 | 组长 · 变电运维一班 |
 | 王总 `wangzong` | 决策紫 `#5a49b8` | 老总视图 · 全公司数据 | 圆形 + 金色描边 | 公司上级（老总） · 中心管理层 |
 | 系统管理员 `admin` | 平台石墨 `#43607c` | 管理员视图 · 平台数据 | 方形 | 系统管理员 · 信息中心 |
 
@@ -147,7 +149,7 @@ cmd /c "docker compose exec -T mysql mysql -uroot -p123456 --default-character-s
 
 旧角色 `DEPARTMENT_MANAGER` 归一化为 `TEAM_LEAD`，未识别角色一律按 `EMPLOYEE` 处理。登录成功后后端签发令牌（`POST /auth/login` 返回 `data.token`），前端把它放进 `Authorization: Bearer` 头，后端 `rbac/AuthFilter` 校验令牌后再交给 `rbac/RoleInterceptor` 按路径前缀授权；请求头里的 `X-User` / `X-Role` 不再被采信，改请求头伪造身份已无效。导航项与登录落点由 `NAV_BY_ROLE` / `LANDING_BY_ROLE` 决定。
 
-MVP 的登录接口返回服务端 HMAC 签名的令牌（`AUTH_SECRET` 作密钥，默认 12 小时有效，账号不存在直接 `401`，不再回落成演示账号）；生产环境仍需接入内网统一身份（或 Spring Security + 刷新令牌）、密码哈希与真实身份源。
+登录为账号 + 口令（`SHA-256(username + ':' + password)` 散列比对，见 `db/init/013_login_password.sql`），接口返回服务端 HMAC 签名的令牌（`AUTH_SECRET` 作密钥，默认 12 小时有效，账号不存在或密码错误统一 `401`）；生产环境仍需接入内网统一身份（或 Spring Security + 刷新令牌）、加盐慢散列与真实身份源。
 
 ### 员工六大板块
 
@@ -207,6 +209,25 @@ $env:AI_TIMEOUT_SECONDS='120'
 ```
 
 容器部署不用手工设环境变量：这五个变量已在 `docker-compose.yml` 的 `backend` 服务透传，值写进 `.env`（已 gitignore）即可，改完 `docker compose up -d --build backend` 生效（配置在启动时读一次）。后端按 `AI_BASE_URL` 自动认两种协议：地址是 Anthropic 形状（`…/apps/anthropic`、`api.anthropic.com`）走 `POST {AI_BASE_URL}/v1/messages`（`x-api-key` + `anthropic-version`），其余按 OpenAI 兼容走 `POST {AI_BASE_URL}/chat/completions`，后者要求模型支持 `response_format={"type":"json_object"}`（Azure OpenAI 的鉴权头与 URL 形状不同，接不了）。思维链模型（deepseek-v4.1-flash / glm / qwen3.8-max 这类）先输出思考再出正文，`AI_TIMEOUT_SECONDS` 建议给到 120（默认 20 会读超时），单次诊断实测个人 34 秒、公司 58 秒；这类模型的思考也占 Anthropic 的 `max_tokens`，代码里已按 16000 预留。API key 没填或填错时不报错，接口会带着 `fallback_note`（含网关的状态码与错误正文）回退内置结论，前端不受影响。
+
+### 接自训练模型（本机 LLaMA-Factory：基座 + LoRA）
+
+诊断结论的来源可以是云端 API，也可以是本机自己微调的模型。本机这套走的是后者：`Qwen2.5-3B-Instruct` + `saves\Qwen2.5-3B-Instruct\lora\sft16_3b` 里的 LoRA 适配器，4-bit 量化、3.09B 参数，跑在 `127.0.0.1:8000`（推理显存约 2.3GB）。
+
+> 为什么不是 7B：本机显卡是 RTX 5060 Laptop（8GB）。诊断样本必须 4096 上下文（答案从第 ~2370 个 token 才开始，`cutoff_len` 低于 2560 时 500 条样本的答案会被整段切掉，这正是早期版本"结论很傻"的原因），而 7B 在 4096 上下文下的训练峰值约 9.5GB，超出 8GB 可用上限，会溢出到共享显存、每步耗时 1 小时。3B 在 4096 上下文下训练峰值约 6GB，本机可完整训练；训练与接入的实测记录见 `docs/` 之外的桌面报告。
+
+要点是**必须用 `api` 模式，不能用 `webui`**：`llamafactory-cli webui` 只提供网页界面（7860），没有任何 HTTP 接口，后端按 `AI_BASE_URL` 调不到它；`llamafactory-cli api` 才提供 OpenAI 兼容的 `/v1/chat/completions`。
+
+1. 双击根目录 **`启动Agent.bat`**（等价于 `powershell -ExecutionPolicy Bypass -File tools\agent\start-agent.ps1`）：脚本先检查 conda 环境、基座模型、LoRA 适配器、端口占用与显存冲突，再启动 api 服务，加载约 20~40 秒。看到 `Uvicorn running on http://0.0.0.0:8000` 就能用了；**那个窗口就是 agent 本体，关掉即停止**（也可以用 `停止Agent.bat`）。要换模型改 `tools\agent\start-agent.ps1` 顶部的 `Adapter` 一行（`saves\Qwen2.5-3B-Instruct\lora\` 下带 `adapter_model.safetensors` 的目录才可用，当前是 `sft16_3b`），换端口用 `-Port`。
+2. `.env` 指向它：`AI_BASE_URL=http://host.docker.internal:8000/v1`（后端跑在容器里时；本机直接 `java -jar` 才用 `127.0.0.1`）、`AI_MODEL=qwen2.5-3b-lora`（LLaMA-Factory 不校验这个名字，非空即可，只用于日志与界面标注）、`AI_API_KEY` 填任意非空串（api 模式未开鉴权，但**留空会被判成「未配置大模型」而直接回退规则结论**）、`AI_TIMEOUT_SECONDS=300`。
+3. 重启后端进程后，员工端「差距与建议 → 运行个性化 Agent 诊断」的出处会显示 `大模型 qwen2.5-3b-lora · 实时计算`；agent 没启动时自动回退内置规则结论、标注 `规则引擎 v1` 并把原因写进 `fallback_note`，页面不报错。
+
+实测口径（本机 RTX 5060 Laptop 8G）：
+
+- 单次个性化诊断实测约 80 秒，`AI_TIMEOUT_SECONDS` 必须给足（默认 20 秒必定读超时并静默回退）。
+- 8G 显存装不下两份模型：`webui` 与 `api` 不能同时开，`启动Agent.bat` 会检查 7860 并直接拦下来；训练时同样要先停掉 `api`（3B 推理占 2.3GB，会让训练溢出换页）。
+- LLaMA-Factory 会忽略请求里的 `response_format`，JSON 形状靠「系统提示词 + 解析容错（首个配平 `{}` 提取 + 形状不合格重试一次）+ `DiagnosisContract` 硬校验 + 不合格回退内置结论」保证，所以本机模型与云端模型走的是同一条输出契约（`docs/diagnosis_schema.json`）。
+- 容器部署时 `AI_BASE_URL` 要写 `http://host.docker.internal:8000/v1`（容器里的 `127.0.0.1` 不是宿主机），改完 `docker compose up -d --build backend`。
 
 字体解析：`report.font-title` / `report.font-body` 默认 `auto`，顺序为「显式配置（绝对路径或 `classpath:` 资源）→ jar 内 `classpath:fonts/*` → 本机 Windows 字体（simhei / simkai / msyh）→ 容器与服务器字体目录（wqy-zenhei.ttc、DroidSansFallbackFull.ttf 等）」。
 Docker 运行镜像已安装 `fonts-wqy-zenhei` + `fonts-droid-fallback`，容器内实际命中 `/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc`；本机开发命中 `C:/Windows/Fonts/simhei.ttf` 与 `simkai.ttf`。

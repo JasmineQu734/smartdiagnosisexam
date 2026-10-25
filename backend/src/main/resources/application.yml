@@ -43,3 +43,8 @@ ai:
   model: ${AI_MODEL:gpt-4o-mini}
   api-key: ${AI_API_KEY:}
   timeout-seconds: ${AI_TIMEOUT_SECONDS:20}
+  # 公司运行诊断 Agent 专属端点（可选，本地 sft17_exec 模型）：
+  # 不配则回落上面共用配置；超时默认 300s（3B 本地推理单次约 100-250s）。
+  exec-base-url: ${AI_EXEC_BASE_URL:}
+  exec-model: ${AI_EXEC_MODEL:}
+  exec-timeout-seconds: ${AI_EXEC_TIMEOUT_SECONDS:300}

@@ -1,0 +1,3412 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GridTrack · 110kV 城东变电站数字孪生园区</title>
+<style>
+  :root{--ink:#d7e2f6;--sub:#8296bd;--line:#22345c;--blue:#5b9bff;--blue-soft:rgba(91,155,255,.14);--green:#35d08e;--amber:#f0b35a;--red:#ef5350;--gold:#d9bd8a;--goldline:rgba(217,189,138,.5)}
+  *{box-sizing:border-box;margin:0;padding:0}
+  ::-webkit-scrollbar{width:6px;height:6px}
+  ::-webkit-scrollbar-thumb{background:rgba(120,150,210,.35);border-radius:3px}
+  ::-webkit-scrollbar-track{background:transparent}
+  html,body{height:100%;font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;color:var(--ink);overflow:hidden}
+  #app{display:flex;flex-direction:column;height:100vh;background:#050a18}
+  header{display:flex;align-items:center;gap:12px;padding:4px 14px;background:rgba(8,15,34,.62);backdrop-filter:blur(7px);border-bottom:1px solid rgba(217,189,138,.35);z-index:6}
+  .title{flex:1;text-align:center;font-size:14.5px;font-weight:800;letter-spacing:2.5px;white-space:nowrap;background:linear-gradient(180deg,#f4e3b8,#c9a45f);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:13px;letter-spacing:.5px;color:#cdd9f0}
+  .logo .dot{width:24px;height:24px;border-radius:3px;background:rgba(217,189,138,.14);border:1px solid var(--goldline);display:grid;place-items:center;color:var(--gold);font-size:10.5px;font-weight:800;letter-spacing:1px}
+  .logo small{display:block;font-size:10px;color:var(--sub);font-weight:400;letter-spacing:0}
+  .kpis{display:flex;gap:5px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
+  .kpi{background:rgba(14,26,54,.55);border:1px solid var(--line);border-left:2px solid var(--gold);border-radius:2px;padding:2px 8px;min-width:0;white-space:nowrap}
+  .kpi .k{font-size:9px;color:var(--sub);letter-spacing:.5px}
+  .kpi .v{font-size:13.5px;font-weight:800;font-variant-numeric:tabular-nums;color:#f0f5ff}
+  .kpi .v b{font-size:10.5px;color:var(--sub);font-weight:400;margin-left:2px}
+  .kpi .trend{font-size:10px;font-weight:700;margin-left:6px}
+  .up{color:var(--green)}.down{color:var(--red)}.flat{color:var(--sub)}
+  .user{display:flex;align-items:center;gap:8px;padding-left:14px;border-left:1px solid var(--line)}
+  .avatar{width:26px;height:26px;font-size:11px;border-radius:3px;background:rgba(217,189,138,.16);border:1px solid rgba(217,189,138,.4);display:grid;place-items:center;font-weight:800;color:var(--gold);font-size:13px}
+  .user .n{font-size:11px;font-weight:700}.user .r{font-size:9px;color:var(--sub)}
+  main{position:relative;flex:1;min-height:0}
+  #canvas{position:absolute;inset:0}#canvas canvas{display:block}
+  .hint{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(8,15,34,.82);border:1px solid var(--line);border-radius:2px;padding:5px 14px;font-size:12px;color:var(--sub);pointer-events:none;white-space:nowrap;z-index:4}
+  .hint b{color:var(--gold)}
+  aside{position:absolute;top:12px;right:12px;bottom:12px;width:300px;display:flex;flex-direction:column;gap:10px;z-index:4;pointer-events:none}
+  .card{background:linear-gradient(170deg,rgba(12,24,50,.62),rgba(6,12,28,.55));backdrop-filter:blur(7px);border:1px solid var(--line);border-top:1px solid var(--goldline);border-radius:4px;padding:13px 15px;pointer-events:auto;box-shadow:0 4px 18px rgba(0,0,0,.4)}
+  .card h3{font-size:13px;margin-bottom:8px;display:flex;align-items:center;gap:8px;border-left:3px solid var(--gold);padding-left:8px;line-height:1.2;color:#e9d9ae;letter-spacing:2px}
+  .card h3 .badge{margin-left:auto;font-size:9.5px;font-weight:700;color:var(--gold);background:rgba(217,189,138,.12);border:1px solid rgba(217,189,138,.35);padding:2px 7px;border-radius:2px;letter-spacing:1px}
+  #overview{flex:0 0 auto;max-height:46%;overflow:auto}
+  .zone-t{font-size:10px;font-weight:800;color:#5e719a;letter-spacing:1px;margin:8px 4px 3px}
+  .dev-row{display:flex;align-items:center;gap:9px;padding:5px 8px;border-radius:2px;cursor:pointer;font-size:12px;transition:background .15s}
+  .dev-row:hover{background:rgba(91,155,255,.1)}
+  .dev-row.active{background:rgba(91,155,255,.12);outline:1px solid rgba(217,189,138,.45)}
+  .dev-row .ic{width:26px;height:26px;border-radius:3px;display:grid;place-items:center;font-size:9.5px;font-weight:800;letter-spacing:.5px;flex:0 0 26px}
+  .ic-red{background:rgba(239,83,80,.16);color:#ff9086}
+  .ic-green{background:rgba(53,208,142,.14);color:#6fe3b4}
+  .ic-amber{background:rgba(240,179,90,.14);color:#ffd08a}
+  .ic-blue{background:rgba(91,155,255,.14);color:#9cc4ff}
+  .ic-purple{background:rgba(176,124,255,.14);color:#c9a6ff}
+  .ic-cyan{background:rgba(77,208,225,.13);color:#8fe6f2}
+  .ic-gray{background:rgba(148,163,190,.14);color:#b3c1d9}
+  .dev-row .info{flex:1;min-width:0}
+  .dev-row .info .nm{font-weight:700;color:#dbe6f8}
+  .dev-row .info .st{font-size:9px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dotst{width:8px;height:8px;border-radius:1px;flex:0 0 8px}
+  #detail{flex:1;min-height:0;overflow:auto;display:none}
+  #detail.show{display:block}
+  #detail .hd{display:flex;align-items:flex-start;gap:10px}
+  #detail .hd .ic{width:44px;height:44px;border-radius:3px;display:grid;place-items:center;font-size:13.5px;font-weight:800;flex:0 0 44px}
+  #detail .hd .nm{font-size:15px;font-weight:800;line-height:1.25;color:#f0f5ff}
+  #detail .hd .en{font-size:9px;color:var(--sub);letter-spacing:.3px}
+  .params{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0}
+  .param{background:rgba(17,30,60,.6);border:1px solid rgba(70,100,160,.25);border-radius:2px;padding:5px 9px}
+  .param .k{font-size:10px;color:var(--sub)}
+  .param .v{font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;color:#eaf1ff}
+  .param .v b{font-size:9px;color:var(--sub);font-weight:400}
+  .sec-t{font-size:11px;font-weight:800;color:#8fa2c8;margin:10px 0 5px;letter-spacing:1px;border-left:3px solid rgba(217,189,138,.55);padding-left:7px}
+  .learn li{font-size:12px;line-height:1.5;margin:3px 0 3px 16px;color:#b9c7e2}
+  .course{display:flex;align-items:center;gap:8px;background:rgba(17,30,60,.6);border:1px solid rgba(70,100,160,.25);border-radius:2px;padding:7px 9px;font-size:11px;margin-top:5px;cursor:pointer;color:#c3d1ea}
+  .course:hover{background:rgba(91,155,255,.12)}
+  .course .tag{font-size:9px;font-weight:800;color:#0a1226;background:var(--gold);border-radius:2px;padding:1px 6px;flex:0 0 auto}
+  .course .go{margin-left:auto;color:var(--gold);font-weight:800}
+  .back{font-size:11px;color:var(--gold);cursor:pointer;font-weight:700;margin-bottom:8px;display:inline-block}
+  .ops{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .op{border:1px solid rgba(90,130,200,.35);background:rgba(15,27,55,.6);border-radius:2px;padding:7px 5px;font-size:11px;font-weight:700;color:#cdd9f0;cursor:pointer;transition:all .15s;text-align:center}
+  .op:hover{background:rgba(217,189,138,.16);border-color:var(--gold);color:#f4e3b8}
+  .op.danger{border-color:rgba(239,83,80,.45);color:#ff9086}
+  .op.danger:hover{background:rgba(239,83,80,.2);border-color:var(--red);color:#ffd5d2}
+  /* ── 左列（演练 + 教学 + 事件流，向两边收边） ── */
+  #leftCol{position:absolute;top:12px;left:12px;bottom:12px;width:300px;display:flex;flex-direction:column;gap:10px;z-index:5;pointer-events:none}
+  #leftCol .card{pointer-events:auto}
+  #scnPanel{position:relative;width:100%}
+  #scnPanel .card{padding:12px 14px;max-height:46vh;display:flex;flex-direction:column}
+  #scnPanel h3{font-size:12.5px;margin-bottom:6px;display:flex;align-items:center;gap:6px;border-left:3px solid var(--gold);padding-left:8px;line-height:1.2;color:#e9d9ae;letter-spacing:2px}
+  #scnPanel h3 .badge{margin-left:auto;font-size:9px;font-weight:700;color:var(--gold);background:rgba(217,189,138,.12);border:1px solid rgba(217,189,138,.35);padding:2px 7px;border-radius:2px}
+  .env-btns{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 8px}
+  .env-btn{flex:1 1 30%;min-width:88px;border:1px solid rgba(90,130,200,.35);background:rgba(15,27,55,.6);border-radius:2px;padding:5px 0;font-size:10.5px;font-weight:700;color:#aebde0;cursor:pointer;transition:all .15s}
+  .env-btn.on{background:rgba(217,189,138,.18);border-color:var(--gold);color:#f4e3b8}
+  #scnList{overflow:auto}
+  .scn-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:2px;cursor:pointer;font-size:11px;transition:background .15s}
+  .scn-item:hover{background:rgba(91,155,255,.1)}
+  .scn-item .cat{font-size:8.5px;font-weight:800;color:#0a1226;border-radius:2px;padding:1px 5px;flex:0 0 auto}
+  .scn-item .nm{flex:1;font-weight:700;color:#c3d1ea}
+  .scn-item .best{font-size:9px;font-weight:800;color:var(--green)}
+  .scn-item .go{color:var(--gold);font-weight:800}
+  .scn-cat-t{font-size:9px;font-weight:800;color:#5e719a;letter-spacing:1px;margin:6px 4px 2px}
+  #scnRun{display:none;flex-direction:column;min-height:0}
+  #scnRun.show{display:flex}
+  #scnList.hide{display:none}
+  .scn-title{font-size:12px;font-weight:800;color:#f0f5ff;margin-bottom:2px}
+  .scn-meta{font-size:9.5px;color:var(--sub);margin-bottom:8px;display:flex;gap:10px}
+  .scn-meta b{color:var(--gold)}
+  .scn-steps{overflow:auto;flex:1;min-height:0}
+  .step{display:flex;align-items:flex-start;gap:7px;padding:6px 7px;border-radius:2px;font-size:10.5px;line-height:1.45;margin-bottom:4px;background:rgba(20,34,66,.55);color:#7e8fb3;transition:all .2s}
+  .step.now{background:rgba(91,155,255,.14);outline:1px solid rgba(217,189,138,.4);color:#eaf1ff;font-weight:700}
+  .step.done{color:#7e8fb3}
+  .step.done .idx{background:#2a9d6f;color:#fff}
+  .step .idx{width:16px;height:16px;border-radius:2px;background:rgba(70,100,160,.3);color:#7e8fb3;font-size:9px;font-weight:800;display:grid;place-items:center;flex:0 0 16px;margin-top:1px}
+  .step.now .idx{background:#b9964f;color:#0a1226}
+  .step .txt{flex:1}
+  .step .devhint{font-size:9px;color:var(--gold);font-weight:700;margin-top:1px}
+  .step .cfm{margin-top:4px;border:1px solid rgba(217,189,138,.5);background:rgba(217,189,138,.1);border-radius:2px;padding:3px 10px;font-size:10px;font-weight:700;color:#f4e3b8;cursor:pointer}
+  .step .cfm:hover{background:var(--gold);color:#0a1226}
+  .scn-foot{display:flex;gap:6px;margin-top:8px}
+  .scn-foot button{flex:1;border:none;border-radius:2px;padding:6px 0;font-size:10.5px;font-weight:800;cursor:pointer}
+  .scn-quit{background:rgba(70,100,160,.25);color:#8fa2c8}
+  .scn-quit:hover{background:rgba(70,100,160,.4)}
+  .scn-timer{font-variant-numeric:tabular-nums;font-weight:800;color:#f0f5ff}
+  .scn-quick{display:flex;gap:6px;margin-bottom:8px}
+  .scn-quick select{flex:1;border:1px solid rgba(90,130,200,.35);border-radius:2px;padding:5px 6px;font-size:10.5px;font-weight:700;color:#d5e0f4;background:#0c1730;outline:none;font-family:inherit}
+  .scn-quick select:focus{border-color:var(--gold)}
+  .scn-quick button{width:46px;border:1px solid rgba(90,130,200,.35);background:rgba(15,27,55,.6);border-radius:2px;font-size:10.5px;font-weight:800;color:#aebde0;cursor:pointer;transition:all .15s}
+  .scn-quick button:hover{background:rgba(217,189,138,.16);border-color:var(--gold);color:#f4e3b8}
+  /* ── 教学模式 ── */
+  #btnTeach{width:100%;margin-bottom:8px}
+  #btnTeach.on{background:rgba(53,208,142,.18);border-color:var(--green);color:#8cecc3}
+  #teachPanel{position:relative;width:100%;display:none;flex:0 0 auto;max-height:56%;overflow:auto}
+  #teachPanel.show{display:block}
+  #teachPanel .card{box-shadow:0 4px 16px rgba(0,0,0,.5);border-top:2px solid var(--green)}
+  /* 教学模式下收起巡检/演练面板，把左列让给教学进度卡 */
+  #app.teaching #patrolCard,#app.teaching #scnPanel{display:none}
+  .teach-hd{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .teach-hd .who{font-size:12px;font-weight:800;color:#f0f5ff}
+  .teach-hd .who small{display:block;font-size:9px;color:var(--sub);font-weight:400}
+  .teach-prog{margin-left:auto;font-size:10px;font-weight:800;color:#8cecc3;background:rgba(53,208,142,.14);border:1px solid rgba(53,208,142,.4);border-radius:2px;padding:2px 8px}
+  .teach-t{font-size:14px;font-weight:800;margin:2px 0 6px;color:#f0f5ff}
+  .teach-k{font-size:11.5px;line-height:1.7;color:#b9c7e2;background:rgba(17,30,60,.6);border:1px solid rgba(70,100,160,.25);border-radius:2px;padding:9px 12px;margin-bottom:8px}
+  .teach-k b{color:#f4e3b8}
+  .teach-op{margin-top:8px;padding-top:8px;border-top:1px dashed rgba(70,100,160,.35);font-size:11.5px;line-height:1.7;color:#a9d8b8}
+  .teach-op b{color:#8cecc3}
+  .teach-act{font-size:10.5px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:6px;color:#c3d1ea}
+  .teach-act .ok{color:var(--green)}
+  .teach-act .wait{color:var(--amber)}
+  .teach-btns{display:flex;gap:6px}
+  .teach-btns button{flex:1;border:none;border-radius:2px;padding:8px 0;font-size:11.5px;font-weight:800;cursor:pointer}
+  /* 小电语音气泡：跟随 3D 角色头顶，讲解字幕 + 互动按钮 */
+  #gbub{position:fixed;z-index:9;width:300px;max-width:min(340px,62vw);background:linear-gradient(180deg,rgba(13,24,48,.95),rgba(17,30,60,.95));border:1px solid rgba(84,140,255,.45);border-left:3px solid var(--green);border-radius:10px;padding:10px 12px 12px;box-shadow:0 10px 30px rgba(0,0,0,.5);pointer-events:auto;opacity:0;left:-9999px;top:-9999px;transform:translate(-50%,calc(-100% + 10px));transition:opacity .25s,transform .25s}
+  #gbub.show{opacity:1;transform:translate(-50%,-100%)}
+  #gbub:before{content:'';position:absolute;left:50%;bottom:-7px;width:12px;height:12px;background:rgba(17,30,60,.95);border-right:1px solid rgba(84,140,255,.45);border-bottom:1px solid rgba(84,140,255,.45);transform:translateX(-50%) rotate(45deg)}
+  #gbub.below{transform:translate(-50%,0)}
+  #gbub.show.below{transform:translate(-50%,0)}
+  #gbub.below:before{bottom:auto;top:-7px;background:rgba(17,30,60,.95);border:none;border-left:1px solid rgba(84,140,255,.45);border-top:1px solid rgba(84,140,255,.45);transform:translateX(-50%) rotate(45deg)}
+  #gbub .gb-name{font-size:10px;font-weight:800;color:#8cecc3;letter-spacing:1px;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+  #gbub .gb-name .spk{font-size:9px;font-weight:700;color:#ffd27d}
+  #gbub .gb-name .spk.off{color:#8ea0c0;text-decoration:line-through}
+  #gbub .gb-say{font-size:12px;line-height:1.75;color:#e8eefc;min-height:21px}
+  #gbub .gb-say b{color:#f4e3b8}
+  #gbub .gb-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  #gbub .gb-actions button{border:1px solid rgba(120,160,230,.4);background:rgba(47,107,255,.16);color:#dce8ff;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer}
+  #gbub .gb-actions button.primary{background:rgba(53,208,142,.2);border-color:rgba(53,208,142,.6);color:#8cecc3}
+  #gbub .gb-actions button:hover{filter:brightness(1.25)}
+  .tb-prev{background:rgba(70,100,160,.25);color:#aebde0}
+  .tb-next{background:#b9964f;color:#0a1226}
+  .tb-exit{background:transparent;border:1px solid var(--line) !important;color:#8fa2c8}
+  .bubble{position:absolute;background:#0d1a36;border:1px solid var(--gold);border-radius:2px;padding:6px 12px;font-size:11px;font-weight:700;color:#f0f5ff;pointer-events:none;z-index:3;box-shadow:0 3px 10px rgba(0,0,0,.4)}
+  .bubble::after{content:'';position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);border:7px solid transparent;border-top-color:var(--gold);border-bottom:none}
+  /* 结果弹窗 */
+  #resultMask{position:absolute;inset:0;background:rgba(3,7,18,.68);backdrop-filter:blur(3px);z-index:9;display:none;place-items:center}
+  #resultMask.show{display:grid}
+  .result-card{width:380px;background:linear-gradient(170deg,#101f42,#0a1329);border:1px solid var(--line);border-top:2px solid var(--gold);border-radius:4px;padding:24px 26px;box-shadow:0 16px 48px rgba(0,0,0,.55);animation:pop .25s ease}
+  @keyframes pop{from{transform:scale(.96);opacity:0}to{transform:none;opacity:1}}
+  .result-card .verdict{font-size:19px;font-weight:800;text-align:center;margin-bottom:4px;color:#f4e3b8}
+  .result-card .sub{text-align:center;font-size:11px;color:var(--sub);margin-bottom:16px}
+  .score-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
+  .score-cell{background:rgba(17,30,60,.6);border:1px solid rgba(70,100,160,.25);border-radius:2px;padding:10px 6px;text-align:center}
+  .score-cell .k{font-size:9.5px;color:var(--sub)}
+  .score-cell .v{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;color:#eaf1ff}
+  .score-cell.total{grid-column:span 3;background:rgba(217,189,138,.1);border-color:rgba(217,189,138,.4)}
+  .score-cell.total .v{font-size:28px;color:#f4e3b8}
+  .vio-list{margin:0 0 14px;max-height:130px;overflow:auto}
+  .vio{display:flex;gap:7px;font-size:10.5px;padding:5px 8px;border-radius:2px;margin-bottom:4px}
+  .vio.crit{background:rgba(239,83,80,.16);color:#ff9086;font-weight:700}
+  .vio.warn{background:rgba(240,179,90,.14);color:#ffd08a}
+  .vio .tag{font-size:8.5px;font-weight:800;padding:1px 5px;border-radius:2px;height:14px;line-height:14px;flex:0 0 auto;color:#fff}
+  .vio.crit .tag{background:#c0392b}
+  .vio.warn .tag{background:#b7791f}
+  .review-tip{font-size:10.5px;color:#9db0d4;line-height:1.6;background:rgba(17,30,60,.6);border:1px solid rgba(70,100,160,.25);border-radius:2px;padding:9px 12px;margin-bottom:14px}
+  .result-btns{display:flex;gap:8px}
+  .result-btns button{flex:1;border:none;border-radius:2px;padding:9px 0;font-size:12px;font-weight:800;cursor:pointer}
+  .rb-again{background:#b9964f;color:#0a1226}
+  .rb-close{background:rgba(70,100,160,.25);color:#aebde0}
+  #alerts{position:relative;width:100%;margin-top:auto;max-height:30%;overflow:hidden}
+  #alerts .card{padding:11px 14px;max-height:100%;overflow:auto}
+  .al{display:flex;gap:8px;font-size:11px;padding:5px 0;border-bottom:1px dashed rgba(70,100,160,.3);animation:slidein .4s ease;color:#a9b9d8}
+  .al:last-child{border-bottom:none}
+  .al .tm{color:var(--sub);font-variant-numeric:tabular-nums;flex:0 0 38px}
+  .al .op-tag{font-size:9px;color:#0a1226;background:var(--gold);border-radius:2px;padding:0 4px;flex:0 0 auto;height:14px;line-height:14px}
+  @keyframes slidein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  #toast{position:absolute;top:56px;left:50%;transform:translate(-50%,-12px);background:rgba(10,18,40,.78);backdrop-filter:blur(6px);border:1px solid var(--line);border-left:3px solid var(--gold);color:#edf3ff;padding:9px 18px;border-radius:2px;font-size:12px;font-weight:700;opacity:0;transition:all .25s;pointer-events:none;z-index:8;white-space:nowrap}
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+  #track{position:absolute;left:318px;right:318px;bottom:12px;z-index:4;background:linear-gradient(170deg,rgba(12,24,50,.66),rgba(6,12,28,.6));backdrop-filter:blur(7px);border:1px solid var(--line);border-top:1px solid var(--goldline);border-radius:3px;padding:10px 14px;display:flex;align-items:center;justify-content:center;gap:16px;box-shadow:0 4px 18px rgba(0,0,0,.4)}
+  #track .tt{font-size:10px;color:var(--sub);font-weight:700;letter-spacing:1px}
+  #track .steps{display:flex;align-items:center;gap:0}
+  .stp{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9.5px;color:var(--sub);width:64px}
+  .stp .b{width:22px;height:22px;border-radius:2px;background:rgba(70,100,160,.25);display:grid;place-items:center;font-size:10px;font-weight:800;color:#7e8fb3;transition:all .3s}
+  .stp.done .b{background:#2a9d6f;color:#fff}
+  .stp.now .b{background:#b9964f;color:#0a1226;box-shadow:0 0 0 4px rgba(217,189,138,.2)}
+  .stp-line{width:22px;height:3px;background:rgba(70,100,160,.3);margin-bottom:14px}
+  .stp-line.done{background:#2a9d6f}
+  #track .eta{font-size:11px;font-weight:800;font-variant-numeric:tabular-nums;color:#f0f5ff}
+  /* ── 专注模式（隐藏面板，不挡操作） ── */
+  #btnZen{position:absolute;right:318px;bottom:12px;z-index:7;border:1px solid rgba(217,189,138,.5);background:rgba(10,19,42,.9);border-radius:2px;padding:6px 14px;font-size:11px;font-weight:800;color:#e9d9ae;cursor:pointer;letter-spacing:.5px}
+  #btnZen:hover{background:rgba(217,189,138,.16)}
+  #app.zen header,#app.zen .hint,#app.zen #leftCol,#app.zen aside,#app.zen #track,#app.zen #alerts,#app.zen #teachPanel{display:none}
+  #app.zen #btnZen{background:var(--gold);color:#0a1226}
+  /* ── 巡检任务 ── */
+  #patrolCard .card{max-height:44vh;display:flex;flex-direction:column}
+  #ptList{overflow:auto}
+  .pt-hd{display:flex;gap:6px;margin-bottom:6px}
+  .pt-hd button{flex:1;border:1px solid rgba(90,130,200,.35);background:rgba(15,27,55,.6);border-radius:2px;padding:5px 0;font-size:10.5px;font-weight:800;color:#aebde0;cursor:pointer;transition:all .15s;font-family:inherit}
+  .pt-hd button:hover{border-color:var(--gold);color:#f4e3b8;background:rgba(217,189,138,.14)}
+  .pt-row{display:flex;align-items:center;gap:8px;padding:5px 7px;border-radius:2px;cursor:pointer;font-size:11px;transition:background .15s;color:#cdd9f0}
+  .pt-row:hover{background:rgba(47,107,216,.14)}
+  .pt-row .no{width:17px;height:17px;border-radius:2px;background:rgba(70,100,160,.3);color:#8fa3c8;font-size:9.5px;font-weight:800;display:grid;place-items:center;flex:0 0 17px}
+  .pt-row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pt-row .go{font-size:9.5px;font-weight:800;color:var(--gold);flex:0 0 auto}
+  .pt-row.done .no{background:rgba(42,157,111,.55);color:#dff5ea}
+  .pt-row.done .go{color:#5fae87}
+  .pt-row.bad .no{background:#b3452e;color:#ffe3da}
+  .pt-row.bad .nm{color:#ff9d8a;text-decoration:line-through}
+  .pt-row.bad .go{color:#b3452e}
+  .pt-row.now{background:rgba(217,189,138,.14);outline:1px solid rgba(217,189,138,.45)}
+  /* ── 检查卡 / 仪表卡 ── */
+  #checkMask{position:absolute;inset:0;background:rgba(3,7,18,.55);backdrop-filter:blur(2px);z-index:9;display:none;place-items:center}
+  #checkMask.show{display:grid}
+  .ck-card{width:330px;background:linear-gradient(170deg,#f6f8fc,#e9edf4);border-radius:4px;border-top:3px solid var(--blue);padding:18px 20px;box-shadow:0 16px 44px rgba(0,0,0,.45);animation:pop .22s ease}
+  .ck-card .t{font-size:15px;font-weight:800;color:#1c2740;margin-bottom:6px}
+  .ck-card .d{font-size:11.5px;line-height:1.7;color:#4a5a78;margin-bottom:14px}
+  .ck-btns{display:flex;gap:8px}
+  .ck-btns button{flex:1;border:none;border-radius:3px;padding:9px 0;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit}
+  .ck-cancel{background:#e2e7f0;color:#5a6a85}
+  .ck-bad{background:#b3452e;color:#fff}
+  .ck-ok{background:#24406e;color:#fff}
+  .ck-btns button:hover{filter:brightness(1.12)}
+  .ck-tip{font-size:9.5px;color:#8a94a8;margin-top:10px;text-align:center}
+  .mt-card{width:330px;background:linear-gradient(170deg,#f6f8fc,#e9edf4);border-radius:4px;border-top:3px solid #0f8a55;padding:18px 20px;box-shadow:0 16px 44px rgba(0,0,0,.45);animation:pop .22s ease}
+  .mt-card .t{font-size:15px;font-weight:800;color:#1c2740;margin-bottom:12px}
+  .mt-lcd{background:#0e1a14;border:1px solid #24463a;border-radius:4px;padding:12px 14px;margin-bottom:12px}
+  .mt-lcd .v{font-family:Consolas,monospace;font-size:30px;font-weight:800;color:#5cf0a8;letter-spacing:1px;font-variant-numeric:tabular-nums}
+  .mt-lcd .u{font-size:10px;color:#5fae87;margin-top:2px;letter-spacing:1px}
+  .mt-lcd .bar{height:5px;background:#1c3329;border-radius:3px;margin-top:9px;overflow:hidden}
+  .mt-lcd .bar i{display:block;height:100%;background:linear-gradient(90deg,#2a9d6f,#5cf0a8);border-radius:3px;transition:width .5s}
+  .mt-btns{display:flex;gap:8px}
+  .mt-btns button{flex:1;border:none;border-radius:3px;padding:9px 0;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit}
+  .mt-report{background:#b3452e;color:#fff}
+  .mt-ok{background:#24406e;color:#fff}
+  .mt-btns button:hover{filter:brightness(1.12)}
+  @media (max-width:960px){aside{width:260px}}
+
+  /* ============================================================
+     白天 UI（html.ui-day）：宿主前端切到白天主题时，通过
+     ?theme=day 或 postMessage 同步到本页——面板/顶栏/按钮全部
+     转浅色，token 换浅色版，写死的浅色字逐条压成深色，保证可读。
+     3D 世界本身的日照由 applyNight 单独控制，与此互不影响。
+     ============================================================ */
+  html.ui-day{--ink:#22314e;--sub:#5d6d8a;--line:#d4dcea;--blue:#2e6bd8;--blue-soft:rgba(46,107,216,.1);--green:#1fa97a;--amber:#d98a1f;--red:#d5443f;--gold:#a8874a;--goldline:rgba(168,135,74,.55)}
+  html.ui-day body,html.ui-day #app{background:#e8edf6}
+  html.ui-day header{background:rgba(255,255,255,.9);border-bottom-color:rgba(168,135,74,.45)}
+  html.ui-day .title{background:linear-gradient(180deg,#8c6c33,#a8874a);-webkit-background-clip:text;background-clip:text}
+  html.ui-day .logo{color:#22314e}
+  html.ui-day .kpi{background:rgba(255,255,255,.92);border-color:#d4dcea}
+  html.ui-day .card{background:linear-gradient(170deg,rgba(255,255,255,.95),rgba(246,248,252,.9));border-color:#d4dcea;box-shadow:0 2px 10px rgba(31,45,80,.1)}
+  html.ui-day #track{background:linear-gradient(170deg,rgba(255,255,255,.96),rgba(246,248,252,.92));border-color:#d4dcea;box-shadow:0 2px 10px rgba(31,45,80,.1)}
+  html.ui-day #toast{background:rgba(255,255,255,.96);color:#22314e;border-color:#d4dcea}
+  html.ui-day .bubble{background:#ffffff;color:#1f2b45}
+  html.ui-day .scn-quick select{background:#ffffff;color:#22314e;border-color:#c9d4e6}
+  html.ui-day #btnZen{background:rgba(255,255,255,.95);border-color:rgba(168,135,74,.5);color:#8c6c33;box-shadow:0 2px 8px rgba(31,45,80,.12)}
+  html.ui-day #resultMask,html.ui-day #checkMask{background:rgba(38,52,82,.42)}
+  /* 写死的浅色字 → 深色（分组：亮白标题类 / 正文类 / 金色类 / 状态类） */
+  html.ui-day :is(.v,.nm,.scn-title,.scn-timer,.who,.teach-t,.eta,.verdict,.pt-row,.course,.op,#toast,.bubble){color:#1f2b45}
+  html.ui-day :is(.teach-act,.pt-row small,.course){color:#3c4c6b}
+  html.ui-day :is(.card h3,#scnPanel h3,.teach-k b,.teach-op b,.teach-op,.cfm,.on,#btnZen,.verdict){color:#7a5c28}
+  html.ui-day .teach-op{border-top-color:rgba(90,120,180,.3)}
+  html.ui-day #gbub{background:linear-gradient(180deg,rgba(255,255,255,.97),rgba(240,244,252,.97));border-color:rgba(90,120,180,.35);border-left-color:#2f9e6e;box-shadow:0 10px 30px rgba(40,60,100,.18)}
+  html.ui-day #gbub:before{background:rgba(240,244,252,.97);border-color:rgba(90,120,180,.35)}
+  html.ui-day #gbub.below:before{border-color:rgba(90,120,180,.35)}
+  html.ui-day #gbub .gb-say{color:#24304e}
+  html.ui-day #gbub .gb-say b{color:#8a5a12}
+  html.ui-day #gbub .gb-name{color:#1f7a4d}
+  html.ui-day #gbub .gb-name .spk{color:#b07708}
+  html.ui-day #gbub .gb-actions button{color:#2a3c60;background:rgba(47,107,255,.08);border-color:rgba(90,120,180,.4)}
+  html.ui-day #gbub .gb-actions button.primary{background:rgba(53,208,142,.14);border-color:rgba(47,158,110,.55);color:#1f7a4d}
+  html.ui-day :is(.ic-red,.crit){color:#c5433d}
+  html.ui-day :is(.ic-amber,.warn){color:#b06f10}
+  html.ui-day .ic-purple{color:#7a4fd0}
+  html.ui-day .pt-row.bad .nm{color:#c5433d}
+  html.ui-day :is(.op,.course,.pt-hd button){background:rgba(46,107,216,.05);border-color:#c9d4e6;color:#3c4c6b}
+  html.ui-day .pt-hd button:hover{border-color:#a8874a;color:#7a5c28;background:rgba(168,135,74,.12)}
+  html.ui-day .pt-row:hover{background:rgba(46,107,216,.08)}
+  html.ui-day .pt-row.now{background:rgba(168,135,74,.1);outline-color:rgba(168,135,74,.45)}
+  html.ui-day .pt-row .go{color:#a8874a}
+  /* 白天补漏：演练中心小按钮 / 情景步骤条 / 金玻璃按钮——原先写死深底浅字，白天看不清 */
+  html.ui-day .scn-quick button{background:#ffffff;border-color:#c9d4e6;color:#3c4c6b}
+  html.ui-day .scn-quick button:hover{background:rgba(168,135,74,.12);border-color:#a8874a;color:#7a5c28}
+  html.ui-day .env-btn,html.ui-day .pt-hd button{background:#ffffff;border-color:#d9c9a6;color:#7a5c28}
+  html.ui-day .env-btn:hover,html.ui-day .pt-hd button:hover{border-color:#a8874a;background:rgba(168,135,74,.12);color:#7a5c28}
+  html.ui-day .env-btn.on{background:rgba(168,135,74,.14);border-color:#a8874a;color:#7a5c28}
+  html.ui-day .op{background:#ffffff;border-color:#d9c9a6;color:#7a5c28}
+  html.ui-day .step{background:#f6f9fd;color:#5d6d8a}
+  html.ui-day .step .idx{background:#e8edf6;color:#5d6d8a}
+  html.ui-day .step.done{color:#8a97b1}
+  html.ui-day .step.now{background:rgba(168,135,74,.1);color:#22314e;outline-color:rgba(168,135,74,.45)}
+  html.ui-day .step.now .idx{background:#a8874a;color:#ffffff}
+  html.ui-day .scn-quit{background:rgba(46,107,216,.06);color:#3c4c6b}
+  html.ui-day .scn-quit:hover{background:rgba(46,107,216,.12);color:#22314e}
+  /* —— 视觉调优：面板半透明 / 按钮椭圆化 / 演练中心金玻璃按钮 —— */
+  .card{background:linear-gradient(170deg,rgba(12,24,50,.42),rgba(6,12,28,.36));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  #track{background:linear-gradient(170deg,rgba(12,24,50,.48),rgba(6,12,28,.42))}
+  .env-btn,.pt-hd button,.op,.scn-quick button,.cfm,#btnZen{border-radius:999px}
+  .scn-quick select{border-radius:999px}
+  .env-btn,.pt-hd button{border:1px solid rgba(217,189,138,.35);background:rgba(217,189,138,.09);color:#ead9b2}
+  .env-btn:hover,.pt-hd button:hover{border-color:var(--gold);color:#f4e3b8;background:rgba(217,189,138,.16)}
+  .env-btn.on,.pt-hd button:active{background:rgba(217,189,138,.22);border-color:var(--gold);color:#f4e3b8}
+  .op{border-color:rgba(217,189,138,.3);background:rgba(217,189,138,.07);color:#e3d2ac}
+  html.ui-day .card{background:linear-gradient(170deg,rgba(255,255,255,.72),rgba(246,248,252,.66))}
+  html.ui-day .env-btn,html.ui-day .pt-hd button{border-color:rgba(168,135,74,.4);background:rgba(168,135,74,.1);color:#6b5326}
+  html.ui-day .env-btn:hover,html.ui-day .pt-hd button:hover{background:rgba(168,135,74,.18);color:#4d3c19}
+  /* —— 白天主题补全：底板加实保证文字可读（可读性优先于通透感） —— */
+  html.ui-day .card{background:linear-gradient(170deg,rgba(255,255,255,.92),rgba(250,252,255,.88));backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+  html.ui-day #track{background:linear-gradient(170deg,rgba(255,255,255,.94),rgba(250,252,255,.9))}
+  html.ui-day .op{border:1px solid rgba(168,135,74,.38);background:rgba(255,255,255,.55);color:#6b5326}
+  html.ui-day .op:hover{border-color:#a8874a;background:rgba(168,135,74,.14)}
+  html.ui-day .op.danger{border-color:rgba(213,68,63,.4);color:#c5433d;background:rgba(213,68,63,.07)}
+  html.ui-day .param{background:rgba(255,255,255,.55);border-color:rgba(168,135,74,.28)}
+  html.ui-day .param .v{color:#22314e}
+  html.ui-day .sec-t{color:#8a6d3b}
+  html.ui-day .learn li{color:#5d6d8a}
+  html.ui-day .back{color:#8c6c33}
+  html.ui-day .stp .b{background:rgba(255,255,255,.65);color:#5d6d8a;border:1px solid rgba(168,135,74,.3)}
+  html.ui-day .stp.now .b{background:#a8874a;color:#fff;border-color:#a8874a}
+  html.ui-day .stp-line{background:rgba(168,135,74,.25)}
+  html.ui-day .course{background:rgba(255,255,255,.55);border-color:rgba(168,135,74,.25)}
+  /* 步骤球两主题统一圆形 */
+  .stp .b{border-radius:50%}
+  /* —— 白天主题补全：园区设备列表 / 详情面板文字压深（浅色字压在透白底上看不清） —— */
+  html.ui-day .dev-row .info .nm{color:#141d33;font-weight:800}
+  html.ui-day .dev-row .info .st{color:#4a5a7a;font-weight:600}
+  html.ui-day .dev-row .ic{color:#fff}
+  html.ui-day .ic-red{background:rgba(213,68,63,.14);color:#c5433d}
+  html.ui-day .ic-green{background:rgba(31,169,122,.14);color:#1fa97a}
+  html.ui-day .ic-amber{background:rgba(217,138,31,.14);color:#b06f10}
+  html.ui-day .ic-gray{background:rgba(93,109,138,.14);color:#5d6d8a}
+  html.ui-day .ic-blue{background:rgba(46,107,216,.14);color:#2e6bd8}
+  html.ui-day .ic-purple{background:rgba(122,79,208,.14);color:#7a4fd0}
+  html.ui-day .zone-t{color:#6b7a94;font-weight:800}
+  html.ui-day .dev-row:hover{background:rgba(46,107,216,.07)}
+  html.ui-day .dev-row.active{background:rgba(168,135,74,.1);outline-color:rgba(168,135,74,.45)}
+  html.ui-day #detail .hd .nm{color:#22314e}
+  html.ui-day #detail .hd .en{color:#8794ad}
+  html.ui-day .badge{color:#8c6c33}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo"><div class="dot">GT</div><div>GridTrack<small>110kV 城东变电站 · 数字孪生园区</small></div></div>
+    <div class="title">110kV 城东变电站 · 三维数字孪生园区</div>
+    <div class="kpis">
+      <div class="kpi"><div class="k">今日巡检任务</div><div class="v" id="k1">18<b>项</b><span class="trend up">+5</span></div></div>
+      <div class="kpi"><div class="k">设备在线率</div><div class="v" id="k2">98.9<b>%</b><span class="trend flat">—</span></div></div>
+      <div class="kpi"><div class="k">全站负载率</div><div class="v" id="k3">63.2<b>%</b><span class="trend up">▲1.1</span></div></div>
+      <div class="kpi"><div class="k">无功补偿</div><div class="v" id="k5">4.8<b>Mvar</b><span class="trend up">投入</span></div></div>
+      <div class="kpi"><div class="k">学习完成度</div><div class="v" id="k4">80.0<b>%</b><span class="trend up">▲4.0</span></div></div>
+    </div>
+    <div class="user"><div class="avatar">张</div><div><div class="n">张伟</div><div class="r">值班员 · 正值</div></div></div>
+  </header>
+  <main>
+    <div id="canvas"></div>
+    <div class="hint">拖动旋转 · 滚轮缩放 · <b>点击任意设备查看结构并操作</b> · 按 H 隐藏面板</div>
+    <aside>
+      <div class="card" id="overview">
+        <h3>园区设备 <span class="badge" id="devCount"></span></h3>
+        <div id="devList"></div>
+      </div>
+      <div class="card" id="detail">
+        <span class="back">← 返回设备总览</span>
+        <div class="hd"><div class="ic" id="dIc"></div><div><div class="nm" id="dNm"></div><div class="en" id="dEn"></div></div></div>
+        <div class="params" id="dParams"></div>
+        <div class="sec-t">现场操作</div>
+        <div class="ops" id="dOps"></div>
+        <div class="sec-t">学习要点</div>
+        <ul class="learn" id="dLearn"></ul>
+        <div class="sec-t">关联课程</div>
+        <div id="dCourses"></div>
+      </div>
+    </aside>
+    <div id="leftCol">
+    <div id="patrolCard"><div class="card">
+      <h3>巡检任务 <span class="badge" id="ptProg">0/15</span></h3>
+      <div class="pt-hd"><button id="btnPatrol">开始巡检</button><button id="btnPatrolAll">一键随机巡检</button></div>
+      <div id="ptList"></div>
+    </div></div>
+    <div id="scnPanel"><div class="card">
+      <h3>演练中心 <span class="badge" id="scnBadge">10 个情景</span></h3>
+      <div class="env-btns">
+        <button class="env-btn" id="btnNight">昼夜切换</button>
+        <button class="env-btn" id="btnRain">降雨模式</button>
+        <button class="env-btn" id="btnZone">分区标注</button>
+        <button class="env-btn" id="btnGltf">高清模型</button>
+        <button class="env-btn" id="btnGlbImport">导入GLB</button>
+        <input type="file" id="glbFile" accept=".glb,.gltf" multiple style="display:none">
+      </div>
+      <div class="scn-quick">
+        <select id="scnSel"></select>
+        <button id="scnRand" title="随机抽取一个情景开始">随机</button>
+      </div>
+      <button class="env-btn" id="btnTeach">进入教学模式 · 跟随小电逛站</button>
+      <div id="scnList"></div>
+      <div id="scnRun">
+        <div class="scn-title" id="rsTitle"></div>
+        <div class="scn-meta"><span>用时 <b class="scn-timer" id="rsTime">00:00</b></span><span>步骤 <b id="rsProg">0/0</b></span><span>违规 <b id="rsVio" style="color:var(--green)">0</b></span></div>
+        <div class="scn-steps" id="rsSteps"></div>
+        <div class="scn-foot"><button class="scn-quit" id="rsBack">⇄ 切换情景</button><button class="scn-quit" id="rsQuit">放弃演练</button></div>
+      </div>
+    </div></div>
+    <div id="teachPanel"><div class="card">
+      <div class="teach-hd">
+        <div class="who">小电 · 电维向导<small>跟我走 · 到站点一下设备打卡</small></div>
+        <span class="teach-prog" id="tpProg">1/10</span>
+      </div>
+      <div class="teach-t" id="tpTitle"></div>
+      <div class="teach-k" id="tpKnow"></div>
+      <div class="teach-act" id="tpAct"></div>
+      <div class="teach-btns">
+        <button class="tb-prev" id="tpPrev">← 上一个</button>
+        <button class="tb-next" id="tpNext">下一个 →</button>
+        <button class="tb-exit" id="tpExit">退出</button>
+      </div>
+    </div></div>
+    <div id="alerts"><div class="card"><h3 style="font-size:12px">实时事件流 <span class="badge">LIVE</span></h3><div id="alList"></div></div></div>
+    </div>
+    <div id="resultMask"><div class="result-card">
+      <div class="verdict" id="rvVerdict"></div>
+      <div class="sub" id="rvSub"></div>
+      <div class="score-grid" id="rvScores"></div>
+      <div class="vio-list" id="rvVio"></div>
+      <div class="review-tip" id="rvTip"></div>
+      <div class="result-btns"><button class="rb-again" id="rvAgain">再练一次</button><button class="rb-close" id="rvClose">关闭</button></div>
+    </div></div>
+    <div id="checkMask">
+      <div class="ck-card" id="ckCheck">
+        <div class="t" id="ckTitle"></div>
+        <div class="d" id="ckDesc"></div>
+        <div class="ck-btns">
+          <button class="ck-cancel" id="ckCancel">取消</button>
+          <button class="ck-bad" id="ckBad">异常</button>
+          <button class="ck-ok" id="ckOk">正常</button>
+        </div>
+        <div class="ck-tip" id="ckTip"></div>
+      </div>
+      <div class="mt-card" id="ckMeter" style="display:none">
+        <div class="t" id="mtTitle"></div>
+        <div class="mt-lcd">
+          <div class="v" id="mtVal">0.00</div>
+          <div class="u" id="mtUnit"></div>
+          <div class="bar"><i id="mtBar"></i></div>
+        </div>
+        <div class="mt-btns">
+          <button class="mt-report" id="mtReport">上报</button>
+          <button class="mt-ok" id="mtOk">确定</button>
+        </div>
+        <div class="ck-tip">读数正常则点「确定」；发现异常先「上报」</div>
+      </div>
+    </div>
+    <div id="toast"></div>
+    <div id="gbub">
+      <div class="gb-name">🎙 小电 · 电维向导<span class="spk" id="gbSpk">语音讲解中</span></div>
+      <div class="gb-say" id="gbSay"></div>
+      <div class="gb-actions" id="gbAct"></div>
+    </div>
+    <button id="btnZen">专注模式 · 隐藏面板 [H]</button>
+    <div id="track">
+      <div><div class="tt">当前作业 · 110kV 线路停电检修</div><div class="steps" id="steps"></div></div>
+      <div><div class="tt">预计剩余</div><div class="eta" id="eta">18:42</div></div>
+    </div>
+  </main>
+</div>
+
+<script type="importmap">
+{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/addons/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+/* ═════════ 基础 ═════════ */
+const wrap = document.getElementById('canvas');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xbcd8ee);
+scene.fog = new THREE.Fog(0xbcd8ee, 220, 640);
+
+const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 1000);
+camera.position.set(74, 56, 86);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+wrap.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.maxPolarAngle = Math.PI * 0.48;
+controls.minDistance = 8; controls.maxDistance = 260;
+controls.target.set(0, 2, 2);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x93a9c9, 1.05));
+const sun = new THREE.DirectionalLight(0xfff1d6, 1.35);
+sun.position.set(60, 80, 48);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -95, right: 95, top: 95, bottom: -95, far: 260 });
+scene.add(sun);
+
+const MAT = {};
+function mat(c) { if (!MAT[c]) MAT[c] = new THREE.MeshLambertMaterial({ color: c }); return MAT[c]; }
+function box(w, h, d, c, x = 0, y = 0, z = 0, p) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(c));
+  m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true;
+  if (p) p.add(m); return m;
+}
+function cyl(rt, rb, h, c, x = 0, y = 0, z = 0, p, seg = 12) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat(c));
+  m.position.set(x, y, z); m.castShadow = true;
+  if (p) p.add(m); return m;
+}
+function wire(p1, p2, sag = 1.2, c = 0x46536b, r = 0.045) {
+  const mid = p1.clone().add(p2).multiplyScalar(0.5); mid.y -= sag;
+  const curve = new THREE.QuadraticBezierCurve3(p1, mid, p2);
+  const m = new THREE.Mesh(new THREE.TubeGeometry(curve, 18, r, 5), mat(c));
+  scene.add(m); return m;
+}
+function string(parent, x, y, z, n = 5, c = 0x9fb3d1) {
+  cyl(0.03, 0.03, n * 0.16, 0x6b7a94, x, y - n * 0.08, z, parent);
+  for (let i = 0; i < n; i++) {
+    const d = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.045, 6, 12), mat(c));
+    d.rotation.x = Math.PI / 2; d.position.set(x, y - 0.16 - i * 0.16, z); parent.add(d);
+  }
+}
+function lamp(g, color, x, y, z, key) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(0.11), new THREE.MeshBasicMaterial({ color }));
+  m.position.set(x, y, z); g.add(m);
+  if (key) lampRefs[key] = m;
+  return m;
+}
+
+/* ═════════ 设备台账（按分区） ═════════ */
+function D(id, zone, ic, color, name, en, desc, params, learn, courses) {
+  return { id, zone, ic, color, name, en, desc, params, learn, courses, status: '运行', stColor: '#22b573' };
+}
+const DEVICES = [
+  /* —— 110kV 配电装置 —— */
+  D('transformer1', '110kV 配电装置', '主变', 'ic-red', '1号主变压器', 'SFZ11-50000/110 · YNd11',
+    '容量 50MVA，110/10.5kV，ONAF 风冷。含油枕、瓦斯继电器、压力释放阀、有载调压机构。',
+    [['高压侧', '110', 'kV'], ['低压侧', '10.5', 'kV'], ['油面温度', '62', '℃'], ['分接档位', '9', '档']],
+    ['呼吸器硅胶变色超 1/2 必须更换', '瓦斯继电器装在油箱与油枕连管上，坡度 1%~1.5%', '压力释放阀动作后标志杆升起，复归前查明原因', '有载调压每档间隔不少于 1 分钟'],
+    [['主变本体结构与保护', '必修'], ['有载调压运行规定', '必修']]),
+  D('transformer2', '110kV 配电装置', '主变', 'ic-red', '2号主变压器', 'SFZ11-50000/110 · YNd11',
+    '与 1 号主变分列运行，风冷 ONAF；两台之间设混凝土防火墙。',
+    [['高压侧', '110', 'kV'], ['低压侧', '10.5', 'kV'], ['油面温度', '58', '℃'], ['分接档位', '9', '档']],
+    ['并列前核对相序、组别与分接头', '负荷分配偏差 >15% 应调整分接头', '潜油泵风扇定期切换试验', '中性点接地方式按调度令切换'],
+    [['主变并列运行条件', '必修']]),
+  D('breaker', '110kV 配电装置', '断路', 'ic-green', '110kV SF6 断路器', 'LW36-126 · 弹簧机构',
+    '线路保护执行元件，SF6 气体绝缘灭弧；配密度继电器与机构箱。',
+    [['SF6 压力', '0.52', 'MPa'], ['分闸次数', '1,204', '次'], ['机构压力', '31.5', 'MPa'], ['位置', '分位', '']],
+    ['SF6 低于 0.45MPa 闭锁分合闸', '密度继电器分补气报警与闭锁两级', '机构频繁打压说明内漏，48h 处理', '故障跳闸后检查 SF6 分解物'],
+    [['断路器灭弧原理', '必修'], ['SF6 气体管理', '必修']]),
+  D('disconnector', '110kV 配电装置', '隔离', 'ic-amber', '110kV 隔离开关', 'GW4-126D · 双柱水平旋转',
+    'GW4 双柱式，两柱各转 90° 分合，中间触头接触；带接地刀与机械联锁。',
+    [['位置', '合闸', ''], ['机构', 'CJ6 电动', ''], ['触头温度', '41', '℃'], ['回路电阻', '38', 'μΩ']],
+    ['主刀与地刀机械联锁', '分合后检查触指接触与三相同期', '触头 80℃ 或温差 15℃ 需转移负荷', '操作必须唱票复诵'],
+    [['GW4 隔离开关结构', '必修'], ['倒闸操作票规范', '必修']]),
+  D('earthing', '110kV 配电装置', '接地', 'ic-amber', '接地刀闸', 'GW4-126D 附属地刀',
+    '检修时合上形成接地保护；与主刀机械联锁，主刀合位时禁止操作。',
+    [['位置', '分闸', ''], ['联锁', '投入', ''], ['接地电阻', '0.6', 'Ω'], ['操作', '手动', '']],
+    ['停电检修必须先验电后合接地刀闸', '主刀合位时地刀机械闭锁，禁止强行操作', '合闸后检查三相触头插入深度', '拆除接地线前清点数量并记录'],
+    [['接地刀闸与五防', '必修']]),
+  D('ct', '110kV 配电装置', '流变', 'ic-blue', '电流互感器', 'LB6-110 · 油浸电容型',
+    '二次侧接保护与测量绕组，末屏可靠接地；变比 600/5。',
+    [['变比', '600/5', 'A'], ['精度级', '0.5S', ''], ['二次电流', '3.21', 'A'], ['绝缘', '>1000', 'MΩ']],
+    ['二次侧严禁开路，会产生危险高压', '更换回路前先可靠短接', '末屏接地必须可靠', '油位过低须补油查密封'],
+    [['互感器二次回路', '必修']]),
+  D('busPT', '110kV 配电装置', '压变', 'ic-blue', '母线电压互感器', 'CVT · 电容式电压互感器',
+    '为保护、测量与同期装置提供母线电压；二次回路经熔断器与空开。',
+    [['变比', '110/√3', 'kV'], ['二次电压', '57.7', 'V'], ['准确级', '0.2', '级'], ['二次空开', '合上', '']],
+    ['二次侧严禁短路，短路会烧毁绕组', '停用 PT 前先退出相关保护电压回路', '二次空开跳开须查明原因再合', 'CVT 分压电容渗漏油须停电处理'],
+    [['电压互感器二次回路', '必修']]),
+  D('arrester', '110kV 配电装置', '避雷', 'ic-purple', '氧化锌避雷器', 'YH10W-108/281 · 无间隙 MOA',
+    '限制过电压保护主设备，配在线监测表与动作计数器。',
+    [['全电流', '0.42', 'mA'], ['阻性电流', '0.11', 'mA'], ['动作次数', '7', '次'], ['监测', '正常', '']],
+    ['阻性电流增大 50% 提示阀片劣化', '雷雨后抄录动作计数器', '均压环锈蚀影响电位分布', '底座绝缘子不得有裂纹'],
+    [['过电压与绝缘配合', '选修']]),
+  D('busbar', '110kV 配电装置', '母线', 'ic-blue', '软母线与构架', '110kV 门型构架 · 耐张绝缘子串',
+    '三相软母线经耐张绝缘子串悬挂，弧垂与构架接地是巡视重点。',
+    [['母线电压', '112', 'kV'], ['相序', 'A/B/C', ''], ['弧垂', '合格', ''], ['零值绝缘子', '0', '片']],
+    ['弧垂突变提示断股、接头松动或覆冰', '零值绝缘子每季用分布电压法检测', '构架接地扁铁锈断属危急缺陷', '验电使用对应电压等级验电器'],
+    [['变电站主接线', '必修']]),
+  D('tower', '110kV 配电装置', '铁塔', 'ic-gray', '110kV 终端塔', 'SJ3 · 格构式',
+    '导线经引流线进站，塔脚设接地引下线与基础保护帽。',
+    [['塔型', 'SJ3', ''], ['档距', '142', 'm'], ['导线', 'LGJ-240', ''], ['接地电阻', '4.8', 'Ω']],
+    ['引流线驰度不足会拉坏设备端子', '雷雨季前查避雷线与接地引下线', '塔材锈蚀螺栓松动周期巡检', '线下作业保持 5m 安全距离'],
+    [['输电线路基础', '选修']]),
+  /* —— 10kV 配电装置 —— */
+  D('switchgear', '10kV 配电装置', '开关柜', 'ic-gray', '10kV 开关柜室', 'KYN28 · 手车式 · 五防联锁',
+    '10kV 出线开关柜列，柜内配真空断路器、CT、避雷器与带电显示。',
+    [['柜内温度', '38', '℃'], ['局放', '正常', ''], ['带电显示', '有电', ''], ['五防锁', '投入', '']],
+    ['手车摇进摇出必须到位', '局放超标柜加密检测', '五防解锁钥匙须审批', '柜门打开严禁分合闸'],
+    [['开关柜五防系统', '必修']]),
+  D('capacitor', '10kV 配电装置', '电容', 'ic-cyan', '10kV 并联电容器组', 'TBB10-4800/334 · 3 组',
+    '无功补偿装置，星形接线，配放电线圈与串联电抗器；投切按电压曲线。',
+    [['容量', '4.8', 'Mvar'], ['组数', '3', '组'], ['母线电压', '10.4', 'kV'], ['功率因数', '0.96', '']],
+    ['投切间隔不少于 5 分钟，防止过电压', '放电线圈损坏会导致残余电荷伤人', '电容器鼓肚、渗漏油立即退出运行', '投切后检查三相电流平衡'],
+    [['无功补偿与电压调整', '必修']]),
+  D('arcCoil', '10kV 配电装置', '消弧', 'ic-purple', '消弧线圈与接地变', 'DKSC-315/10.5',
+    '中性点经消弧线圈接地，补偿单相接地电容电流，可调 9 档。',
+    [['补偿电流', '18.5', 'A'], ['档位', '5', '档'], ['残流', '3.2', 'A'], ['接地变容量', '315', 'kVA']],
+    ['单相接地时允许运行不超过 2 小时', '调档须在接地故障消除后进行', '残流大于 10A 需重新整定', '接地变兼作站用变时注意容量分配'],
+    [['中性点接地方式', '必修']]),
+  D('stationTrans', '10kV 配电装置', '站变', 'ic-gray', '站用变压器', 'SCB11-315/10.5 · 干式',
+    '为站内二次、照明、消防负荷供电，双电源自动切换。',
+    [['容量', '315', 'kVA'], ['低压', '400', 'V'], ['电源', '主电源', ''], ['绕组温度', '76', '℃']],
+    ['站用变失电会同时影响保护与通信', '切换后检查低压母线电压与相序', '干变温控器超温跳闸须查风机', '站用电系统不得带检修临时负荷过夜'],
+    [['站用电系统', '必修']]),
+  /* —— 二次与辅助 —— */
+  D('protect', '二次与辅助设施', '保护', 'ic-blue', '主控楼 · 继电保护室', 'PCS-941 · 保护与测控屏',
+    '线路保护、主变保护、测控与远动装置集中布置，软压板投退核心场所。',
+    [['保护装置', 'PCS-941', ''], ['软压板', '投入', ''], ['定值区', '1 区', ''], ['直流电压', '220', 'V']],
+    ['改定值前打印定值单双人核对', '投退软压板后装置面板确认变位', '校验前退出出口压板', '直流接地 2 小时内定位'],
+    [['软压板逻辑与投退', '必修'], ['保护定值单管理', '必修']]),
+  D('dcPanel', '二次与辅助设施', '直流', 'ic-blue', '直流屏与充电装置', 'GZDW-220/100 · 双充双电',
+    '为保护、控制、事故照明提供 220V 直流；充电机分均充/浮充。',
+    [['母线电压', '220', 'V'], ['充电方式', '浮充', ''], ['充电电流', '3.2', 'A'], ['绝缘', '合格', '']],
+    ['浮充电压一般 2.25V/只，均充 2.35V/只', '直流接地选线先拉次要负荷', '蓄电池组不得长期欠充', '充电机故障时母联须可靠切换'],
+    [['直流系统运行', '必修']]),
+  D('battery', '二次与辅助设施', '蓄电', 'ic-blue', '蓄电池室', '2V/200Ah × 104 只',
+    '阀控式密封铅酸蓄电池组，配防酸隔爆与通风设施，年度核对性放电。',
+    [['组电压', '234', 'V'], ['单只电压', '2.25', 'V'], ['容量', '92', '%'], ['室温', '24', '℃']],
+    ['蓄电池室严禁烟火，通风机先启后进', '核对性放电每年一次，放出 80% 额定容量', '单只电压低于 1.8V 需更换', '连接条氧化会增大内阻，涂凡士林'],
+    [['蓄电池运行与核容', '必修']]),
+  D('firePump', '二次与辅助设施', '消防', 'ic-red', '消防泵房与水池', 'XBD-45 · 电动消防泵 ×2',
+    '主变水喷雾与站区消火栓供水；稳压泵维持管网压力。',
+    [['管网压力', '0.62', 'MPa'], ['水池液位', '3.8', 'm'], ['主泵', '备用', ''], ['稳压泵', '运行', '']],
+    ['消防泵每月试转一次并记录', '水池液位低于 2.5m 立即补水', '主备泵切换试验每季度一次', '冬季检查管道防冻保温'],
+    [['变电站消防系统', '必修']]),
+  D('oilPit', '二次与辅助设施', '油池', 'ic-gray', '事故油池', '主变排油专用 · 有效容积 60m³',
+    '主变事故排油经排油管进入油池，油水分离后回收，防止环境污染。',
+    [['液位', '0.3', 'm'], ['容积', '60', 'm³'], ['油水分离', '正常', ''], ['通气管', '畅通', '']],
+    ['主变检修排油前确认油池容量', '池内积水过多须抽排后测油位', '油池盖板不得缺失或压重物', '排油阀常闭，事故时手动开启'],
+    [['变压器事故排油', '选修']]),
+  D('tools', '二次与辅助设施', '器具', 'ic-amber', '安全工器具室', '绝缘工器具 · 恒温除湿',
+    '存放验电器、接地线、绝缘手套、安全带等，配除湿与试验标签管理。',
+    [['室温', '21', '℃'], ['湿度', '48', '%'], ['在库', '36', '件'], ['超期', '0', '件']],
+    ['绝缘手套每 6 个月耐压试验一次', '验电器使用前自检声光信号', '接地线编号与台账必须一一对应', '工器具受潮后禁止使用'],
+    [['安全工器具管理', '必修']]),
+  D('store', '二次与辅助设施', '备品', 'ic-gray', '备品备件库', '一二次备件 · 定额储备',
+    '存放断路器分闸线圈、继电器、熔断器、套管等事故备品。',
+    [['库容', '78', '%'], ['备品项', '142', '项'], ['低于定额', '3', '项'], ['温湿度', '正常', '']],
+    ['事故备品不得挪用，领用须审批', '熔断器按型号规格分区存放', '橡胶件注意保质期与避光', '每季度盘点一次并更新台账'],
+    [['变电备品管理', '选修']]),
+  D('robot', '二次与辅助设施', '巡检', 'ic-cyan', '智能巡检机器人', '磁轨导航 · 红外 + 可见光',
+    '沿磁轨道自主巡检，红外测温与表计识别，异常仍需人工复核。',
+    [['电量', '78', '%'], ['任务进度', '5/12', '点'], ['红外测温', '正常', ''], ['云台', '自检OK', '']],
+    ['机器人数据只作参考，异常须人工复核', '雨雪天气收杆改人工巡视', '充电坞接触不良最常见', '点位变更先离线验证'],
+    [['变电巡检智能化', '选修']]),
+  D('camera', '二次与辅助设施', '监控', 'ic-gray', '周界摄像头', '球机 · 红外补光 · 电子围栏',
+    '站区周界与主变区视频监控，支持云台巡航与越界报警。',
+    [['在线率', '100', '%'], ['云台', '巡航', ''], ['存储', '30', '天'], ['补光', '自动', '']],
+    ['镜头积灰会造成误报，纳入每月擦拭', '越界报警须人工确认后再出警', '录像存储不足 30 天须扩容', '检修时避免正对弧光'],
+    [['变电站安防系统', '选修']]),
+  D('gate', '二次与辅助设施', '门卫', 'ic-gray', '大门与门卫室', '电动道闸 · 访客登记',
+    '人员车辆唯一出入口，配访客登记、门禁与道闸联动。',
+    [['道闸', '关闭', ''], ['访客', '0', '人'], ['门禁', '正常', ''], ['监控', '在线', '']],
+    ['外来人员必须登记并全程陪同', '道闸失电时可手动抬杆', '施工车辆进场须办理工作票', '夜间大门常闭并上锁'],
+    [['变电站门禁管理', '选修']]),
+];
+
+/* ═════════ 环境（默认白天，可切夜景） ═════════ */
+let domeMat, stars, cloudMats = [];
+function makeSkyTex(stops) {
+  const cv = document.createElement('canvas'); cv.width = 8; cv.height = 256;
+  const ctx = cv.getContext('2d'), g = ctx.createLinearGradient(0, 0, 0, 256);
+  stops.forEach(([o, c]) => g.addColorStop(o, c));
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 8, 256);
+  return new THREE.CanvasTexture(cv);
+}
+const skyDay = makeSkyTex([[0, '#4d8fd6'], [.45, '#8db9e8'], [.78, '#cfe3f5'], [1, '#eef6fd']]);
+const skyNight = makeSkyTex([[0, '#040a1a'], [.5, '#0b1c3e'], [.8, '#16335f'], [1, '#204572']]);
+(function sky() {
+  domeMat = new THREE.MeshBasicMaterial({ map: skyDay, side: THREE.BackSide, depthWrite: false });
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(460, 32, 24), domeMat);
+  scene.add(dome);
+  /* 星空（白天隐藏） */
+  const N = 320, pos = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    const a = Math.random() * Math.PI * 2, e = .18 + Math.random() * .68, r = 430;
+    pos[i * 3] = Math.cos(a) * Math.cos(e) * r;
+    pos[i * 3 + 1] = Math.sin(e) * r;
+    pos[i * 3 + 2] = Math.sin(a) * Math.cos(e) * r;
+  }
+  const sg = new THREE.BufferGeometry();
+  sg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xaebfe0, size: 1.6, sizeAttenuation: false, transparent: true, opacity: .85 }));
+  stars.visible = false;
+  scene.add(stars);
+})();
+for (let i = 0; i < 30; i++) {
+  const a = (i / 30) * Math.PI * 2 + Math.random() * .12, r = 270 + Math.random() * 60, h = 26 + Math.random() * 46;
+  const m = new THREE.Mesh(new THREE.ConeGeometry(36 + Math.random() * 26, h, 6),
+    new THREE.MeshLambertMaterial({ color: i % 3 === 0 ? 0x8fb98a : 0x9cc492 }));
+  m.position.set(Math.cos(a) * r, h / 2 - 8, Math.sin(a) * r); scene.add(m);
+}
+const terrain = new THREE.Mesh(new THREE.BoxGeometry(480, 1, 480), mat(0x93c46b));
+terrain.position.y = -1.5; terrain.receiveShadow = true; scene.add(terrain);
+const FC = [0x9ed46f, 0x8cc95e, 0xc9d97e, 0x85c455, 0xb8d984, 0xa2d167];
+for (let i = 0; i < 30; i++) {
+  const a = Math.random() * Math.PI * 2, r = 105 + Math.random() * 105;
+  const f = new THREE.Mesh(new THREE.BoxGeometry(24 + Math.random() * 28, .3, 20 + Math.random() * 26), mat(FC[i % FC.length]));
+  f.position.set(Math.cos(a) * r, -.9, Math.sin(a) * r); f.rotation.y = Math.random() * .7; f.receiveShadow = true; scene.add(f);
+}
+const river = new THREE.Mesh(new THREE.PlaneGeometry(70, 360), new THREE.MeshLambertMaterial({ color: 0x8cc3e6 }));
+river.rotation.x = -Math.PI / 2; river.rotation.z = .22; river.position.set(-150, -.7, 30); scene.add(river);
+const bank = new THREE.Mesh(new THREE.PlaneGeometry(78, 360), mat(0xc7d9b0));
+bank.rotation.x = -Math.PI / 2; bank.rotation.z = .22; bank.position.set(-150, -.82, 30); scene.add(bank);
+for (let i = 0; i < 16; i++) {
+  const a = Math.random() * Math.PI * 2, r = 108 + Math.random() * 100;
+  const h = new THREE.Mesh(new THREE.SphereGeometry(16 + Math.random() * 18, 10, 8), mat(0x9dbd86));
+  h.scale.y = .3 + Math.random() * .2; h.position.set(Math.cos(a) * r, -1.2, Math.sin(a) * r); h.receiveShadow = true; scene.add(h);
+}
+const highway = new THREE.Mesh(new THREE.BoxGeometry(440, .08, 9), mat(0xb9c6d8));
+highway.position.set(0, -.62, 58); scene.add(highway);
+for (let i = -210; i <= 210; i += 8) {
+  const dash = new THREE.Mesh(new THREE.BoxGeometry(3.5, .02, .38), mat(0xffffff));
+  dash.position.set(i, -.56, 58); scene.add(dash);
+}
+for (let i = 0; i < 26; i++) {
+  const bx = 86 + Math.random() * 100, bz = -70 + Math.random() * 110;
+  const w = 6 + Math.random() * 11, h = 5 + Math.random() * 15, d = 6 + Math.random() * 11;
+  box(w, h, d, [0xcfd6e2, 0xd9cbb8, 0xc2ccd8][i % 3], bx, h / 2 - 1.2, bz, scene);
+  box(w * .9, .3, d * .9, 0x8e9bb0, bx, h - 1.1, bz, scene);
+}
+function farTower(x, z, h = 26) {
+  const g = new THREE.Group(); g.position.set(x, -1.2, z);
+  for (const [sx, sz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+    const leg = cyl(.1, .42, h, 0x8794a8, sx * 2.2, h / 2, sz * 2.2, g);
+    leg.rotation.z = -sx * .09; leg.rotation.x = sz * .09;
+  }
+  box(3, .2, .2, 0x8794a8, 0, h - 1, 0, g);
+  box(9, .18, .18, 0x8794a8, 0, h - 3.4, 0, g);
+  box(6, .18, .18, 0x8794a8, 0, h, 0, g);
+  scene.add(g);
+}
+[[92, -46], [124, -66, 30], [156, -86, 34]].forEach(t => farTower(t[0], t[1], t[2] || 26));
+for (let k = 0; k < 3; k++) {
+  const o = (k - 1) * 1.4;
+  wire(new THREE.Vector3(52 + o, 14.6, -30), new THREE.Vector3(92 + o, 21, -46), 6, 0x5c6a80, .05);
+  wire(new THREE.Vector3(92 + o, 21, -46), new THREE.Vector3(124 + o, 25, -66), 7, 0x5c6a80, .05);
+  wire(new THREE.Vector3(124 + o, 25, -66), new THREE.Vector3(156 + o, 27, -86), 7, 0x5c6a80, .05);
+}
+const clouds = [];
+for (let i = 0; i < 10; i++) {
+  const c = new THREE.Group();
+  for (let j = 0; j < 3; j++) {
+    const s = new THREE.Mesh(new THREE.SphereGeometry(5 + Math.random() * 5, 8, 6),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .85 }));
+    s.position.set(j * 6 - 6, Math.random() * 2, Math.random() * 4); c.add(s);
+    cloudMats.push(s.material);
+  }
+  c.position.set(-200 + Math.random() * 400, 62 + Math.random() * 26, -170 + Math.random() * 300);
+  scene.add(c); clouds.push(c);
+}
+
+/* ═════════ 园区地面 / 道路 / 围墙 ═════════ */
+const clickable = [], pickables = [];
+function register(group, dev) {
+  if (!dev) return;
+  clickable.push({ group, dev });
+  group.traverse(o => { if (o.isMesh) { o.userData.dev = dev; pickables.push(o); } });
+}
+const pad = new THREE.Mesh(new THREE.BoxGeometry(150, .5, 110), mat(0xe9edf4));
+pad.receiveShadow = true; scene.add(pad);
+/* 卵石纹理（canvas 程序化：碎石储油坑/110kV 区地面，对照视频） */
+function gravelTex() {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 256;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#b3ac9e'; ctx.fillRect(0, 0, 256, 256);
+  const shades = ['#d8d2c4', '#c8c0b0', '#e2dcd0', '#a89f8e', '#bfb7a6', '#8f8878', '#d3c9b6'];
+  for (let i = 0; i < 460; i++) {
+    const x = Math.random() * 256, y = Math.random() * 256, r = 2 + Math.random() * 4.5;
+    ctx.fillStyle = shades[(Math.random() * shades.length) | 0];
+    ctx.beginPath();
+    ctx.ellipse(x, y, r, r * (.55 + Math.random() * .5), Math.random() * Math.PI, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.2)';
+    ctx.beginPath(); ctx.ellipse(x - r * .25, y - r * .3, r * .38, r * .22, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,.12)';
+    ctx.beginPath(); ctx.ellipse(x + r * .2, y + r * .3, r * .42, r * .2, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  const t = new THREE.CanvasTexture(cv);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+const gravelMat = new THREE.MeshLambertMaterial({ map: gravelTex() });
+gravelMat.map.repeat.set(10, 2);
+const gravel = new THREE.Mesh(new THREE.BoxGeometry(96, .14, 16), gravelMat);
+gravel.position.set(-4, .3, -30); gravel.receiveShadow = true; scene.add(gravel);
+const pitGround = new THREE.Mesh(new THREE.BoxGeometry(24, .16, 20), mat(0xcfc9bd));
+pitGround.position.set(-41, .3, 2); pitGround.receiveShadow = true; scene.add(pitGround);
+/* 环形道路 */
+function roadStrip(w, d, x, z) {
+  const r = new THREE.Mesh(new THREE.BoxGeometry(w, .09, d), mat(0xdde2ea));
+  r.position.set(x, .36, z); r.receiveShadow = true; scene.add(r); return r;
+}
+roadStrip(130, 6, 0, 40); roadStrip(130, 6, 0, -40); roadStrip(6, 86, -61, 0); roadStrip(6, 86, 61, 0);
+roadStrip(6, 40, 0, 20);
+/* 站内检修道路（导览步行网络）：110kV 设备排南侧东西向 + 南北连络路 + 主变/母线查看支路 */
+roadStrip(104, 4.5, -8, -19);    /* 110kV 设备排南侧：x -60..44 */
+roadStrip(4.5, 60, -3.8, 10.5);     /* 南北支路：z -19.5..40.5，x=-3.8——走开关柜室与主控楼之间的走廊（房间实际占 x[-28.25,-7.75]，旧 x=-24 从房中穿过） */
+roadStrip(45.5, 3, -24.75, 13.2);   /* 主变查看支路（东西向 z=13.2）：x -47.5..-2，南靠主变围栏、北贴开关柜室南墙 */
+roadStrip(4, 10, 0, -26);        /* 母线构架查看支路：z -21..-31，x=0 */
+roadStrip(34, 4.5, -8, 27);      /* 二次建筑区前东西向：x -25..9 */
+for (let i = -62; i <= 62; i += 6) {
+  const d1 = new THREE.Mesh(new THREE.BoxGeometry(2.6, .02, .3), mat(0xffffff));
+  d1.position.set(i, .43, 40); scene.add(d1);
+  const d2 = new THREE.Mesh(new THREE.BoxGeometry(2.6, .02, .3), mat(0xffffff));
+  d2.position.set(i, .43, -40); scene.add(d2);
+}
+/* 围墙 */
+const fenceC = 0xb6c3d8;
+function fenceLine(x1, z1, x2, z2) {
+  const len = Math.hypot(x2 - x1, z2 - z1), n = Math.max(1, Math.round(len / 4));
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    cyl(.07, .07, 1.6, fenceC, x1 + (x2 - x1) * t, 1, z1 + (z2 - z1) * t, scene);
+  }
+  const m = new THREE.Mesh(new THREE.BoxGeometry(len, .08, .08), mat(fenceC));
+  m.position.set((x1 + x2) / 2, 1.55, (z1 + z2) / 2);
+  m.rotation.y = -Math.atan2(z2 - z1, x2 - x1); scene.add(m);
+}
+fenceLine(-70, -50, 70, -50); fenceLine(-70, 50, -8, 50); fenceLine(8, 50, 70, 50);
+fenceLine(-70, -50, -70, 50); fenceLine(70, -50, 70, 50);
+
+/* ═════════ 110kV 构架与母线 ═════════ */
+const steelC = 0x7d8ba3, busC = 0x5b6a85, insuC = 0x8a5530;   /* insuC：棕瓷伞裙（对照真实 110kV 电瓷） */
+function portal(x1, x2, z, h = 9, withBus = true, dev = null) {
+  const g = new THREE.Group(); g.position.set(0, .3, z);
+  for (const x of [x1, x2]) {
+    cyl(.16, .22, h, steelC, x, h / 2, -.6, g);
+    cyl(.16, .22, h, steelC, x, h / 2, .6, g);
+    cyl(.05, .05, 1.1, steelC, x, h, 0, g);
+  }
+  box(x2 - x1 + 1.2, .3, .3, steelC, (x1 + x2) / 2, h, 0, g);
+  if (withBus) {
+    const bar = new THREE.Mesh(new THREE.CylinderGeometry(.07, .07, x2 - x1 + 2), mat(busC));
+    bar.rotation.z = Math.PI / 2; bar.position.set((x1 + x2) / 2, h - 1, 0); g.add(bar);
+    string(g, x1 + 2, h - .4, 0, 6); string(g, x2 - 2, h - .4, 0, 6);
+  }
+  if (dev) {
+    /* 母线导体只有 7cm 粗，直接点很难命中：加一个不可见的大判定盒 */
+    const hit = new THREE.Mesh(new THREE.BoxGeometry(x2 - x1 + 2, 2.6, 2.4),
+      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
+    hit.position.set((x1 + x2) / 2, h - .8, 0); g.add(hit);
+    register(g, dev);
+  }
+  scene.add(g); return g;
+}
+for (let i = 0; i < 7; i++) portal(-48 + i * 14, -48 + i * 14, -30, 9, false);
+portal(-48, 40, -18, 8);
+for (let ph = 0; ph < 3; ph++) {
+  const o = (ph - 1) * 1.1;
+  wire(new THREE.Vector3(-48 + o, 8.5, -30), new THREE.Vector3(40 + o, 8.5, -30), 1.5);
+  wire(new THREE.Vector3(-48 + o, 7.4, -18), new THREE.Vector3(40 + o, 7.4, -18), 1.3);
+  for (let i = 0; i < 7; i++) wire(new THREE.Vector3(-48 + i * 14 + o, 8.1, -30), new THREE.Vector3(-48 + i * 14 + o, 7.0, -18), .9);
+}
+/* 相序牌 + 警示球 */
+[[-20, -30], [8, -30], [34, -30]].forEach(([x, z]) => {
+  box(1.7, 1, .08, 0xffffff, x, 10.2, z, scene);
+  box(1.7, .2, .09, 0xef4444, x, 10.5, z + .01, scene);
+  box(1.7, .2, .09, 0xf59e0b, x, 10.24, z + .01, scene);
+  box(1.7, .2, .09, 0x22b573, x, 9.98, z + .01, scene);
+});
+[[-8, 8.9, -30], [20, 8.9, -30]].forEach(([x, y, z]) => {
+  const b = new THREE.Mesh(new THREE.SphereGeometry(.32), mat(0xef4444)); b.position.set(x, y, z); scene.add(b);
+});
+/* 出线到终端塔 */
+for (let ph = 0; ph < 3; ph++) {
+  const o = (ph - 1) * 1.1;
+  wire(new THREE.Vector3(40 + o, 8.5, -30), new THREE.Vector3(52 + o, 14.6, -30), 1.6, 0x46536b, .05);
+}
+
+/* ═════════ 设备建模 ═════════ */
+const fans = [], dsGroups = [], lampRefs = {}, rotors = {}, tweens = [];
+
+/* 主变（写实版：灰白金属本体 + 片式散热器 + 储油柜 + 棕瓷套管，对照数字孪生巡检视频） */
+function buildTransformer(x, z, dev, idx) {
+  const g = new THREE.Group(); g.position.set(x, .3, z);
+  const BODY = 0xc6ccd4, TRIM = 0x6a7484, PORC = 0x8a5530;
+  /* 拖架与底座 */
+  box(4.9, .5, 3.4, 0x59616e, 0, .25, 0, g);
+  box(4.7, .16, 3.2, 0x8a93a0, 0, .58, 0, g);
+  /* 本体油箱（银灰白）+ 加强筋 */
+  box(4.4, 2.5, 3.0, BODY, 0, 1.9, 0, g);
+  box(4.55, .14, 3.15, TRIM, 0, 3.12, 0, g);
+  for (let i = 0; i < 9; i++) box(.08, 2.3, .05, 0xb8bfc9, -1.8 + i * .45, 1.9, 1.52, g);
+  for (let i = 0; i < 7; i++) box(.08, 2.3, .05, 0xb8bfc9, -1.8 + i * .6, 1.9, -1.52, g);
+  box(4.45, .1, .1, TRIM, 0, 3.05, 1.5, g); box(4.45, .1, .1, TRIM, 0, 3.05, -1.5, g);
+  /* 片式散热器 ×2（后侧：上下集油管 + 密集鳍片） */
+  for (const gx of [-1.35, 1.35]) {
+    cyl(.13, .13, 1.9, TRIM, gx, 2.85, -2.0, g).rotation.z = Math.PI / 2;
+    cyl(.13, .13, 1.9, TRIM, gx, .95, -2.0, g).rotation.z = Math.PI / 2;
+    for (let k = 0; k < 9; k++) box(.055, 1.95, 1.35, 0xbfc6cf, gx - .8 + k * .2, 1.9, -2.0, g);
+    cyl(.06, .06, .35, TRIM, gx, 2.4, -1.65, g);                 // 油阀
+  }
+  /* 储油柜（油枕）+ 支架 + 油位表 */
+  cyl(.42, .42, 3.1, BODY, .2, 4.35, -.2, g, 16).rotation.z = Math.PI / 2;
+  cyl(.45, .45, .1, TRIM, -1.35, 4.35, -.2, g, 16).rotation.z = Math.PI / 2;
+  cyl(.45, .45, .1, TRIM, 1.75, 4.35, -.2, g, 16).rotation.z = Math.PI / 2;
+  box(.12, .75, .12, TRIM, -.9, 3.62, -.2, g); box(.12, .75, .12, TRIM, 1.3, 3.62, -.2, g);
+  cyl(.15, .15, .05, 0xf0f3f7, -1.5, 4.55, .18, g, 12).rotation.x = Math.PI / 3;
+  /* 瓦斯继电器联管 + 呼吸器 */
+  cyl(.08, .08, 1.2, TRIM, .9, 3.65, .75, g);
+  cyl(.2, .2, .3, 0x7d8ba3, .9, 3.8, .75, g, 12);
+  cyl(.04, .04, 1.4, TRIM, -1.55, 3.6, .95, g);
+  cyl(.1, .1, .3, 0x3a6ea8, -1.55, 3.0, .95, g, 10);
+  /* 高压套管 ×3（棕瓷伞裙 + 金属端子，出线到母线） */
+  for (let i = -1; i <= 1; i++) {
+    const bx = i * 1.4, bz = -.75;
+    cyl(.32, .32, .16, TRIM, bx, 3.2, bz, g, 14);
+    cyl(.16, .24, 2.3, PORC, bx, 4.42, bz, g, 14);
+    for (let s = 0; s < 7; s++) cyl(.29, .29, .1, PORC, bx, 3.5 + s * .3, bz, g, 14);
+    cyl(.1, .1, .5, steelC, bx, 5.78, bz, g, 10);
+    cyl(.16, .05, .22, 0xb9c2cf, bx, 6.12, bz, g, 10);
+    wire(new THREE.Vector3(x + bx, 6.25, z + bz), new THREE.Vector3(x + bx, 8.5, -30), 1.1);
+  }
+  /* 低压侧套管 ×3（前缘，接 10kV 电缆桥） */
+  for (let i = -1; i <= 1; i++) {
+    cyl(.14, .14, .1, TRIM, i * 1.3, 3.18, 1.35, g, 12);
+    cyl(.06, .1, .85, PORC, i * 1.3, 3.6, 1.35, g, 12);
+    for (let s = 0; s < 4; s++) cyl(.14, .14, .05, PORC, i * 1.3, 3.35 + s * .17, 1.35, g, 12);
+    cyl(.045, .045, .3, steelC, i * 1.3, 4.1, 1.35, g, 8);
+  }
+  /* 温度表 / 铭牌 / 放油阀 */
+  cyl(.14, .14, .06, 0xf0f3f7, 1.3, 2.85, 1.55, g, 14);
+  box(.05, .05, .03, 0x1f2a44, 1.3, 2.85, 1.6, g);
+  box(.55, .4, .04, 0xf0f3f7, -1.6, 2.05, 1.54, g);
+  cyl(.09, .09, .3, TRIM, -1.9, .75, 1.75, g);
+  /* 冷却风机 ×3（保留交互：风扇动画） */
+  const hub = new THREE.Group(); hub.position.set(0, 1.55, -1.25); g.add(hub);
+  for (let i = 0; i < 3; i++) {
+    const fm = new THREE.Group(); fm.position.set(-1.5 + i * 1.5, 0, 0); hub.add(fm);
+    fm.add(new THREE.Mesh(new THREE.TorusGeometry(.42, .06, 6, 18), mat(0x9aa3ad)));
+    const blade = new THREE.Group(); fm.add(blade);
+    for (let b = 0; b < 4; b++) box(.34, .08, .04, 0xdde4ef, .26, 0, 0, blade).rotation.z = b * Math.PI / 2;
+    blade.position.z = .09;
+    fans.push({ mesh: blade, owner: 'transformer' + (idx + 1) });
+  }
+  /* 设备围栏（红白栏杆，视频同款） */
+  const fg = 0xc23b2e;
+  for (let i = -3; i <= 3; i++) { cyl(.04, .04, 1.05, fg, i * 1.5, .52, 2.8, g); cyl(.04, .04, 1.05, fg, i * 1.5, .52, -2.8, g); }
+  box(9.4, .06, .06, fg, 0, 1, 2.8, g); box(9.4, .06, .06, fg, 0, 1, -2.8, g);
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[0].anchor = buildTransformer(-46, 2, DEVICES[0], 0);
+DEVICES[1].anchor = buildTransformer(-37, 2, DEVICES[1], 1);
+box(.7, 7, 15, 0xc9c4b8, -41.5, 3.8, 2, scene);
+box(.9, .4, 15.4, 0xb3ada0, -41.5, 7.5, 2, scene);
+
+/* 断路器（110kV 瓷柱式：灰机构箱 + 棕瓷支柱 + T 形水平双断口，视频同款） */
+function buildBreaker(x, z, dev) {
+  const g = new THREE.Group(); g.position.set(x, .3, z);
+  box(3.8, .5, 1.9, 0x8a93a0, 0, .25, 0, g);
+  for (let i = -1; i <= 1; i++) {
+    cyl(.3, .34, .16, 0x6a7484, i * 1.3, .58, 0, g, 14);
+    cyl(.16, .23, 2.2, insuC, i * 1.3, 1.76, 0, g, 14);          // 支柱瓷套
+    for (let s = 0; s < 8; s++) cyl(.26, .26, .09, insuC, i * 1.3, .95 + s * .26, 0, g, 14);
+    cyl(.2, .2, .24, steelC, i * 1.3, 2.96, 0, g, 12);           // T 形接头
+    for (const sd of [-1, 1]) {                                   // 水平双断口
+      cyl(.12, .15, .95, insuC, i * 1.3 + sd * .62, 3.18, 0, g, 12).rotation.z = Math.PI / 2;
+      for (let k = 0; k < 4; k++)
+        cyl(.2, .2, .06, insuC, i * 1.3 + sd * (.36 + k * .17), 3.18, 0, g, 12).rotation.z = Math.PI / 2;
+      cyl(.08, .08, .2, steelC, i * 1.3 + sd * 1.18, 3.18, 0, g, 10);
+    }
+  }
+  box(1.15, 1.6, .95, 0x9aa3ad, 2.55, 1.05, 0, g);
+  box(.62, .22, .06, 0x1f2a44, 2.55, 1.42, .5, g);
+  cyl(.17, .17, .08, 0xffffff, 2.55, 1.75, .48, g, 12);
+  lamp(g, 0xef4444, 2.95, 1.95, .5, 'breaker');
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[2].anchor = buildBreaker(-16, -12, DEVICES[2]);
+
+/* GW4 隔离开关 */
+function buildDisconnector(x, z, dev) {
+  const g = new THREE.Group(); g.position.set(x, .3, z);
+  box(3.6, .4, 1.7, 0x8895ad, 0, .2, 0, g);
+  box(1.15, .95, .75, 0x9aa7bd, 1.65, .78, 1, g);
+  const mk = s => {
+    const col = new THREE.Group(); col.position.set(s * 1.25, 0, 0); g.add(col);
+    cyl(.12, .16, 2, insuC, 0, 1, -.32, col); cyl(.12, .16, 2, insuC, 0, 1, .32, col);
+    for (let r = 0; r < 4; r++) {
+      const d = new THREE.Mesh(new THREE.TorusGeometry(.2, .04, 6, 13), mat(0x744a28));
+      d.rotation.x = Math.PI / 2; d.position.set(0, .55 + r * .42, 0); col.add(d);
+    }
+    box(.15, .12, .95, 0xc9d2e2, 0, 2.05, -.37, col);
+    box(.1, .1, 1.1, 0xd9925b, 0, 2.1, -s * .575, col);
+    return col;
+  };
+  dsGroups.push({ left: mk(-1), right: mk(1) });
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[3].anchor = buildDisconnector(-7, -12, DEVICES[3]);
+
+/* 接地刀闸 */
+function buildEarthing(x, z, dev) {
+  const g = new THREE.Group(); g.position.set(x, .3, z);
+  box(2.6, .3, 1.3, 0x8895ad, 0, .15, 0, g);
+  for (let i = -1; i <= 1; i++) {
+    cyl(.09, .1, 1.3, insuC, i * .8, .75, -.3, g);
+    const blade = new THREE.Group(); blade.position.set(i * .8, 1.05, .1); g.add(blade);
+    box(.08, 1.1, .08, 0xd9925b, 0, .55, 0, blade);
+    blade.rotation.x = -1.2;           // 分位
+    if (i === 0) rotors.earth = blade;
+  }
+  box(.7, .5, .4, 0x9aa7bd, 1.55, .55, .5, g);
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[4].anchor = buildEarthing(2, -12, DEVICES[4]);
+
+/* CT */
+function buildCT(x, z, dev) {
+  const g = new THREE.Group(); g.position.set(x, .3, z);
+  for (let i = -1; i <= 1; i++) {
+    cyl(.18, .18, 1.3, 0x8895ad, i * 1.05, .95, 0, g);
+    cyl(.4, .27, 1.5, insuC, i * 1.05, 2.3, 0, g);
+    for (let r = 0; r < 3; r++) {
+      const d = new THREE.Mesh(new THREE.TorusGeometry(.31, .04, 6, 14), mat(0x744a28));
+      d.rotation.x = Math.PI / 2; d.position.set(i * 1.05, 1.85 + r * .42, 0); g.add(d);
+    }
+    cyl(.27, .27, .3, 0x94a3b8, i * 1.05, 3.15, 0, g);
+    box(.42, .36, .3, 0x9aa7bd, i * 1.05, 1.25, .45, g);
+    box(.18, .15, .02, 0xdfe8f5, i * 1.05, 2.05, .42, g);
+  }
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[5].anchor = buildCT(11, -12, DEVICES[5]);
+
+/* 母线 PT */
+function buildBusPT(x, z, dev) {
+  const g = new THREE.Group(); g.position.set(x, .3, z);
+  box(3.4, .5, 1.8, 0x9aa7bd, 0, .25, 0, g);
+  for (let i = -1; i <= 1; i++) {
+    cyl(.13, .16, 1.8, insuC, i * 1.05, 1.15, 0, g);
+    cyl(.34, .3, 1.0, 0xdfe8f5, i * 1.05, 2.55, 0, g, 14);
+    cyl(.22, .22, .16, 0x8895ad, i * 1.05, 3.12, 0, g);
+    box(.38, .3, .28, 0x9aa7bd, i * 1.05, 1.25, .6, g);        // 二次端子箱
+  }
+  box(1.2, 1.1, .5, 0x8895ad, 2.4, .85, 0, g);                   // 二次空开柜
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[6].anchor = buildBusPT(20, -12, DEVICES[6]);
+
+/* 避雷器（棕瓷多裙 + 均压环 + 动作计数器，视频同款） */
+function buildArrester(x, z, dev) {
+  const g = new THREE.Group(); g.position.set(x, .3, z);
+  for (let i = -1; i <= 1; i++) {
+    cyl(.13, .17, 2.9, 0x7d5030, i * .95, 1.75, 0, g, 12);
+    for (let s = 0; s < 10; s++)
+      cyl(.235 - Math.abs(s - 5) * .01, .235 - Math.abs(s - 5) * .01, .05, 0x7d5030, i * .95, .55 + s * .27, 0, g, 12);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(.33, .04, 6, 16), mat(steelC));
+    ring.rotation.x = Math.PI / 2; ring.position.set(i * .95, 3.25, 0); g.add(ring);
+    cyl(.2, .2, .06, 0xdfe8f5, i * .95, .55, 0, g, 12);
+    box(.48, .52, .34, 0xdfe8f5, i * .95, .45, .58, g);           // 泄漏电流表/计数器
+    box(.3, .13, .02, 0x1f2a44, i * .95, .53, .76, g);
+  }
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[7].anchor = buildArrester(30, -12, DEVICES[7]);
+DEVICES[8].anchor = portal(-48, 40, -30, 9, true, DEVICES[8]);
+DEVICES[9].anchor = (function tower(x, z, dev, rot) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rot;
+  /* 两点连杆：格构塔的基本件（圆柱从 p1 指向 p2） */
+  const UP = new THREE.Vector3(0, 1, 0);
+  function strut(p1, p2, r, c) {
+    const dir = new THREE.Vector3().subVectors(p2, p1);
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, dir.length(), 6), mat(c));
+    m.position.copy(p1).addScaledVector(dir, .5);
+    m.quaternion.setFromUnitVectors(UP, dir.clone().normalize());
+    m.castShadow = true; g.add(m); return m;
+  }
+  const H = 17, wB = 2.9, wT = 1.0;                       // 塔高 / 底部根开 / 顶部根开
+  const P = (t, sx, sz) => new THREE.Vector3(
+    sx * (wB + (wT - wB) * t) / 2, t * H, sz * (wB + (wT - wB) * t) / 2);
+  /* 四根主材（线性收分）+ 塔脚基础 */
+  for (const [sx, sz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+    strut(P(0, sx, sz), P(1, sx, sz), .11, steelC);
+    box(1.05, .55, 1.05, 0xb9c3d4, sx * wB / 2, .27, sz * wB / 2, g);
+  }
+  /* 塔身：7 段，每段四面 X 斜材 + 水平圈梁 */
+  const NL = 7;
+  for (let l = 1; l <= NL; l++) {
+    const t1 = l / NL, w = wB + (wT - wB) * t1;
+    if (l < NL) for (const sz of [-1, 1]) {
+      strut(P((l - 1) / NL, -1, sz), P(t1, 1, sz), .045, steelC);
+      strut(P((l - 1) / NL, 1, sz), P(t1, -1, sz), .045, steelC);
+    }
+    for (const sx of [-1, 1]) {
+      strut(P((l - 1) / NL, sx, -1), P(t1, sx, 1), .045, steelC);
+      strut(P((l - 1) / NL, sx, 1), P(t1, sx, -1), .045, steelC);
+    }
+    box(w, .07, .07, steelC, 0, t1 * H, w / 2, g); box(w, .07, .07, steelC, 0, t1 * H, -w / 2, g);
+    box(.07, .07, w, steelC, w / 2, t1 * H, 0, g); box(.07, .07, w, steelC, -w / 2, t1 * H, 0, g);
+  }
+  /* 塔头：V 形地线顶架 + 上下两层导线横担 */
+  strut(P(1, -1, -1), new THREE.Vector3(0, H + 2.6, 0), .06, steelC);
+  strut(P(1, 1, 1), new THREE.Vector3(0, H + 2.6, 0), .06, steelC);
+  box(.1, 2.7, .1, steelC, 0, H + 1.3, 0, g);
+  box(1.9, .09, .09, steelC, 0, H + 2.55, 0, g);
+  for (const gx of [-.85, .85]) string(g, gx, H + 2.5, 0, 5);                 // 地线串
+  for (const [ay, alen] of [[H - 2.2, 7.5], [H - 6.5, 5.2]]) {
+    box(alen, .14, .14, steelC, 0, ay, 0, g);                                 // 横担
+    box(.9, .09, .09, steelC, 0, ay + .28, 0, g);
+    for (const hx of [-alen / 2 + .3, alen / 2 - .3]) string(g, hx, ay - .05, 0, 7);
+  }
+  /* 相位色标（下横担下方的相序牌） */
+  [[-3.45, 0xef4444], [0, 0xf59e0b], [3.45, 0x22b573]].forEach(([hx, c]) => box(.42, .5, .05, c, hx, H - 6.9, 0, g));
+  /* 爬梯（一侧竖扶手 + 踏步） */
+  for (let y = .8; y < H - 2; y += .62) box(.5, .045, .045, steelC, wB / 2 * (1 - y / H) + .28, y, 0, g);
+  box(.05, H - 3, .05, steelC, wB / 2 * .3 + .55, (H - 3) / 2 + .8, .12, g);
+  register(g, dev); scene.add(g); return g;
+})(52, -30, DEVICES[9], 0);
+
+/* 10kV 开关柜室（玻璃前脸 + 内部 KYN28 柜列可见） */
+function buildSwitchgear(x, z, dev) {
+  const g = new THREE.Group(); g.position.set(x, .3, z);
+  box(20, .25, 9, 0x4a5f85, 0, .42, 0, g);
+  box(20, 4, .3, 0xdde4ef, 0, 2.2, -4.35, g);                    // 后墙
+  box(.3, 4, 9, 0xdde4ef, -9.85, 2.2, 0, g);                     // 侧墙
+  box(.3, 4, 9, 0xdde4ef, 9.85, 2.2, 0, g);
+  const glass = new THREE.Mesh(new THREE.BoxGeometry(19.4, 3.5, .07),
+    new THREE.MeshLambertMaterial({ color: 0xa8d0ff, transparent: true, opacity: .26, depthWrite: false }));
+  glass.position.set(0, 2.05, 4.42); g.add(glass);
+  for (let i = 0; i <= 4; i++) box(.26, 3.6, .28, 0x5a6f95, -9.4 + i * 4.7, 2.1, 4.45, g);
+  box(20.5, .45, 9.5, 0x4a7ac4, 0, 4.4, 0, g);
+  const ceil = new THREE.Mesh(new THREE.BoxGeometry(17, .07, 7.5), new THREE.MeshBasicMaterial({ color: 0xdfeaff, transparent: true, opacity: .9 }));
+  ceil.position.set(0, 4.05, 0); g.add(ceil);
+  for (let i = 0; i < 10; i++) {                                 // KYN28 柜列
+    const cx = -8.6 + i * 1.9;
+    box(1.7, 2.5, 1.1, i % 4 === 3 ? 0x8d9cb8 : 0x22355c, cx, 1.5, -2.4, g);
+    box(1.5, .8, .04, 0x0e2447, cx, 2.1, -1.83, g);              // 继电器室小门
+    box(1.4, .5, .04, 0x1c3050, cx, 1.15, -1.83, g);             // 手车室
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(.04), new THREE.MeshBasicMaterial({ color: i % 4 === 3 ? 0xf0b35a : 0x35d08e }));
+    dot.position.set(cx, 2.65, -1.8); g.add(dot);
+    box(.3, .18, .02, i % 2 ? 0xef4444 : 0x35d08e, cx - .45, .95, -1.78, g);  // 红绿灯
+  }
+  box(2.2, .9, .9, 0xdde4ef, 5.5, .45, .8, g);                   // 巡检操作台
+  const mon = new THREE.Mesh(new THREE.BoxGeometry(.9, .55, .06), new THREE.MeshBasicMaterial({ color: 0x3f7fd9 }));
+  mon.position.set(5.5, 1.2, .55); g.add(mon);
+  box(1.3, .55, .65, 0x9aa7bd, 8.2, .75, 4.2, g);
+  lamp(g, 0x22b573, -9.2, 4.7, 4.5, 'switchgear');
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[10].anchor = buildSwitchgear(-18, 20, DEVICES[10]);
+
+/* 电容器组（3 组，带围栏与放电线圈） */
+function buildCapacitor(x, z, dev) {
+  const g = new THREE.Group(); g.position.set(x, .3, z);
+  for (let b = -1; b <= 1; b++) {
+    const bg = new THREE.Group(); bg.position.set(b * 4.2, 0, 0); g.add(bg);
+    box(3.2, .4, 2.4, 0x9aa7bd, 0, .2, 0, bg);
+    for (let i = 0; i < 3; i++) {
+      cyl(.42, .42, 1.7, 0xd9d2c4, -1 + i * 1, 1.2, -.5, bg, 12);
+      cyl(.16, .16, .28, 0x8895ad, -1 + i * 1, 2.2, -.5, bg);
+      cyl(.28, .28, 1.3, 0xd9d2c4, -1 + i * 1, 1.0, .55, bg, 12);
+    }
+    box(.9, 1.0, .55, 0x8895ad, 1.1, .8, 1.0, bg);              // 放电线圈
+    lamp(bg, b === 0 ? 0x22b573 : 0x22b573, 0, 2.5, .8);
+  }
+  const fg = 0xb6c3d8;
+  for (let i = -6; i <= 6; i++) { cyl(.05, .05, 1.2, fg, i * 1.1, .6, 2.6, g); cyl(.05, .05, 1.2, fg, i * 1.1, .6, -2.6, g); }
+  box(14, .06, .06, fg, 0, 1.15, 2.6, g); box(14, .06, .06, fg, 0, 1.15, -2.6, g);
+  box(.55, 1.3, .6, 0x9aa7bd, 6.6, .85, 0, g);
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[11].anchor = buildCapacitor(43, 4, DEVICES[11]);
+
+/* 消弧线圈 + 接地变 */
+function buildArcCoil(x, z, dev) {
+  const g = new THREE.Group(); g.position.set(x, .3, z);
+  box(5.4, .45, 4.6, 0x9aa7bd, 0, .22, 0, g);
+  cyl(1.05, 1.05, 2.3, 0xdde4ef, -1.1, 1.5, 0, g, 18);          // 消弧线圈本体
+  cyl(1.12, 1.12, .18, 0x5a6f95, -1.1, 2.75, 0, g, 18);
+  cyl(.18, .18, 2.8, insuC, -1.1, 1.6, 1.2, g);
+  box(1.2, 1.5, .8, 0x9aa7bd, 1.5, 1.0, -.6, g);                 // 调匝机构箱
+  box(.6, .22, .06, 0x1f2a44, 1.5, 1.35, -.2, g);
+  box(2.0, 2.0, 1.9, 0xdde4ef, 1.4, 1.25, 1.1, g);               // 接地变
+  for (let i = 0; i < 4; i++) box(.2, 1.5, .06, 0x5a6f95, .7 + i * .45, 1.25, 2.07, g);
+  cyl(.12, .12, 1.1, insuC, 1.4, 2.9, 1.1, g);
+  lamp(g, 0x22b573, 2.6, 1.7, -.2, 'arcCoil');
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[12].anchor = buildArcCoil(31, 6, DEVICES[12]);
+
+/* 站用变（干式，带外壳与风机） */
+function buildStationTrans(x, z, dev) {
+  const g = new THREE.Group(); g.position.set(x, .3, z);
+  box(3.6, .4, 3, 0x9aa7bd, 0, .2, 0, g);
+  box(3.2, 2.6, 2.6, 0xdfe8f5, 0, 1.6, 0, g);                    // 外壳
+  for (let i = 0; i < 5; i++) box(.5, .12, .05, 0x9aa7bd, -1.2 + i * .6, 2.4, 1.32, g);
+  for (let i = 0; i < 4; i++) box(.12, 1.2, .05, 0x9aa7bd, -1.3 + i * .85, 1.2, 1.32, g);
+  box(.9, .55, .06, 0xdfe8f5, 0, 1.9, 1.34, g);                  // 温控器
+  box(.55, .18, .02, 0x1f2a44, 0, 2.05, 1.37, g);
+  box(.55, .18, .02, 0xef4444, 0, 1.85, 1.37, g);
+  const fan = new THREE.Group(); fan.position.set(0, .85, 1.38); g.add(fan);
+  for (let b = 0; b < 4; b++) box(.3, .07, .03, 0xdde4ef, .22, 0, 0, fan).rotation.z = b * Math.PI / 2;
+  fans.push({ mesh: fan, owner: 'stationTrans' });
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[13].anchor = buildStationTrans(41, -8, DEVICES[13]);
+
+/* ═════════ 分区密度补全（对照科普图：引流线/基础/围栏/附属设施） ═════════ */
+/* 围栏段工具 */
+function fenceRun(x1, z1, x2, z2, fg = 0xb6c3d8) {
+  const len = Math.hypot(x2 - x1, z2 - z1), n = Math.max(2, Math.round(len / 2.2));
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    cyl(.04, .04, 1.15, fg, x1 + (x2 - x1) * t, .88, z1 + (z2 - z1) * t, scene);
+  }
+  box(Math.abs(x2 - x1) || .05, .05, Math.abs(z2 - z1) || .05, fg, (x1 + x2) / 2, 1.4, (z1 + z2) / 2, scene);
+  box(Math.abs(x2 - x1) || .05, .05, Math.abs(z2 - z1) || .05, fg, (x1 + x2) / 2, .55, (z1 + z2) / 2, scene);
+}
+/* —— 110kV 配电装置区：混凝土基础墩 + 三相引流线上母线 —— */
+for (const px of [-16, -7, 2, 11, 20, 30]) box(3.2, .4, 2.4, 0xcfc9bd, px, .2, -12, scene);
+const rowTops = [[-16, 3.4], [-7, 2.6], [2, 2.1], [11, 3.6], [20, 3.6], [30, 3.4]];
+for (let i = 0; i < rowTops.length - 1; i++) {                   // 沿排互相连线
+  const [xa, ya] = rowTops[i], [xb, yb] = rowTops[i + 1];
+  wire(new THREE.Vector3(xa, ya, -12), new THREE.Vector3(xb, yb, -12), .45);
+}
+for (const [px, py] of rowTops) for (let ph = -1; ph <= 1; ph++) // 上跳母线（三相）
+  wire(new THREE.Vector3(px + ph * .5, py, -12), new THREE.Vector3(px + ph * 1.4, 7.9, -30), 1.0);
+/* —— 主变区：储油坑（卵石纹理池）+ 四面红白围栏 + 中性点间隙设备 —— */
+for (const tx of [-46, -37]) {
+  const pit = new THREE.Mesh(new THREE.BoxGeometry(8, .14, 6), gravelMat.clone());
+  pit.material.map = gravelTex(); pit.material.map.repeat.set(4, 3);
+  pit.position.set(tx, .33, 2); pit.receiveShadow = true; scene.add(pit);
+  box(8.3, .22, .25, 0xb3ada0, tx, .42, -1.05, scene); box(8.3, .22, .25, 0xb3ada0, tx, .42, 5.05, scene);
+  box(.25, .22, 6.4, 0xb3ada0, tx - 4.05, .42, 2, scene); box(.25, .22, 6.4, 0xb3ada0, tx + 4.05, .42, 2, scene);
+}
+const railC = 0xc23b2e;                                            // 主变区栏杆（视频同款红色）
+fenceRun(-53, -7.5, -29, -7.5, railC); fenceRun(-53, 11.5, -29, 11.5, railC);
+fenceRun(-53, -7.5, -53, 11.5, railC); fenceRun(-29, -7.5, -29, 11.5, railC);
+let neutralAnchor = null;                                          // 中性点设备锚点（巡检任务用）
+(function neutralPoint() {
+  const g = new THREE.Group(); g.position.set(-33, .3, 7.5);
+  box(1.6, .4, 1.2, 0xcfc9bd, 0, .2, 0, g);
+  cyl(.09, .11, 1.1, insuC, -.45, .95, 0, g); cyl(.09, .11, 1.1, insuC, .45, .95, 0, g);
+  box(.09, .09, .8, 0xd9925b, 0, 1.55, 0, g);                    // 保护间隙
+  box(.5, .6, .4, 0x9aa7bd, .95, .7, .3, g);                     // 中性点 CT
+  cyl(.05, .05, 1.6, 0xb08d57, .95, 1.8, .3, g);
+  scene.add(g); neutralAnchor = g;
+})();
+/* —— 主变 → 10kV 开关柜室 电缆桥（转弯双段 + 三相电缆） —— */
+(function busBridge() {
+  const post = (x, z) => { cyl(.09, .12, 2.6, 0x8895ad, x, 1.3, z, scene); box(.5, .12, .5, 0xcfc9bd, x, .25, z, scene); };
+  for (const z of [6, 9.5, 13, 16]) post(-41, z);
+  for (const x of [-38, -35, -32, -29]) post(x, 16);
+  box(.3, .14, 10.6, 0x9aa7bd, -41, 2.62, 11, scene);
+  box(13, .14, .3, 0x9aa7bd, -34.5, 2.62, 16, scene);
+  for (let ph = -1; ph <= 1; ph++) {
+    wire(new THREE.Vector3(-44.4 + ph * .4, 3.1, 4.6), new THREE.Vector3(-41 + ph * .35, 2.9, 6), .3);
+    wire(new THREE.Vector3(-41 + ph * .35, 2.9, 5.5), new THREE.Vector3(-41 + ph * .35, 2.9, 16), .15);
+    wire(new THREE.Vector3(-41 + ph * .35, 2.9, 16), new THREE.Vector3(-28.4, 2.7, 17.6 + ph * .35), .4);
+  }
+})();
+/* —— 无功补偿区：干式串联电抗器（叠环）+ 消弧线圈围栏 —— */
+(function reactor() {
+  const g = new THREE.Group(); g.position.set(36, .3, -2);
+  box(3.4, .5, 3.4, 0xcfc9bd, 0, .25, 0, g);
+  for (let i = 0; i < 7; i++) {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(1.05 - i * .04, .13, 8, 24), mat(i % 2 ? 0xd9d2c4 : 0xc9bfa8));
+    ring.rotation.x = Math.PI / 2; ring.position.y = .85 + i * .26; ring.castShadow = true; g.add(ring);
+  }
+  cyl(.1, .1, 2.6, 0x8895ad, 0, 1.3, 0, g);
+  scene.add(g);
+})();
+fenceRun(27.8, 3.2, 34.2, 3.2); fenceRun(27.8, 8.8, 34.2, 8.8);
+fenceRun(27.8, 3.2, 27.8, 8.8); fenceRun(34.2, 3.2, 34.2, 8.8);
+/* —— 附属设施：警示牌 / 灭火器箱 / 消防沙箱 / 旗杆 / 宣传栏 —— */
+function signPost(x, z, color) {
+  const g = new THREE.Group(); g.position.set(x, .3, z);
+  cyl(.03, .045, 1.3, 0x8794ad, 0, .65, 0, g);
+  box(.64, .52, .04, color, 0, 1.35, 0, g);
+  box(.5, .38, .02, 0xffffff, 0, 1.35, .03, g);
+  scene.add(g);
+}
+signPost(-12, 32, 0xf0b35a); signPost(18, -7, 0xef4444); signPost(-26, -6, 0x2f6bff); signPost(36, 13, 0xf0b35a);
+box(.7, .9, .45, 0xc0392b, 2.5, .75, 24.2, scene);               // 灭火器箱
+box(1.1, .5, .7, 0xc0392b, 4.2, .45, 24.2, scene);               // 消防沙箱
+box(.9, .16, .58, 0xd9d2c4, 4.2, .76, 24.2, scene);              // 沙子
+for (const [fx, c] of [[4, 0xde2910], [6.5, 0x2f6bff]]) {        // 旗杆 + 旗帜
+  cyl(.05, .08, 9, 0xc9cdd6, fx, 4.5, 46, scene);
+  const flag = new THREE.Mesh(new THREE.BoxGeometry(1.3, .75, .03), new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide }));
+  flag.position.set(fx + .68, 8.35, 46); scene.add(flag);
+  cyl(.3, .38, .3, 0xd9bd8a, fx, 9.05, 46, scene);
+}
+(function billboard() {                                          // 宣传栏
+  const g = new THREE.Group(); g.position.set(11, .3, 46);
+  box(3.4, 1.7, .14, 0xdde4ef, 0, 1.6, 0, g);
+  box(3.1, 1.4, .03, 0xdfe8f5, 0, 1.6, .09, g);
+  box(.5, .14, .03, 0x35d08e, -.9, 1.95, .1, g); box(.5, .14, .03, 0xf0b35a, 0, 1.95, .1, g);
+  box(.12, 1.5, .12, 0x5a6f95, -1.4, .75, 0, g); box(.12, 1.5, .12, 0x5a6f95, 1.4, .75, 0, g);
+  scene.add(g);
+})();
+
+/* 主控楼（中空剖面：玻璃幕墙 + 内部屏柜/大屏/操作台可见） */
+function buildControl(x, z, dev) {
+  const g = new THREE.Group(); g.position.set(x, .3, z);
+  /* 地板与结构墙 */
+  box(15.4, .25, 8.4, 0x53627f, 0, .42, 0, g);
+  box(16, 6, .35, 0xdde4ef, 0, 3.2, -4.32, g);                   // 后墙
+  box(.35, 6, 9, 0xdde4ef, -7.82, 3.2, 0, g);                    // 左墙
+  box(.35, 6, 9, 0xdde4ef, 7.82, 3.2, 0, g);                     // 右墙
+  /* 玻璃幕墙（正面，可看进内部） */
+  const glass = new THREE.Mesh(new THREE.BoxGeometry(15.4, 5.4, .08),
+    new THREE.MeshLambertMaterial({ color: 0xa8d0ff, transparent: true, opacity: .26, depthWrite: false }));
+  glass.position.set(0, 3.1, 4.42); g.add(glass);
+  for (let i = 0; i <= 5; i++) box(.28, 5.6, .3, 0x24406f, -7.7 + i * 3.85, 3.2, 4.45, g);  // 幕墙立柱
+  box(16, .5, .4, 0x24406f, 0, 5.95, 4.45, g);                   // 幕墙顶梁
+  box(2.6, 2.6, .1, 0x8fb4f2, 0, 1.3, 4.5, g);                   // 玻璃门
+  /* 屋顶 */
+  box(16.6, .6, 9.6, 0x4a7ac4, 0, 6.5, 0, g);
+  box(16.6, .35, 9.8, 0x5b83d9, 0, 6.95, 0, g);
+  /* 内部天花照明（自发光，昼夜都亮） */
+  for (let i = 0; i < 3; i++) {
+    const strip = new THREE.Mesh(new THREE.BoxGeometry(1.6, .08, 6.5),
+      new THREE.MeshBasicMaterial({ color: 0xdfeaff, transparent: true, opacity: .9 }));
+    strip.position.set(-4.5 + i * 4.5, 5.85, 0); g.add(strip);
+  }
+  /* 保护屏柜阵列：左排（线路/主变保护，深蓝柜）+ 右排（测控/远动，浅灰柜） */
+  for (let i = 0; i < 6; i++) {
+    box(1.05, 2.3, .55, 0x22355c, -7.3, 1.7, -3.2 + i * 1.25, g);        // 左排保护柜
+    box(.9, 1.5, .04, 0x0e2447, -7, 2.35, -3.2 + i * 1.25, g);           // 柜面屏幕
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(.05), new THREE.MeshBasicMaterial({ color: i === 1 ? 0xf0b35a : 0x35d08e }));
+    dot.position.set(-7, 3.05, -3.2 + i * 1.25); g.add(dot);             // 运行指示灯
+    box(1.05, 2.3, .55, 0x8d9cb8, 7.3, 1.7, -3.2 + i * 1.25, g);         // 右排测控柜
+    box(.9, 1.5, .04, 0x1c3050, 7, 2.35, -3.2 + i * 1.25, g);
+    const dot2 = new THREE.Mesh(new THREE.SphereGeometry(.05), new THREE.MeshBasicMaterial({ color: i === 4 ? 0xef5350 : 0x35d08e }));
+    dot2.position.set(7, 3.05, -3.2 + i * 1.25); g.add(dot2);
+  }
+  /* SCADA 监控大屏（后墙内面）：主接线光字牌 + 负荷柱条 */
+  box(10.5, 2.6, .18, 0x0b1e3c, 0, 4.3, -4.05, g);
+  const scr = new THREE.Mesh(new THREE.BoxGeometry(10.1, 2.2, .06), new THREE.MeshBasicMaterial({ color: 0x0e2a52 }));
+  scr.position.set(0, 4.3, -3.95); g.add(scr);
+  for (let i = 0; i < 5; i++) {
+    box(1.6, .32, .05, 0x59c2ff, -4 + i * 2, 5.1, -3.9, g);              // 光字牌
+    const h = .5 + (i % 3) * .3;
+    box(.5, h, .05, i % 2 ? 0x35d08e : 0xf0b35a, -3.8 + i * 1.8, 3.9 + h / 2, -3.9, g);  // 负荷柱
+  }
+  /* 操作台 ×2 + 显示器 + 值班椅 */
+  for (const dz of [.6, -1.6]) {
+    box(3.8, .12, 1.05, 0xdde4ef, 0, .95, dz, g);
+    for (const dx of [-1.2, 1.2]) {
+      box(.1, .8, .9, 0x24406f, dx, .55, dz, g);
+      const mon = new THREE.Mesh(new THREE.BoxGeometry(.95, .62, .07), new THREE.MeshBasicMaterial({ color: 0x3f7fd9 }));
+      mon.position.set(dx, 1.5, dz - .2); g.add(mon);
+      box(1.05, .72, .09, 0x1a2c50, dx, 1.5, dz - .21, g);
+    }
+    box(.55, .1, .55, 0x24406f, 0, .45, dz + 1.1, g);                    // 椅面
+    cyl(.06, .06, .45, 0x24406f, 0, .22, dz + 1.1, g);
+  }
+  /* 外部细节 */
+  box(4, .7, .12, 0xffffff, 0, 5.55, 4.55, g);                   // 站名
+  box(1.2, .9, .7, 0xdfe8f5, -8.4, .8, 4.2, g);                  // 空调
+  box(1.2, .9, .7, 0xdfe8f5, -7, .8, 4.2, g);
+  box(12, .25, .6, 0x9aa7bd, 0, 6.1, 4.9, g);                    // 电缆桥架
+  cyl(.05, .05, 4.2, 0x8895ad, 7.2, 8.9, -2, g);                 // 天线
+  lamp(g, 0x22b573, 0, 7.2, 4.6, 'protect');
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[14].anchor = buildControl(8, 18, DEVICES[14]);
+
+/* 直流屏室（玻璃前脸 + 内部直流屏可见） */
+function buildDC(x, z, dev) {
+  const g = new THREE.Group(); g.position.set(x, .3, z);
+  box(7, .2, 6, 0x4a5f85, 0, .4, 0, g);
+  box(7, 4, .3, 0xdde4ef, 0, 2.2, -2.85, g);                     // 后墙
+  box(.3, 4, 6, 0xdde4ef, -3.35, 2.2, 0, g);
+  box(.3, 4, 6, 0xdde4ef, 3.35, 2.2, 0, g);
+  const glass = new THREE.Mesh(new THREE.BoxGeometry(6.7, 3.6, .07),
+    new THREE.MeshLambertMaterial({ color: 0xa8d0ff, transparent: true, opacity: .26, depthWrite: false }));
+  glass.position.set(0, 2.1, 2.92); g.add(glass);
+  for (let i = 0; i <= 2; i++) box(.22, 3.7, .26, 0x24406f, -3.2 + i * 3.2, 2.15, 2.95, g);
+  box(7.4, .4, 6.4, 0x4a7ac4, 0, 4.4, 0, g);
+  const ceil = new THREE.Mesh(new THREE.BoxGeometry(5.5, .07, 4.6), new THREE.MeshBasicMaterial({ color: 0xdfeaff, transparent: true, opacity: .9 }));
+  ceil.position.set(0, 4.05, 0); g.add(ceil);
+  for (let i = 0; i < 3; i++) {                                  // 内部直流/馈线屏
+    box(1.15, 2.1, .55, i === 0 ? 0x22355c : 0x8d9cb8, -2 + i * 2, 1.45, -1.9, g);
+    box(.95, 1.3, .04, 0x0e2447, -2 + i * 2, 1.85, -1.6, g);
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(.045), new THREE.MeshBasicMaterial({ color: 0x35d08e }));
+    dot.position.set(-2 + i * 2, 2.65, -1.6); g.add(dot);
+  }
+  box(1.4, .6, .9, 0xdde4ef, 1.8, .5, .8, g);                    // 操作台
+  const mon = new THREE.Mesh(new THREE.BoxGeometry(.8, .5, .06), new THREE.MeshBasicMaterial({ color: 0x3f7fd9 }));
+  mon.position.set(1.8, 1.1, .6); g.add(mon);
+  box(1.2, .8, .6, 0xdfe8f5, 3.4, .7, 3.0, g);                   // 空调
+  lamp(g, 0x22b573, -3, 4.4, 3.0, 'dc');
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[15].anchor = buildDC(23, 20, DEVICES[15]);
+
+/* 蓄电池室（玻璃前脸 + 内部电池架可见） */
+function buildBattery(x, z, dev) {
+  const g = new THREE.Group(); g.position.set(x, .3, z);
+  box(6, .2, 5.4, 0x55688c, 0, .4, 0, g);
+  box(6, 3.6, .3, 0xdde4ef, 0, 2, -2.55, g);                     // 后墙
+  box(.3, 3.6, 5.4, 0xdde4ef, -2.85, 2, 0, g);
+  box(.3, 3.6, 5.4, 0xdde4ef, 2.85, 2, 0, g);
+  const glass = new THREE.Mesh(new THREE.BoxGeometry(5.7, 3.2, .07),
+    new THREE.MeshLambertMaterial({ color: 0xa8d0ff, transparent: true, opacity: .26, depthWrite: false }));
+  glass.position.set(0, 1.9, 2.62); g.add(glass);
+  for (let i = 0; i <= 2; i++) box(.2, 3.3, .24, 0x5a6f95, -2.75 + i * 2.75, 1.95, 2.65, g);
+  box(6.4, .35, 5.8, 0x4a7ac4, 0, 3.95, 0, g);
+  const ceil = new THREE.Mesh(new THREE.BoxGeometry(4.6, .07, 4), new THREE.MeshBasicMaterial({ color: 0xdfeaff, transparent: true, opacity: .9 }));
+  ceil.position.set(0, 3.65, 0); g.add(ceil);
+  for (let r = 0; r < 2; r++) for (let i = 0; i < 5; i++) {      // 内部电池架 + 电池
+    box(.8, 1.5, .1, 0x3a4a68, -2 + i * .9, .95, -1.4 + r * 2, g);
+    for (let b = 0; b < 2; b++) box(.55, .5, .5, 0x2b3a56, -2 + i * .9, .5 + b * .65, -1.4 + r * 2, g);
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(.04), new THREE.MeshBasicMaterial({ color: (i + r) % 3 ? 0x35d08e : 0xf0b35a }));
+    dot.position.set(-2 + i * .9, 1.75, -1.4 + r * 2); g.add(dot);
+  }
+  for (let i = 0; i < 3; i++) box(.9, .55, .1, 0x9aa7bd, -1.8 + i * 1.8, 2.6, 2.7, g);  // 排风扇
+  lamp(g, 0x22b573, 2.4, 3.9, 2.7, 'battery');
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[16].anchor = buildBattery(31, 20, DEVICES[16]);
+
+/* 消防泵房 + 水池 */
+function buildFire(x, z, dev) {
+  const g = new THREE.Group(); g.position.set(x, .3, z);
+  box(8, 4.2, 6, 0xc27070, 0, 2.3, 0, g);
+  box(8.4, .4, 6.4, 0x8f4b4b, 0, 4.5, 0, g);
+  box(1.4, 2.2, .12, 0xdfe8f5, 0, 1.1, 3.06, g);
+  box(3.4, .5, .1, 0xffffff, 0, 3.5, 3.07, g);
+  box(1.4, 1.2, 1.2, 0x9aa7bd, -4.4, .9, 3.5, g);               // 泵体
+  cyl(.4, .4, 1.1, 0xef4444, -4.4, 1.9, 3.5, g);
+  cyl(4.2, 4.2, 4.6, 0x9dc3e6, 6.5, 2.3, 0, g, 24);             // 消防水池
+  cyl(4.3, 4.3, .25, 0xb9c3d4, 6.5, 4.7, 0, g, 24);
+  cyl(.18, .18, 3, 0x9aa7bd, 2.4, 1.5, 1.6, g);                 // 出水管
+  lamp(g, 0x22b573, 3.5, 4.4, 3.0, 'fire');
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[17].anchor = buildFire(-52, 26, DEVICES[17]);
+
+/* 事故油池 */
+function buildOilPit(x, z, dev) {
+  const g = new THREE.Group(); g.position.set(x, .3, z);
+  box(7, .6, 5.5, 0x9aa7bd, 0, .3, 0, g);
+  box(6.2, .5, 4.7, 0x6b6b6b, 0, .35, 0, g);
+  for (let i = 0; i < 4; i++) box(5.6, .06, .09, 0x8895ad, 0, .62, -1.7 + i * 1.1, g);
+  cyl(.16, .16, 1.1, 0xb08d57, 2.8, .85, 2.2, g);
+  box(1.0, 1.1, .8, 0xd9b25b, -2.6, .85, -2.0, g);               // 排油阀
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[18].anchor = buildOilPit(-56, 10, DEVICES[18]);
+
+/* 安全工器具室 */
+function buildTools(x, z, dev) {
+  const g = new THREE.Group(); g.position.set(x, .3, z);
+  box(7, 3.6, 6, 0xdfe8f5, 0, 2, 0, g);
+  box(7.4, .4, 6.4, 0x4a7ac4, 0, 4, 0, g);
+  box(1.3, 2.1, .12, 0x8fb4f2, 0, 1.05, 3.06, g);
+  box(3.6, .5, .1, 0xffffff, 0, 3.1, 3.07, g);
+  box(1.1, .8, .5, 0xdfe8f5, 3.4, .7, 3.2, g);                   // 除湿机
+  lamp(g, 0x22b573, -2.8, 3.9, 3.0, 'tools');
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[19].anchor = buildTools(-17.5, 32, DEVICES[19]);
+
+/* 备品库 */
+function buildStore(x, z, dev) {
+  const g = new THREE.Group(); g.position.set(x, .3, z);
+  box(11, 4.6, 7.5, 0xc9cfda, 0, 2.5, 0, g);
+  box(11.6, .4, 8, 0x4a7ac4, 0, 4.85, 0, g);
+  box(3.4, 3.2, .16, 0xdde4ef, 0, 1.6, 3.82, g);                 // 卷帘门
+  for (let i = 0; i < 6; i++) box(3.2, .1, .04, 0x5a6f95, 0, .6 + i * .5, 3.9, g);
+  box(1.4, .5, .1, 0xffffff, -3.6, 3.5, 3.8, g);
+  lamp(g, 0x22b573, 4.2, 4.4, 3.7, 'store');
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[20].anchor = buildStore(-38, 34, DEVICES[20]);
+
+/* 巡检机器人 */
+const robot = new THREE.Group();
+box(1.2, .65, 1.6, 0x2f6bff, 0, .58, 0, robot);
+box(.85, .38, .95, 0xdfe8f5, 0, 1.08, -.1, robot);
+cyl(.17, .17, .32, 0x1f2a44, 0, 1.44, -.1, robot);
+const roboLight = new THREE.Mesh(new THREE.SphereGeometry(.09), new THREE.MeshBasicMaterial({ color: 0x22b573 }));
+roboLight.position.set(0, 1.65, -.1); robot.add(roboLight);
+robot.position.set(0, .7, 34); scene.add(robot);
+DEVICES[21].anchor = robot;
+
+/* 周界摄像头 */
+function buildCamera(x, z, dev) {
+  const g = new THREE.Group(); g.position.set(x, .3, z);
+  cyl(.1, .14, 5, 0x8895ad, 0, 2.5, 0, g);
+  box(.5, .3, .3, 0xdfe8f5, .3, 4.9, 0, g);
+  const head = new THREE.Group(); head.position.set(.55, 4.78, 0); g.add(head);
+  box(.45, .35, .4, 0xffffff, 0, 0, 0, head);
+  cyl(.11, .11, .16, 0x1f2a44, .3, 0, 0, head).rotation.z = Math.PI / 2;
+  rotors.camera = head;
+  lamp(g, 0x22b573, 0, 4.6, 0, 'camera');
+  register(g, dev); scene.add(g); return g;
+}
+DEVICES[22].anchor = buildCamera(0, 48, DEVICES[22]);
+
+/* 大门 + 道闸 */
+const gateBar = new THREE.Group();
+(function buildGate(x, z, dev) {
+  const g = new THREE.Group(); g.position.set(x, .3, z);
+  box(4, 3, 3.4, 0x9db3d6, 0, 1.5, 0, g);
+  box(4.4, .35, 3.8, 0x24406f, 0, 3.1, 0, g);
+  box(1, 1.8, .12, 0xdfe8f5, 0, 1.75, 1.75, g);
+  cyl(.12, .12, 1.2, 0x8895ad, 3.2, .6, 1.6, g);
+  gateBar.position.set(3.2, 1.15, 1.6); g.add(gateBar);
+  box(4.6, .14, .14, 0xef4444, 2.3, 0, 0, gateBar);
+  gateBar.rotation.z = 0;
+  register(g, dev); scene.add(g);
+})(0, 50, DEVICES[23]);
+DEVICES[23].anchor = scene.children[scene.children.length - 1];
+
+/* 公园绿化 / 停车位 */
+function tree(x, z, s = 1) {
+  const t = new THREE.Group();
+  cyl(.15, .21, 1, 0x8a6b4f, 0, .5, 0, t);
+  const c1 = new THREE.Mesh(new THREE.SphereGeometry(.9 * s, 10, 8), mat(0x54b45e)); c1.position.y = 1.55 * s; c1.castShadow = true; t.add(c1);
+  const c2 = new THREE.Mesh(new THREE.SphereGeometry(.58 * s, 10, 8), mat(0x77c97f)); c2.position.set(.32 * s, 2.05 * s, .16); c2.castShadow = true; t.add(c2);
+  t.position.set(x, .2, z); scene.add(t);
+}
+for (let i = 0; i < 34; i++) {
+  const x = -66 + Math.random() * 132, z = -46 + Math.random() * 92;
+  if (Math.abs(x) < 58 && Math.abs(z) < 42) continue;
+  tree(x, z, .8 + Math.random() * .5);
+}
+/* 园内绿化带：路肩与建筑间隙，避开道路与设备区 */
+for (const [tx, tz] of [[-12, 36], [-4, 36], [12, 36], [22, 36], [-14, -36], [-2, -36], [10, -36], [22, -36],
+  [-56, 0], [-56, 18], [56, 0], [56, -14], [-12, 10], [14, 10], [26, 10], [-19, 35], [-8, 35]]) tree(tx, tz, .55 + Math.random() * .3);
+/* 主路黄黑路缘石（对照运维仿真图路沿）；支路口留缺口，不横断路口 */
+for (const zed of [36.7, 43.3]) for (let i = -62, k = 0; i <= 62; i += 2.4, k++) {
+  if (zed < 40 && (Math.abs(i + 24) < 3 || Math.abs(i + 45) < 3)) continue;
+  box(2.2, .12, .28, k % 2 ? 0xf0c534 : 0x2b2f38, i, .44, zed, scene);
+}
+/* 公路行道树（沙盘图两侧密树带） */
+for (let i = -84; i <= 84; i += 9) { tree(i + Math.random() * 2, 52.5, .7 + Math.random() * .4); tree(i + Math.random() * 2, 64, .7 + Math.random() * .4); }
+/* 远景风电机组（叶片旋转） */
+const turbines = [];
+for (const [wx, wz] of [[-128, 96], [-100, 122], [112, 112], [142, 78], [-140, 40]]) {
+  const g = new THREE.Group(); g.position.set(wx, -1, wz);
+  cyl(.5, 1, 26, 0xeef2f8, 0, 13, 0, g, 10);
+  box(1.5, 1, 1, 0xeef2f8, 0, 26, -.3, g);
+  const hub = new THREE.Group(); hub.position.set(0, 26, .5); g.add(hub);
+  cyl(.45, .45, .8, 0xdde4ef, 0, 0, 0, hub, 10).rotation.x = Math.PI / 2;
+  for (let b = 0; b < 3; b++) {
+    const bg = new THREE.Group(); bg.rotation.z = b * Math.PI * 2 / 3; hub.add(bg);
+    box(.5, 10.5, .1, 0xf8fafd, 0, 5.4, 0, bg);
+  }
+  scene.add(g); turbines.push(hub);
+}
+/* 红白烟囱（沙盘图电厂标志） */
+(function chimney() {
+  const g = new THREE.Group(); g.position.set(-96, -1, 58);
+  cyl(2.6, 3.4, 46, 0xe8edf4, 0, 23, 0, g, 14);
+  for (const ry of [40, 30, 19]) cyl(2.72 - (40 - ry) * .006, 2.86 - (40 - ry) * .006, 4.5, 0xc0392b, 0, ry, 0, g, 14);
+  scene.add(g);
+})();
+for (let i = 0; i < 6; i++) {
+  const car = new THREE.Group();
+  box(3.6, .3, 5.2, 0xd5dbe6, 0, .05, 0, car);
+  car.position.set(28 + i * 4.4, .4, 34); scene.add(car);
+}
+/* 园区细节：端子箱 / 避雷针 / 电缆沟盖板（对照电力科普图常见设施） */
+function terminalBox(x, z, rot = 0) {
+  const g = new THREE.Group(); g.position.set(x, .3, z); g.rotation.y = rot;
+  box(.9, 1.15, .55, 0xb7c4d8, 0, .58, 0, g);
+  box(.98, .08, .62, 0x8794ad, 0, 1.18, 0, g);
+  box(.68, .68, .03, 0x8794ad, 0, .6, .29, g);
+  const dot = new THREE.Mesh(new THREE.SphereGeometry(.035), new THREE.MeshBasicMaterial({ color: 0x35d08e }));
+  dot.position.set(.24, .95, .3); g.add(dot);
+  scene.add(g);
+}
+terminalBox(-46, 7.2); terminalBox(-37, 7.2); terminalBox(-24, -16); terminalBox(30, -18);
+/* 避雷针（110kV 区两角，金色针尖） */
+for (const [mx, mz] of [[-50, -34], [30, -34]]) {
+  const g = new THREE.Group(); g.position.set(mx, .3, mz);
+  cyl(.16, .34, 13, 0x8794ad, 0, 6.5, 0, g);
+  cyl(.02, .07, 2.4, 0xc9a45f, 0, 14.2, 0, g);
+  scene.add(g);
+}
+/* 电缆沟盖板（主路南侧一排） */
+for (let i = -56; i <= 56; i += 4) {
+  const cv1 = box(1.8, .07, 1.1, 0xb3bccb, i, .42, 33.4, scene);
+  cv1.receiveShadow = true;
+}
+for (let i = -60; i <= 60; i += 16) {
+  const lampP = new THREE.Group();
+  cyl(.07, .09, 3.2, 0x8895ad, 0, 1.6, 0, lampP);
+  box(.6, .14, .32, 0xf3f7fc, .25, 3.2, 0, lampP);
+  lampP.position.set(i, .2, 36); scene.add(lampP);
+}
+/* 环场路灯（发光灯头） */
+const lampGlows = [];
+function streetLamp(x, z, rot) {
+  const g = new THREE.Group(); g.position.set(x, .2, z); g.rotation.y = rot || 0;
+  cyl(.06, .09, 4.4, 0x394763, 0, 2.2, 0, g);
+  box(1, .12, .3, 0x394763, .55, 4.4, 0, g);
+  const bulb = new THREE.Mesh(new THREE.BoxGeometry(.75, .07, .22),
+    new THREE.MeshBasicMaterial({ color: 0xffe6a8 }));
+  bulb.position.set(.6, 4.3, 0); g.add(bulb); lampGlows.push(bulb);
+  scene.add(g);
+}
+/* 路灯全部立在路缘外侧，灯臂挑向路面——不许站在行车/步行道上 */
+[[-30, 44.5, Math.PI / 2], [2, 44.5, Math.PI / 2], [34, 44.5, Math.PI / 2],
+ [-58, 22, Math.PI / 2], [-58, -13, Math.PI / 2],
+ [58, 22, -Math.PI / 2], [58, -18, -Math.PI / 2],
+ [-30, -44.5, -Math.PI / 2], [2, -44.5, -Math.PI / 2],
+ [34, -44.5, -Math.PI / 2], [18, 8, Math.PI / 2], [-14, -24, -Math.PI / 2]].forEach(p => streetLamp(...p));
+/* 主控楼夜景灯带 */
+const nightStrips = [];
+(function () {
+  const mk = (w, x, y, z, d) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, .5, .06),
+      new THREE.MeshBasicMaterial({ color: 0x86b8ff, transparent: true, opacity: .8 }));
+    m.position.set(x, y, z); if (d) m.rotation.y = Math.PI / 2; scene.add(m);
+    nightStrips.push(m);
+  };
+  mk(14, 8, 2.5, 22.58); mk(14, 8, 4.2, 22.58);
+  mk(5, 12.58 + 6, 3.2, 20, true); mk(5, -3.58, 3.2, 20, true);
+})();
+/* 公路车辆 */
+const cars = [];
+function makeCar(color, z, dir) {
+  const c = new THREE.Group();
+  box(2.4, .65, 1.1, color, 0, .6, 0, c);
+  box(1.4, .55, 1, 0x2b3550, -.1, 1.1, 0, c);
+  for (const [wx, wz] of [[-.75, .55], [.75, .55], [-.75, -.55], [.75, -.55]]) {
+    const w = cyl(.24, .24, .2, 0x1f2a44, wx, .3, wz, c, 10); w.rotation.x = Math.PI / 2;
+  }
+  c.position.set(-160 + Math.random() * 320, 0, z); c.scale.x = dir;
+  scene.add(c); cars.push({ g: c, dir });
+}
+makeCar(0x2f6bff, 57, 1); makeCar(0xef4444, 59.4, -1); makeCar(0xf59e0b, 57, 1);
+
+/* ═════════ 状态 / 交互 ═════════ */
+const state = {
+  fan: { transformer1: true, transformer2: true },
+  tap: { transformer1: 9, transformer2: 9 },
+  breakerClosed: false, dsClosed: true, earthClosed: false, plateIn: true,
+  capIn: true, stationMain: true, robotRun: true, cameraRun: true,
+  gateOpen: false, dcFloat: true, firePump: false, ops: 0
+};
+const raycaster = new THREE.Raycaster(), pointer = new THREE.Vector2();
+let selected = null;
+const ring = new THREE.Mesh(new THREE.RingGeometry(1.5, 1.8, 40),
+  new THREE.MeshBasicMaterial({ color: 0x2f6bff, transparent: true, opacity: .85, side: THREE.DoubleSide }));
+ring.rotation.x = -Math.PI / 2; ring.visible = false; scene.add(ring);
+
+function pointerPos(e) {
+  const r = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+  pointer.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+}
+renderer.domElement.addEventListener('pointermove', e => {
+  pointerPos(e); raycaster.setFromCamera(pointer, camera);
+  const hit = raycaster.intersectObjects(pickables, false)[0];
+  const dev = hit ? hit.object.userData.dev : null;
+  renderer.domElement.style.cursor = dev ? 'pointer' : 'grab';
+  if (dev && dev.anchor) {
+    const p = new THREE.Vector3(); dev.anchor.getWorldPosition(p);
+    ring.position.set(p.x, .6, p.z); ring.visible = true;
+  } else ring.visible = false;
+});
+renderer.domElement.addEventListener('click', e => {
+  pointerPos(e); raycaster.setFromCamera(pointer, camera);
+  /* 教学讲解中点小电本人 = 重听本站讲解；其他阶段不拦截，避免小电挡住目标设备的点击 */
+  if (teach && teach.on && teach.phase === 'talking' && guide.visible && guideMeshes.length) {
+    if (raycaster.intersectObjects(guideMeshes, false)[0]) { talkStation(teach.i, true); return; }
+  }
+  const hit = raycaster.intersectObjects(pickables, false)[0];
+  if (hit && hit.object.userData.dev) selectDevice(hit.object.userData.dev);
+});
+
+const toastEl = document.getElementById('toast');
+let toastTimer = null;
+function toast(msg) {
+  toastEl.textContent = msg; toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2600);
+}
+const alList = document.getElementById('alList');
+function pushEvent(text, isOp) {
+  const d = new Date();
+  const tm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  const div = document.createElement('div'); div.className = 'al';
+  div.innerHTML = `<span class="tm">${tm}</span>${isOp ? '<span class="op-tag">操作</span>' : ''}<span style="flex:1">${text}</span>`;
+  alList.prepend(div);
+  while (alList.children.length > 5) alList.lastChild.remove();
+}
+['1号主变油温 61.8℃，正常', '巡检机器人完成 5 号点位红外测温', '10kV 母线电压 10.42kV，合格'].forEach(t => pushEvent(t, false));
+
+/* 操作定义 */
+const OPS = {
+  transformer1: [['风机启动', 'fanOn'], ['风机停止', 'fanOff'], ['调高一档', 'tapUp'], ['调低一档', 'tapDown']],
+  transformer2: [['风机启动', 'fanOn'], ['风机停止', 'fanOff'], ['调高一档', 'tapUp'], ['调低一档', 'tapDown']],
+  breaker: [['合闸送电', 'close'], ['分闸停电', 'open']],
+  disconnector: [['合上主刀', 'dsClose'], ['拉开主刀', 'dsOpen']],
+  earthing: [['合上地刀', 'earthClose'], ['拉开地刀', 'earthOpen']],
+  ct: [['测二次电流', 'measure'], ['查油位', 'oil']],
+  busPT: [['投入电压回路', 'ptIn'], ['退出电压回路', 'ptOut']],
+  arrester: [['泄漏电流试验', 'leak'], ['计数器复归', 'reset']],
+  busbar: [['红外测温', 'ir'], ['弧垂检查', 'sag']],
+  tower: [['接地电阻测试', 'ground'], ['红外测温', 'ir']],
+  switchgear: [['手车摇出', 'rackOut'], ['手车摇入', 'rackIn']],
+  capacitor: [['投入电容器', 'capIn'], ['退出电容器', 'capOut']],
+  arcCoil: [['调高一档', 'coilUp'], ['调低一档', 'coilDown']],
+  stationTrans: [['切换备用电源', 'stsSwap'], ['恢复主电源', 'stsMain']],
+  protect: [['投入软压板', 'plateIn'], ['退出软压板', 'plateOut']],
+  dcPanel: [['转均充', 'boost'], ['转浮充', 'float']],
+  battery: [['核对性放电', 'capTest'], ['测单只电压', 'cellTest']],
+  firePump: [['启动主泵', 'pumpOn'], ['停泵', 'pumpOff']],
+  oilPit: [['测液位', 'pitLevel'], ['检查油水分离', 'separator']],
+  tools: [['工器具盘点', 'toolCheck'], ['查试验标签', 'toolTag']],
+  store: [['备品盘点', 'stockCheck'], ['查低定额项', 'stockLow']],
+  robot: [['暂停巡检', 'stop'], ['继续巡检', 'run']],
+  camera: [['云台巡航', 'camOn'], ['锁定视角', 'camOff']],
+  gate: [['开闸放行', 'gateOpen'], ['落闸关闭', 'gateClose']]
+};
+
+/* 场景反馈 */
+const flashes = [];
+function flashAt(pos, color = 0xffd166, size = 1.2) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(size, 12, 10),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: .9 }));
+  m.position.copy(pos); scene.add(m); flashes.push({ m, t: 0 });
+}
+function anchorPos(dev) {
+  const p = new THREE.Vector3(); dev.anchor ? dev.anchor.getWorldPosition(p) : p.set(0, 1, 0); return p;
+}
+function setParam(dev, i, v) {
+  dev.params[i][1] = String(v);
+  if (selected && selected.id === dev.id) renderParams(dev);
+}
+function setStatus(dev, text, color) {
+  dev.status = text; dev.stColor = color;
+  const row = document.getElementById('row-' + dev.id);
+  if (row) { const d = row.querySelector('.dotst'); d.style.background = color; d.style.boxShadow = '0 0 6px ' + color; }
+}
+function tween(dur, fn) { tweens.push({ t: 0, dur, fn }); }
+
+function runOp(dev, key) {
+  if (scn.active && !scn.done && scnObserve(dev, key)) return;
+  const p = anchorPos(dev), t = p.clone(); t.y += 3.5;
+  switch (key) {
+    case 'fanOn': state.fan[dev.id] = true; toast('冷却风机启动，油温开始下降'); pushEvent(dev.name + ' 冷却风机启动', true); break;
+    case 'fanOff': state.fan[dev.id] = false; toast('冷却风机停止，注意油温趋势'); pushEvent(dev.name + ' 冷却风机停止', true); break;
+    case 'tapUp': case 'tapDown': {
+      const step = key === 'tapUp' ? 1 : -1;
+      const next = Math.min(17, Math.max(1, state.tap[dev.id] + step));
+      if (next === state.tap[dev.id]) { toast('已到极限档位，禁止继续调压'); return; }
+      state.tap[dev.id] = next; setParam(dev, 3, next);
+      const v = (110 + (next - 9) * .625).toFixed(1); setParam(dev, 0, v);
+      toast('有载调压至 ' + next + ' 档，电压 ' + v + ' kV');
+      pushEvent(dev.name + ' 调压至 ' + next + ' 档', true); flashAt(t, 0x9ec5ff, .9); break;
+    }
+    case 'close':
+      if (state.breakerClosed) { toast('断路器已在合位'); return; }
+      state.breakerClosed = true; setParam(dev, 3, '合位'); setStatus(dev, '运行', '#22b573');
+      lampRefs.breaker.material.color.setHex(0x22b573); flashAt(t, 0x9fe8c4, 1.4);
+      toast('断路器合闸成功，线路送电'); pushEvent(dev.name + ' 合闸送电', true); break;
+    case 'open':
+      if (!state.breakerClosed) { toast('断路器已在分位'); return; }
+      state.breakerClosed = false; setParam(dev, 3, '分位'); setStatus(dev, '热备用', '#f59e0b');
+      lampRefs.breaker.material.color.setHex(0xef4444); flashAt(t, 0xffcf7a, 1.1);
+      toast('断路器分闸，线路转热备用'); pushEvent(dev.name + ' 分闸', true); break;
+    case 'dsOpen': case 'dsClose': {
+      const want = key === 'dsClose';
+      if (want === state.dsClosed) { toast(want ? '主刀已在合位' : '主刀已在分位'); return; }
+      if (want && state.breakerClosed) { toast('五防闭锁：断路器在合位，禁止合隔离开关'); pushEvent('五防闭锁：带负荷合隔离开关被拦截', true); return; }
+      if (want && state.earthClosed) { toast('五防闭锁：接地刀闸在合位，禁止合主刀'); return; }
+      state.dsClosed = want; animateDs(want);
+      setParam(dev, 0, want ? '合闸' : '分闸'); setStatus(dev, want ? '合闸' : '分闸', want ? '#22b573' : '#94a3b8');
+      toast(want ? '主刀合上，双柱旋转 90° 到位' : '主刀拉开，形成明显断开点');
+      pushEvent(dev.name + (want ? ' 主刀合闸' : ' 主刀分闸'), true); break;
+    }
+    case 'earthClose': case 'earthOpen': {
+      const want = key === 'earthClose';
+      if (want === state.earthClosed) { toast(want ? '地刀已合上' : '地刀已拉开'); return; }
+      if (want && state.dsClosed) { toast('五防闭锁：主刀在合位，禁止合接地刀闸'); pushEvent('五防闭锁：主刀合位时合地刀被拦截', true); return; }
+      state.earthClosed = want;
+      tween(.9, k => { rotors.earth.rotation.x = want ? (-1.2 + 1.2 * k) : (0 - 1.2 * k); });
+      setParam(dev, 0, want ? '合闸' : '分闸'); setStatus(dev, want ? '合闸' : '分闸', want ? '#22b573' : '#94a3b8');
+      toast(want ? '接地刀闸合上，三相接地可靠' : '接地刀闸拉开');
+      pushEvent(dev.name + (want ? ' 合闸' : ' 分闸'), true); break;
+    }
+    case 'measure': setParam(dev, 2, (3 + Math.random() * .5).toFixed(2)); toast('二次电流 ' + dev.params[2][1] + ' A，三相平衡'); pushEvent(dev.name + ' 二次电流测量', true); break;
+    case 'oil': toast('油位 2/3，油色正常，无渗漏'); pushEvent(dev.name + ' 油位检查正常', true); break;
+    case 'ptIn': case 'ptOut': {
+      const want = key === 'ptIn';
+      setParam(dev, 3, want ? '合上' : '断开'); setParam(dev, 1, want ? '57.7' : '0');
+      tween(.6, k => { if (lampRefs.busPT) lampRefs.busPT.material.color.setHex(want ? 0x22b573 : 0xef4444); });
+      toast(want ? '电压回路投入，二次电压 57.7V' : '电压回路退出，保护可能失压');
+      pushEvent(dev.name + (want ? ' 投入' : ' 退出'), true); break;
+    }
+    case 'leak': setParam(dev, 0, (.4 + Math.random() * .06).toFixed(2)); setParam(dev, 1, (.1 + Math.random() * .04).toFixed(2));
+      toast('全电流 ' + dev.params[0][1] + ' mA / 阻性 ' + dev.params[1][1] + ' mA，合格'); pushEvent(dev.name + ' 泄漏电流试验', true); break;
+    case 'reset': setParam(dev, 2, 0); toast('计数器复归为 0（原值 7 次已记录）'); pushEvent(dev.name + ' 计数器复归', true); break;
+    case 'ir': { const tp = (38 + Math.random() * 12).toFixed(1); toast('红外测温 ' + tp + '℃，' + (tp > 45 ? '异常温升需复核' : '正常')); pushEvent(dev.name + ' 红外测温 ' + tp + '℃', true); break; }
+    case 'sag': toast('弧垂合格，三相一致，无断股覆冰'); pushEvent(dev.name + ' 弧垂检查', true); break;
+    case 'ground': setParam(dev, 3, (3.5 + Math.random() * 2).toFixed(1)); toast('接地电阻 ' + dev.params[3][1] + ' Ω，合格'); pushEvent(dev.name + ' 接地电阻 ' + dev.params[3][1] + ' Ω', true); break;
+    case 'rackIn': case 'rackOut': {
+      const want = key === 'rackIn';
+      setParam(dev, 2, want ? '有电' : '无电'); setStatus(dev, want ? '运行' : '检修', want ? '#22b573' : '#94a3b8');
+      if (lampRefs.switchgear) lampRefs.switchgear.material.color.setHex(want ? 0x22b573 : 0xef4444);
+      toast(want ? '手车摇入到位，五防联锁投入' : '手车摇出，柜内停电可检修');
+      pushEvent(dev.name + (want ? ' 手车摇入' : ' 手车摇出'), true); break;
+    }
+    case 'capIn': case 'capOut': {
+      const want = key === 'capIn';
+      if (want === state.capIn) { toast(want ? '电容器已投入' : '电容器已退出'); return; }
+      state.capIn = want; setParam(dev, 3, want ? '0.96' : '0.89');
+      document.getElementById('k5').innerHTML = (want ? '4.8' : '0.0') + '<b>Mvar</b><span class="trend ' + (want ? 'up' : 'flat') + '">' + (want ? '投入' : '退出') + '</span>';
+      toast(want ? '电容器投入，功率因数升至 0.96' : '电容器退出，功率因数降至 0.89（5 分钟内不得重投）');
+      pushEvent(dev.name + (want ? ' 投入' : ' 退出'), true); flashAt(t, want ? 0x9fe8c4 : 0xffc2c2, 1); break;
+    }
+    case 'coilUp': case 'coilDown': {
+      const step = key === 'coilUp' ? 1 : -1;
+      const cur = parseInt(dev.params[1][1]); const next = Math.min(9, Math.max(1, cur + step));
+      if (next === cur) { toast('已到极限档位'); return; }
+      setParam(dev, 1, next); setParam(dev, 0, (15 + next * .7).toFixed(1));
+      toast('消弧线圈调至 ' + next + ' 档，补偿电流 ' + dev.params[0][1] + ' A');
+      pushEvent(dev.name + ' 调档至 ' + next, true); break;
+    }
+    case 'stsSwap': case 'stsMain': {
+      const main = key === 'stsMain';
+      if (main === state.stationMain) { toast(main ? '已在主电源供电' : '已在备用电源供电'); return; }
+      state.stationMain = main;
+      setParam(dev, 2, main ? '主电源' : '备用电源'); setParam(dev, 1, '400');
+      if (lampRefs.switchgear) lampRefs.switchgear.material.color.setHex(main ? 0x22b573 : 0xf59e0b);
+      toast(main ? '已恢复主电源供电' : '已切换至备用电源，检查低压相序');
+      pushEvent(dev.name + ' 电源切换为' + (main ? '主电源' : '备用电源'), true); break;
+    }
+    case 'plateIn': case 'plateOut': {
+      const want = key === 'plateIn';
+      if (want === state.plateIn) { toast(want ? '软压板已投入' : '软压板已退出'); return; }
+      if (!want && state.breakerClosed) { toast('注意：线路运行中，退出差动软压板须先申请调度'); return; }
+      state.plateIn = want; setParam(dev, 1, want ? '投入' : '退出');
+      lampRefs.protect.material.color.setHex(want ? 0x22b573 : 0xef4444);
+      flashAt(t, want ? 0x9fe8c4 : 0xffb4b4, .8);
+      toast(want ? '软压板投入，装置面板确认变位' : '软压板退出，装置告警'); pushEvent(dev.name + ' 软压板' + (want ? '投入' : '退出'), true); break;
+    }
+    case 'boost': case 'float': {
+      const fl = key === 'float';
+      state.dcFloat = fl;
+      setParam(dev, 1, fl ? '浮充' : '均充'); setParam(dev, 0, fl ? '220' : '234'); setParam(dev, 2, fl ? '3.2' : '12.5');
+      if (lampRefs.dc) lampRefs.dc.material.color.setHex(fl ? 0x22b573 : 0xf59e0b);
+      toast(fl ? '转浮充，母线 220V' : '转均充，母线 234V，10 小时后自动转浮充');
+      pushEvent(dev.name + ' 转' + (fl ? '浮充' : '均充'), true); break;
+    }
+    case 'capTest': setParam(dev, 2, (88 + Math.random() * 6).toFixed(0)); toast('核对性放电完成，容量 ' + dev.params[2][1] + '%，合格'); pushEvent(dev.name + ' 核对性放电', true); break;
+    case 'cellTest': setParam(dev, 1, (2.23 + Math.random() * .04).toFixed(2)); toast('单只电压 ' + dev.params[1][1] + 'V，最低 2.22V 正常'); pushEvent(dev.name + ' 单只电压抽测', true); break;
+    case 'pumpOn': case 'pumpOff': {
+      const on = key === 'pumpOn';
+      if (on === state.firePump) { toast(on ? '主泵已在运行' : '主泵已停止'); return; }
+      state.firePump = on; setParam(dev, 2, on ? '运行' : '备用'); setParam(dev, 0, on ? '0.86' : '0.62');
+      if (lampRefs.fire) lampRefs.fire.material.color.setHex(on ? 0xef4444 : 0x22b573);
+      toast(on ? '主泵启动，管网压力 0.86MPa' : '主泵停止，稳压泵维持 0.62MPa');
+      pushEvent(dev.name + (on ? ' 主泵启动' : ' 主泵停止'), true); flashAt(t, on ? 0x9ec5ff : 0xdddddd, 1); break;
+    }
+    case 'pitLevel': setParam(dev, 0, (0.2 + Math.random() * .3).toFixed(1)); toast('油池液位 ' + dev.params[0][1] + 'm，无异常积油'); pushEvent(dev.name + ' 液位检测', true); break;
+    case 'separator': toast('油水分离装置正常，排水清澈'); pushEvent(dev.name + ' 油水分离检查', true); break;
+    case 'toolCheck': setParam(dev, 2, 36); toast('盘点 36 件，账物一致'); pushEvent(dev.name + ' 工器具盘点', true); break;
+    case 'toolTag': setParam(dev, 3, 0); toast('试验标签全部在有效期内'); pushEvent(dev.name + ' 试验标签检查', true); break;
+    case 'stockCheck': setParam(dev, 1, 142); toast('备品 142 项，账物一致'); pushEvent(dev.name + ' 备品盘点', true); break;
+    case 'stockLow': setParam(dev, 2, 3); toast('3 项低于定额：熔断器、分闸线圈、密封圈'); pushEvent(dev.name + ' 低定额项核查', true); break;
+    case 'stop': state.robotRun = false; setStatus(dev, '已暂停', '#94a3b8'); toast('机器人暂停，停靠 5 号点位'); pushEvent(dev.name + ' 暂停巡检', true); break;
+    case 'run': state.robotRun = true; setStatus(dev, '巡检中', '#2f6bff'); toast('机器人继续巡检'); pushEvent(dev.name + ' 恢复巡检', true); break;
+    case 'camOn': state.cameraRun = true; setStatus(dev, '巡航', '#22b573'); toast('云台恢复自动巡航'); pushEvent(dev.name + ' 云台巡航', true); break;
+    case 'camOff': state.cameraRun = false; setStatus(dev, '锁定', '#f59e0b'); toast('云台锁定，正对主变区'); pushEvent(dev.name + ' 云台锁定', true); break;
+    case 'gateOpen': case 'gateClose': {
+      const open = key === 'gateOpen';
+      if (open === state.gateOpen) { toast(open ? '道闸已抬起' : '道闸已落下'); return; }
+      state.gateOpen = open;
+      tween(.8, k => { gateBar.rotation.z = open ? k * 1.15 : (1 - k) * 1.15; });
+      setParam(dev, 0, open ? '开启' : '关闭');
+      toast(open ? '道闸抬起，车辆放行' : '道闸落下');
+      pushEvent(dev.name + (open ? ' 开闸' : ' 落闸'), true); break;
+    }
+  }
+  state.ops++;
+}
+function animateDs(closed) {
+  dsGroups.forEach(gp => {
+    const fl = gp.left.rotation.y, fr = gp.right.rotation.y;
+    const tl = closed ? 0 : Math.PI / 2 * .92, tr = closed ? 0 : -Math.PI / 2 * .92;
+    tween(1.1, k => { gp.left.rotation.y = fl + (tl - fl) * k; gp.right.rotation.y = fr + (tr - fr) * k; });
+  });
+}
+
+/* ═════════ UI ═════════ */
+const devList = document.getElementById('devList');
+document.getElementById('devCount').textContent = DEVICES.length + ' 台在册';
+const zones = [...new Set(DEVICES.map(d => d.zone))];
+zones.forEach(z => {
+  const t = document.createElement('div'); t.className = 'zone-t'; t.textContent = z; devList.appendChild(t);
+  DEVICES.filter(d => d.zone === z).forEach(d => {
+    const row = document.createElement('div');
+    row.className = 'dev-row'; row.id = 'row-' + d.id;
+    row.innerHTML = `<div class="ic ${d.color}">${d.ic}</div>
+      <div class="info"><div class="nm">${d.name}</div><div class="st">${d.en}</div></div>
+      <div class="dotst" style="background:${d.stColor};box-shadow:0 0 6px ${d.stColor}"></div>`;
+    row.onclick = () => selectDevice(d);
+    devList.appendChild(row);
+  });
+});
+function renderParams(d) {
+  document.getElementById('dParams').innerHTML = d.params.map(p =>
+    `<div class="param"><div class="k">${p[0]}</div><div class="v">${p[1]}<b> ${p[2]}</b></div></div>`).join('');
+}
+function selectDevice(d) {
+  /* 教学模式：点击设备走小电流程——目标设备=打卡（不开详情、不拽镜头），其余给提示，绝不打断教学 */
+  if (teach && teach.on) {
+    const s = STATIONS[teach.i], target = s && DEVICES.find(x => x.id === s.dev);
+    if (teach.phase === 'task' && !teach.learned) {
+      if (target && d.id === target.id) { doCheckin(); return; }
+      toast('小电：这一站先点「' + (target ? target.name : '目标设备') + '」打卡哦，点气泡里的按钮也行～');
+      return;
+    }
+    if (teach.phase === 'talking') { toast('小电：先听完我的讲解，讲完有题考你哦～'); return; }
+    if (teach.phase === 'quiz' || teach.phase === 'asked') { toast('小电：先把题答完，再去看设备～'); return; }
+    if (teach.phase === 'walking') { toast('小电：正带你去下一站，跟紧我～'); return; }
+    if (teach.learned || teach.phase === 'praise') { toast('小电：这一站学会啦，马上带你去下一站～'); return; }
+  }
+  selected = d;
+  document.getElementById('overview').style.display = 'none';
+  const det = document.getElementById('detail'); det.classList.add('show');
+  document.getElementById('dIc').textContent = d.ic;
+  document.getElementById('dIc').className = 'ic ' + d.color;
+  document.getElementById('dNm').textContent = d.name;
+  document.getElementById('dEn').textContent = d.en;
+  renderParams(d);
+  document.getElementById('dOps').innerHTML = (OPS[d.id] || []).map(([label, key]) =>
+    `<button class="op ${/^(open|dsOpen|capOut|pumpOff|camOff|gateClose|earthClose)$/.test(key) ? 'danger' : ''}" data-key="${key}">${label}</button>`).join('');
+  document.querySelectorAll('#dOps .op').forEach(b => b.onclick = () => runOp(d, b.dataset.key));
+  document.getElementById('dLearn').innerHTML = d.learn.map(x => `<li>${x}</li>`).join('');
+  document.getElementById('dCourses').innerHTML = d.courses.map(c => {
+    const kw = encodeURIComponent(c[0]);
+    return `<a class="course" target="_blank" rel="noopener" href="https://search.bilibili.com/all?keyword=${kw}"><span class="tag">${c[1]}</span>${c[0]}<span class="go">↗</span></a>` +
+      `<a class="course" target="_blank" rel="noopener" href="https://www.icourse163.org/search.htm?keyword=${kw}"><span class="tag" style="background:var(--green)">慕课</span>中国大学MOOC：${c[0]}<span class="go">↗</span></a>`;
+  }).join('');
+  det.querySelector('.back').onclick = () => {
+    det.classList.remove('show'); document.getElementById('overview').style.display = ''; selected = null;
+  };
+  document.querySelectorAll('.dev-row').forEach(r => r.classList.remove('active'));
+  const row = document.getElementById('row-' + d.id); if (row) row.classList.add('active');
+  if (d.anchor) {
+    const p = new THREE.Vector3(); d.anchor.getWorldPosition(p);
+    controls.target.copy(p); camTween(p.clone().add(new THREE.Vector3(10, 10, 12)));
+  }
+}
+let camAnim = null;
+function camTween(to) { camAnim = { from: camera.position.clone(), to, t: 0 }; }
+document.querySelector('.back')?.addEventListener('click', () => {
+  camTween(new THREE.Vector3(74, 56, 86)); controls.target.set(0, 2, 2);
+});
+
+/* KPI + 油温 */
+let kpiT = 0;
+function tickData() {
+  kpiT++;
+  const load = (62 + Math.sin(kpiT / 4) * 4 + Math.random()).toFixed(1);
+  document.getElementById('k3').innerHTML = load + '<b>%</b><span class="trend ' + (load > 63 ? 'up' : 'down') + '">' + (load > 63 ? '▲' : '▼') + Math.abs(load - 63.2).toFixed(1) + '</span>';
+  document.getElementById('k2').innerHTML = (98 + Math.random() * 1.6).toFixed(1) + '<b>%</b><span class="trend flat">—</span>';
+  ['transformer1', 'transformer2'].forEach(id => {
+    const dv = DEVICES.find(x => x.id === id), cur = parseFloat(dv.params[2][1]);
+    const target = state.fan[id] ? 58 : 72;
+    dv.params[2][1] = (cur + (target - cur) * .02 + (Math.random() - .5) * .15).toFixed(1);
+  });
+  if (selected && selected.id.startsWith('transformer')) renderParams(selected);
+}
+setInterval(tickData, 2500);
+
+/* 作业步骤 */
+const STEPS = ['核对定值单', '布置安全措施', '验电', '合接地刀闸', '悬挂标示牌', '工作许可'];
+let stepNow = 2;
+const stepsEl = document.getElementById('steps');
+STEPS.forEach((s, i) => {
+  if (i > 0) { const l = document.createElement('div'); l.className = 'stp-line'; stepsEl.appendChild(l); }
+  const el = document.createElement('div'); el.className = 'stp';
+  el.innerHTML = `<div class="b">${i + 1}</div>${s}`; stepsEl.appendChild(el);
+});
+function paintSteps() {
+  [...stepsEl.querySelectorAll('.stp')].forEach((el, i) => {
+    el.classList.toggle('done', i < stepNow); el.classList.toggle('now', i === stepNow);
+    el.querySelector('.b').textContent = i < stepNow ? '✓' : i === stepNow ? '●' : i + 1;
+  });
+  [...stepsEl.querySelectorAll('.stp-line')].forEach((el, i) => el.classList.toggle('done', i < stepNow));
+}
+paintSteps();
+setInterval(() => { stepNow = (stepNow + 1) % STEPS.length; paintSteps(); }, 12000);
+let etaS = 1122;
+setInterval(() => {
+  etaS = Math.max(0, etaS - 1);
+  document.getElementById('eta').textContent = Math.floor(etaS / 60) + ':' + String(etaS % 60).padStart(2, '0');
+}, 1000);
+
+/* ═════════ 演练引擎与 10 个情景 ═════════ */
+const SCN_CAT_C = { '倒闸操作': '#2f6bff', '异常处置': '#f59e0b', '事故处理': '#ef4444', '专项演练': '#22b573' };
+const INTERFERE = [
+  '调度来电询问操作进度，注意唱票复诵不受干扰',
+  '天气突变：西北风 5 级，注意导线摆动',
+  '邻间隔 SF6 密度仪出现无关告警，需甄别真伪',
+  '监控后台弹出历史遗留缺陷提醒',
+  '站长来电询问作业风险点'
+];
+const SCENARIOS = [
+  { id:'S1', cat:'倒闸操作', name:'110kV 线路停电检修', diff:'●●', time:420,
+    intro:'线路由运行转检修：严格执行操作票顺序，五防联锁全程生效。',
+    tip:'铁律：先断路器、后隔离开关、再接地刀闸；未验电合地刀属恶性违章。',
+    forbid:[
+      {dev:'breaker', op:'close', crit:true, reason:'带接地刀闸合断路器——恶性误操作，一票否决'},
+      {dev:'disconnector', op:'dsClose', crit:true, reason:'接地刀闸在合位时合主刀，违反五防'}
+    ],
+    init(){ scnBase(true, true, false); },
+    steps:[
+      {t:'接受调度令，核对操作票与定值单，唱票复诵', type:'confirm'},
+      {t:'拉开 110kV 断路器', type:'op', dev:'breaker', op:'open'},
+      {t:'检查断路器确在分位，机构已储能', type:'confirm'},
+      {t:'拉开隔离开关，形成明显断开点', type:'op', dev:'disconnector', op:'dsOpen'},
+      {t:'在设备侧验电，确无电压', type:'confirm'},
+      {t:'合上接地刀闸', type:'op', dev:'earthing', op:'earthClose'},
+      {t:'悬挂「禁止合闸，线路有人工作」标示牌', type:'confirm'},
+      {t:'汇报调度，办理工作许可手续', type:'confirm'}
+    ]},
+  { id:'S2', cat:'倒闸操作', name:'主变压器由运行转检修', diff:'●●●', time:540,
+    intro:'50MVA 主变停役全流程，含冷却器停运。',
+    tip:'负荷转移完成后才能操作；停电顺序与线路相同，另需停冷却器。',
+    forbid:[
+      {dev:'breaker', op:'close', crit:true, reason:'主变检修中合断路器——恶性误操作'},
+      {dev:'disconnector', op:'dsClose', crit:true, reason:'地刀合位时合主刀，违反五防'},
+      {dev:'transformer1', op:'fanOn', crit:false, reason:'检修中的主变不得再投冷却器'}
+    ],
+    init(){ scnBase(true, true, false); },
+    steps:[
+      {t:'核对操作票，确认负荷已全部转移至 2 号主变', type:'confirm'},
+      {t:'拉开主变低压侧开关', type:'confirm'},
+      {t:'拉开 110kV 断路器', type:'op', dev:'breaker', op:'open'},
+      {t:'拉开主变高压侧隔离开关', type:'op', dev:'disconnector', op:'dsOpen'},
+      {t:'在变压器各侧验电', type:'confirm'},
+      {t:'合上主变接地刀闸', type:'op', dev:'earthing', op:'earthClose'},
+      {t:'停用 1 号主变冷却风机', type:'op', dev:'transformer1', op:'fanOff'},
+      {t:'悬挂标示牌，装设遮栏', type:'confirm'},
+      {t:'汇报调度，主变转为检修状态', type:'confirm'}
+    ]},
+  { id:'S3', cat:'倒闸操作', name:'电容器组退出操作', diff:'●', time:300,
+    intro:'母线电压越上限，按电压曲线退出电容器组；退出后 5 分钟内不得重投。',
+    tip:'投切间隔不少于 5 分钟，防止操作过电压损伤电容器。',
+    forbid:[
+      {dev:'capacitor', op:'capIn', crit:false, reason:'退出后 5 分钟内重新投入，违反投切间隔规定'}
+    ],
+    init(){ scnBase(false, true, false); state.capIn = true; setParam(DEVICES[11], 3, '0.96'); },
+    steps:[
+      {t:'检查 10kV 母线电压（红外巡检核对表计）', type:'op', dev:'busbar', op:'ir'},
+      {t:'确认电压超上限，符合退出条件', type:'confirm'},
+      {t:'退出电容器组', type:'op', dev:'capacitor', op:'capOut'},
+      {t:'检查电容器开关确在分位', type:'confirm'},
+      {t:'检查母线电压回落、功率因数变化', type:'confirm'},
+      {t:'汇报调度并记录', type:'confirm'}
+    ]},
+  { id:'S4', cat:'异常处置', name:'SF6 气压低报警处置', diff:'●●', time:360,
+    intro:'密度继电器发出补气报警（0.44MPa < 0.45MPa），需判断级别并补气。',
+    tip:'补气报警与闭锁是两级信号：报警可运行，闭锁必须停电。',
+    forbid:[
+      {dev:'breaker', op:'open', crit:true, reason:'补气期间操作断路器，气压波动存在风险'},
+      {dev:'breaker', op:'close', crit:true, reason:'补气期间操作断路器，存在灭弧失效风险'}
+    ],
+    init(){ scnBase(false, true, false); setParam(DEVICES[2], 0, '0.44'); },
+    steps:[
+      {t:'确认监控报警：SF6 密度继电器补气报警动作', type:'confirm'},
+      {t:'现场核对压力表读数（0.44MPa，低于 0.45 补气值）', type:'confirm'},
+      {t:'判断：未达 0.42 闭锁值，断路器仍可运行', type:'confirm'},
+      {t:'申请检修班带电补气，办理第二种工作票', type:'confirm'},
+      {t:'补气完成，压力恢复至额定 0.52MPa', type:'confirm'},
+      {t:'复归信号，汇报并记录缺陷处理过程', type:'confirm'}
+    ],
+    done(){ setParam(DEVICES[2], 0, '0.52'); }},
+  { id:'S5', cat:'异常处置', name:'主变油温异常升高', diff:'●●', time:360,
+    intro:'1 号主变油温 74℃ 且持续上升，按规程逐项检查处置。',
+    tip:'先查负荷再启冷却器；油温超过 85℃ 才考虑申请停役。',
+    forbid:[],
+    init(){ scnBase(true, true, false); state.fan.transformer1 = false; setParam(DEVICES[0], 2, '74'); },
+    steps:[
+      {t:'发现油温 74℃ 且持续上升，确认非表计故障', type:'confirm'},
+      {t:'检查负荷电流：未超过额定，排除过载', type:'confirm'},
+      {t:'检查冷却系统：发现风机未启动', type:'confirm'},
+      {t:'启动 1 号主变冷却风机', type:'op', dev:'transformer1', op:'fanOn'},
+      {t:'就地检查风扇运转正常、油流指示正确', type:'confirm'},
+      {t:'观察油温逐步回落至正常范围', type:'confirm'},
+      {t:'汇报调度，加强监视并分析温升原因', type:'confirm'}
+    ]},
+  { id:'S6', cat:'异常处置', name:'直流系统接地查找', diff:'●●●', time:480,
+    intro:'直流绝缘监测装置发接地告警，用拉路查找法定位接地支路。',
+    tip:'拉路顺序：先次要后重要、先室外后室内；拉合间隙不超过 3 秒。',
+    forbid:[],
+    init(){ scnBase(false, true, false); },
+    steps:[
+      {t:'确认绝缘监测装置报警：直流负极对地电压异常', type:'confirm'},
+      {t:'判断接地极性与概况，汇报班长', type:'confirm'},
+      {t:'按「先次要后重要」顺序试拉次要负荷', type:'confirm'},
+      {t:'逐路拉合定位：锁定事故照明支路接地', type:'confirm'},
+      {t:'隔离故障支路，通知检修班处理', type:'confirm'},
+      {t:'恢复充电装置浮充运行', type:'op', dev:'dcPanel', op:'float'},
+      {t:'确认母线电压恢复正常，汇报调度', type:'confirm'}
+    ]},
+  { id:'S7', cat:'事故处理', name:'10kV 母线单相接地', diff:'●●●', time:480,
+    intro:'10kV 母线 B 相金属性接地，消弧线圈动作，须在 2 小时内隔离。',
+    tip:'中性点经消弧线圈接地系统可带故障运行 2 小时，但要尽快选线隔离。',
+    forbid:[],
+    init(){ scnBase(false, true, false); setParam(DEVICES[12], 1, '5'); },
+    steps:[
+      {t:'确认接地告警：10kV 母线 B 相电压降低', type:'confirm'},
+      {t:'检查消弧线圈动作情况与补偿电流', type:'confirm'},
+      {t:'调高消弧线圈档位以减小残流', type:'op', dev:'arcCoil', op:'coilUp'},
+      {t:'检查残流小于 10A，脱谐度合格', type:'confirm'},
+      {t:'接地选线：确定为 10kV 城东线', type:'confirm'},
+      {t:'调度令：将故障线路停电隔离', type:'confirm'},
+      {t:'确认故障已隔离，母线电压恢复正常', type:'confirm'},
+      {t:'汇报调度并做好记录（注意 2 小时限制）', type:'confirm'}
+    ]},
+  { id:'S8', cat:'事故处理', name:'全站失电应急处置', diff:'●●●●', time:540,
+    intro:'系统故障导致全站失电。保住直流、保住通讯、等令恢复。',
+    tip:'黑启动顺序：直流 → 事故照明 → 汇报 → 站用电切换；严禁未得令合闸。',
+    forbid:[
+      {dev:'breaker', op:'close', crit:true, reason:'未取得调度令擅自合闸送电——违反调度纪律，一票否决'}
+    ],
+    init(){ scnBase(false, true, false); setParam(DEVICES[13], 2, '主电源'); },
+    steps:[
+      {t:'确认全站交流失电，检查保护装置直流正常', type:'confirm'},
+      {t:'核对蓄电池组电压，确认保护电源可靠', type:'op', dev:'battery', op:'cellTest'},
+      {t:'开启事故照明，检查通信设备运行', type:'confirm'},
+      {t:'站用电切换至备用电源', type:'op', dev:'stationTrans', op:'stsSwap'},
+      {t:'汇报调度：失电时间、保护动作情况', type:'confirm'},
+      {t:'等待调度令，系统恢复来电', type:'confirm'},
+      {t:'恢复站用主电源供电', type:'op', dev:'stationTrans', op:'stsMain'},
+      {t:'检查充电装置转浮充，站用电全部恢复', type:'op', dev:'dcPanel', op:'float'}
+    ]},
+  { id:'S9', cat:'事故处理', name:'主变火灾应急处置', diff:'●●●●●', time:480,
+    intro:'1 号主变套管爆炸起火。先断电、后灭火，顺序错即触电风险。',
+    tip:'水喷淋对带电设备喷射=人员触电；必须先停电再启泵。',
+    forbid:[
+      {dev:'firePump', op:'pumpOn', crit:true, reason:'设备未停电即启动水喷淋——人员触电风险，一票否决',
+       guard:()=>state.breakerClosed},
+      {dev:'breaker', op:'close', crit:true, reason:'火灾状态下合闸送电——严重违章'}
+    ],
+    init(){ scnBase(true, true, false); setParam(DEVICES[0], 2, '96'); },
+    steps:[
+      {t:'发现 1 号主变着火，立即向调度和消防部门报警', type:'confirm'},
+      {t:'拉开断路器切断电源', type:'op', dev:'breaker', op:'open'},
+      {t:'拉开隔离开关，隔离故障设备', type:'op', dev:'disconnector', op:'dsOpen'},
+      {t:'确已停电后，启动消防水泵', type:'op', dev:'firePump', op:'pumpOn'},
+      {t:'确认水喷雾系统对准着火设备投运', type:'confirm'},
+      {t:'组织人员疏散，设置警戒线', type:'confirm'},
+      {t:'清理现场，确认火势熄灭无复燃', type:'confirm'}
+    ]},
+  { id:'S10', cat:'专项演练', name:'新设备验收巡视', diff:'●●', time:540,
+    intro:'对全站新投运设备进行验收巡视，用红外测温与例行测试发现缺陷。',
+    tip:'巡视不是走过场：每台设备都要动手测、对比历史数据。',
+    forbid:[
+      {dev:'breaker', op:'close', crit:true, reason:'验收期间擅动运行设备'}
+    ],
+    init(){ scnBase(true, true, false); },
+    steps:[
+      {t:'领取验收清单，核对设备铭牌与台账一致', type:'confirm'},
+      {t:'红外测温 1 号主变，检查套管接头发热', type:'op', dev:'transformer1', op:'ir'},
+      {t:'红外测温 2 号主变', type:'op', dev:'transformer2', op:'ir'},
+      {t:'测量 CT 二次电流，核对变比正确', type:'op', dev:'ct', op:'measure'},
+      {t:'避雷器泄漏电流试验并记录初值', type:'op', dev:'arrester', op:'leak'},
+      {t:'测量终端塔接地电阻', type:'op', dev:'tower', op:'ground'},
+      {t:'母线红外测温，检查接头与绝缘子', type:'op', dev:'busbar', op:'ir'},
+      {t:'汇总缺陷清单：3 处一般缺陷、0 处危急缺陷', type:'confirm'},
+      {t:'生成验收报告，移交生产运行', type:'confirm'}
+    ]},
+];
+
+/* 基础状态复位 */
+function scnBase(breakerClosed, dsClosed, earthClosed) {
+  state.breakerClosed = breakerClosed; state.dsClosed = dsClosed; state.earthClosed = earthClosed;
+  const bk = DEVICES[2], ds = DEVICES[3], et = DEVICES[4];
+  setParam(bk, 3, breakerClosed ? '合位' : '分位');
+  setParam(ds, 0, dsClosed ? '合闸' : '分闸');
+  setParam(et, 0, earthClosed ? '合闸' : '分闸');
+  if (lampRefs.breaker) lampRefs.breaker.material.color.setHex(breakerClosed ? 0x22b573 : 0xef4444);
+  if (dsGroups.length) { dsGroups[0].left.rotation.y = dsClosed ? 0 : Math.PI / 2 * .92; dsGroups[0].right.rotation.y = dsClosed ? 0 : -Math.PI / 2 * .92; }
+  if (rotors.earth) rotors.earth.rotation.x = earthClosed ? 0 : -1.2;
+}
+
+const scn = { active: null, idx: 0, outOfOrder: 0, violations: [], startAt: 0, lastInterfere: 0, done: false };
+
+function scnStart(s) {
+  scn.active = s; scn.idx = 0; scn.outOfOrder = 0; scn.violations = []; scn.done = false;
+  scn.startAt = performance.now(); scn.lastInterfere = performance.now();
+  if (s.init) s.init();
+  document.getElementById('scnList').classList.add('hide');
+  document.getElementById('scnRun').classList.add('show');
+  document.getElementById('rsTitle').textContent = s.name;
+  pushEvent('演练开始：' + s.name, true);
+  toast('演练开始：' + s.intro);
+  scnRenderSteps();
+  const firstDev = s.steps.find(x => x.dev);
+  if (firstDev) {
+    const dv = DEVICES.find(d => d.id === firstDev.dev);
+    if (dv && dv.anchor) {
+      const p = new THREE.Vector3(); dv.anchor.getWorldPosition(p);
+      controls.target.copy(p); camTween(p.clone().add(new THREE.Vector3(10, 10, 12)));
+    }
+  }
+}
+function scnRenderSteps() {
+  const s = scn.active; if (!s) return;
+  const box = document.getElementById('rsSteps');
+  box.innerHTML = '';
+  s.steps.forEach((st, i) => {
+    const el = document.createElement('div');
+    el.className = 'step' + (i < scn.idx ? ' done' : i === scn.idx ? ' now' : '');
+    let inner = `<div class="idx">${i < scn.idx ? '✓' : i + 1}</div><div class="txt">${st.t}`;
+    if (i === scn.idx) {
+      if (st.type === 'confirm') {
+        inner += `<br><button class="cfm" data-i="${i}">确认完成</button>`;
+      } else {
+        const dv = DEVICES.find(d => d.id === st.dev);
+        inner += `<div class="devhint">在 3D 场景中点击「${dv ? dv.name : st.dev}」执行相应操作</div>`;
+      }
+    }
+    inner += '</div>';
+    el.innerHTML = inner;
+    box.appendChild(el);
+  });
+  const cfm = box.querySelector('.cfm');
+  if (cfm) cfm.onclick = () => scnComplete();
+  document.getElementById('rsProg').textContent = scn.idx + '/' + s.steps.length;
+}
+function scnComplete() {
+  const s = scn.active; if (!s || scn.done) return;
+  const finished = s.steps[scn.idx];
+  scn.idx++;
+  if (scn.idx >= s.steps.length) {
+    pushEvent('已完成：' + finished.t, true);
+    if (s.done) s.done();
+    scnFinish(true);
+  } else {
+    pushEvent('已完成：' + finished.t, true);
+    scnRenderSteps();
+  }
+}
+function scnObserve(dev, key) {
+  const s = scn.active; if (!s || scn.done) return false;
+  for (const f of (s.forbid || [])) {
+    if (f.dev === dev.id && f.op === key) {
+      if (f.guard && !f.guard()) continue;
+      scn.violations.push({ crit: !!f.crit, reason: f.reason });
+      pushEvent((f.crit ? '[违规]' : '[警告]') + ' ' + f.reason, true);
+      if (f.crit) scnFinish(false);
+      return true; /* 拦截该操作 */
+    }
+  }
+  const st = s.steps[scn.idx];
+  if (st && st.type === 'op' && st.dev === dev.id && st.op === key) {
+    scnComplete();
+  } else {
+    const later = s.steps.findIndex((x, i) => i > scn.idx && x.type === 'op' && x.dev === dev.id && x.op === key);
+    if (later >= 0) { scn.outOfOrder++; pushEvent('[警告] 操作顺序不当：跳过了前置步骤', true); }
+  }
+  return false;
+}
+function scnFinish(success) {
+  const s = scn.active; scn.done = true;
+  const elapsed = Math.floor((performance.now() - scn.startAt) / 1000);
+  const total = s.steps.length;
+  const comp = success ? 100 : Math.round((scn.idx / total) * 100);
+  const order = Math.max(0, 100 - scn.outOfOrder * 10);
+  const critN = scn.violations.filter(v => v.crit).length;
+  const warnN = scn.violations.length - critN;
+  const safety = critN ? 0 : Math.max(0, 100 - warnN * 25);
+  const score = critN ? 0 : Math.round(comp * .4 + order * .2 + safety * .4);
+  const verdict = critN ? '安全一票否决' : score >= 90 ? '优秀' : score >= 75 ? '合格' : score >= 60 ? '勉强合格' : '不合格';
+  let best = {};
+  try { best = JSON.parse(localStorage.getItem('gtCampusScores') || '{}'); } catch (e) {}
+  const old = best[s.id] || 0;
+  if (score > old) { best[s.id] = score; try { localStorage.setItem('gtCampusScores', JSON.stringify(best)); } catch (e) {} }
+  document.getElementById('rvVerdict').textContent = verdict;
+  document.getElementById('rvVerdict').style.color = critN ? 'var(--red)' : score >= 75 ? 'var(--green)' : 'var(--amber)';
+  document.getElementById('rvSub').textContent = s.name + ' · 用时 ' + fmtT(elapsed) + (success ? '' : ' · 未完成全部步骤');
+  document.getElementById('rvScores').innerHTML = `
+    <div class="score-cell"><div class="k">完整性</div><div class="v">${comp}</div></div>
+    <div class="score-cell"><div class="k">顺序</div><div class="v">${order}</div></div>
+    <div class="score-cell"><div class="k">安全</div><div class="v" style="color:${safety === 0 ? 'var(--red)' : 'var(--green)'}">${safety}</div></div>
+    <div class="score-cell total"><div class="k">综合得分（历史最佳 ${best[s.id] || score}）</div><div class="v">${score}</div></div>`;
+  document.getElementById('rvVio').innerHTML = scn.violations.length
+    ? scn.violations.map(v => `<div class="vio ${v.crit ? 'crit' : 'warn'}"><span class="tag">${v.crit ? '否决' : '警告'}</span>${v.reason}</div>`).join('')
+    : '<div class="vio warn" style="background:#e8f7ef;color:#177a4c"><span class="tag" style="background:var(--green)">满分</span>全程零违规，安全意识到位</div>';
+  document.getElementById('rvTip').innerHTML = '<b>复盘要点：</b>' + s.tip;
+  document.getElementById('resultMask').classList.add('show');
+  pushEvent((success ? '演练完成：' : '演练中止：') + s.name + '，得分 ' + score, true);
+  scnRenderIdle();
+}
+function scnQuit() { if (scn.active && !scn.done) scnFinish(false); }
+function fmtT(sec) { return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); }
+function scnTick() {
+  if (!scn.active || scn.done) return;
+  const el = document.getElementById('rsTime');
+  if (el) el.textContent = fmtT(Math.floor((performance.now() - scn.startAt) / 1000));
+  if (performance.now() - scn.lastInterfere > 32000) {
+    scn.lastInterfere = performance.now();
+    const it = INTERFERE[Math.floor(Math.random() * INTERFERE.length)];
+    toast(it); pushEvent('干扰事件：' + it, false);
+  }
+}
+function scnRenderIdle() {
+  const list = document.getElementById('scnList');
+  list.innerHTML = ''; list.classList.remove('hide');
+  document.getElementById('scnRun').classList.remove('show');
+  let best = {};
+  try { best = JSON.parse(localStorage.getItem('gtCampusScores') || '{}'); } catch (e) {}
+  [...new Set(SCENARIOS.map(s => s.cat))].forEach(cat => {
+    const t = document.createElement('div'); t.className = 'scn-cat-t'; t.textContent = cat; list.appendChild(t);
+    SCENARIOS.filter(s => s.cat === cat).forEach(s => {
+      const el = document.createElement('div'); el.className = 'scn-item';
+      el.innerHTML = `<span class="cat" style="background:${SCN_CAT_C[s.cat]}">${s.cat}</span>
+        <span class="nm">${s.name}<br><small style="color:#94a3b8;font-weight:400">${s.diff} · 目标 ${Math.floor(s.time / 60)} 分钟</small></span>
+        ${best[s.id] ? `<span class="best">${best[s.id]}分</span>` : ''}
+        <span class="go">▶</span>`;
+      el.onclick = () => scnStart(s);
+      list.appendChild(el);
+    });
+  });
+}
+function scnAgain() {
+  const s = scn.active;
+  document.getElementById('resultMask').classList.remove('show');
+  if (s) scnStart(s);
+}
+function scnClose() {
+  document.getElementById('resultMask').classList.remove('show');
+  scn.active = null;
+  scnRenderIdle();
+}
+
+/* 分区标注：彩色描边 + 悬浮标签 + 主变区接地网（对照电力科普分区） */
+const zoneOverlay = new THREE.Group(); zoneOverlay.visible = false; scene.add(zoneOverlay);
+function zoneRing(x1, z1, x2, z2, color, label) {
+  const y = .55, t = .18;
+  const m = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: .95 });
+  const mk = (w, d, x, z) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, .06, d), m); b.position.set(x, y, z); zoneOverlay.add(b); };
+  mk(x2 - x1 + t * 2, t, (x1 + x2) / 2, z1); mk(x2 - x1 + t * 2, t, (x1 + x2) / 2, z2);
+  mk(t, z2 - z1, x1, (z1 + z2) / 2); mk(t, z2 - z1, x2, (z1 + z2) / 2);
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64;
+  const c = cv.getContext('2d');
+  c.fillStyle = 'rgba(6,12,28,.85)'; c.fillRect(0, 0, 256, 64);
+  c.strokeStyle = '#' + color.toString(16).padStart(6, '0'); c.lineWidth = 4; c.strokeRect(3, 3, 250, 58);
+  c.fillStyle = '#ffffff'; c.font = "800 30px 'Microsoft YaHei'"; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText(label, 128, 34);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false }));
+  sp.scale.set(13, 3.25, 1); sp.position.set((x1 + x2) / 2, 6.8, (z1 + z2) / 2); zoneOverlay.add(sp);
+}
+zoneRing(-52, -8, -30, 12, 0xff6b6b, '主变压器区');
+zoneRing(-24, -36, 36, -4, 0xf0b35a, '110kV 配电装置区');
+zoneRing(-26, 13, -10, 27, 0x5b9bff, '10kV 配电装置区');
+zoneRing(26, -14, 48, 12, 0x35d08e, '无功补偿区');
+zoneRing(0, 13, 37, 27, 0xb07cff, '二次系统 · 控制楼');
+/* 主变区接地网：橙色发光网格 */
+(function () {
+  const gh = new THREE.GridHelper(26, 8, 0xff9a3d, 0xff9a3d);
+  gh.position.set(-41, .34, 2);
+  gh.material.transparent = true; gh.material.opacity = .75;
+  zoneOverlay.add(gh);
+})();
+document.getElementById('btnZone').onclick = () => {
+  zoneOverlay.visible = !zoneOverlay.visible;
+  document.getElementById('btnZone').classList.toggle('on', zoneOverlay.visible);
+  toast(zoneOverlay.visible ? '分区标注：五区一网，对照电力科普分区图' : '已关闭分区标注');
+};
+
+/* ═════════ 巡检任务系统（对照 Unity 数字孪生巡检视频：菜单 → 飞行 → 判定/读表） ═════════ */
+/* 落点计算：从设备包围盒中心 + lookY（目标高度）+ lookOff [dx,dz]（部件偏移）+ camOff（相机相对目标偏移）动态求出 */
+function devCenter(id) {
+  let obj = null;
+  if (id === 'neutral') obj = neutralAnchor;
+  else { const d = DEVICES.find(v => v.id === id); obj = d && d.anchor; }
+  if (!obj) return null;
+  obj.updateWorldMatrix(true, true);
+  /* 只用实体网格求包围盒：剔除 TubeGeometry（引流线跨半场，会把中心拉飞） */
+  const b = new THREE.Box3(), tmp = new THREE.Box3();
+  obj.traverse(o => {
+    if (o.isMesh && o.geometry && o.geometry.type !== 'TubeGeometry') { tmp.setFromObject(o); b.union(tmp); }
+  });
+  if (b.isEmpty()) return obj.getWorldPosition(new THREE.Vector3());
+  const sz = b.getSize(new THREE.Vector3());
+  /* 包围盒异常巨大（挂了跨场导线）→ 回退锚点原点 */
+  if (sz.x > 40 || sz.z > 40 || sz.y > 40) return obj.getWorldPosition(new THREE.Vector3());
+  return b.getCenter(new THREE.Vector3());
+}
+const PATROL = [
+  { name: '主变本体外观检查', dev: 'transformer1', lookY: 3, camOff: [6.5, 1.4, 8.5], kind: 'check', desc: '本体无渗漏油，油温、油色正常，无放电痕迹与异味', devName: '1 号主变' },
+  { name: '主变基座检查', dev: 'transformer1', lookY: .8, camOff: [4, 1.3, 6], kind: 'check', desc: '本体基础不下沉、不开裂，外观无锈蚀', devName: '1 号主变基座' },
+  { name: '储油柜油位检查', dev: 'transformer1', lookY: 4.6, camOff: [3.5, 1.6, 4], kind: 'meter', meter: { label: '储油柜油位表', val: '6.2', unit: '刻度格', bar: 62 }, devName: '1 号主变储油柜' },
+  { name: '呼吸器硅胶检查', dev: 'transformer1', lookY: 3.1, lookOff: [-1.55, .95], camOff: [-2.4, .4, 3.2], kind: 'check', desc: '硅胶颜色正常（受潮变色不超过 2/3），油杯正常呼吸', devName: '1 号主变呼吸器' },
+  { name: '瓦斯继电器检查', dev: 'transformer1', lookY: 4.1, lookOff: [.9, .75], camOff: [2.2, .9, 2.6], kind: 'check', desc: '继电器内充满油、无气体聚集，防雨罩完好', devName: '1 号主变瓦斯继电器' },
+  { name: '铁芯接地电流测量', dev: 'transformer1', lookY: .9, lookOff: [-2, 1.2], camOff: [-1.6, 1.2, 4.5], kind: 'meter', meter: { label: '钳形电流表', val: '0.08', unit: 'A', bar: 12 }, devName: '1 号主变铁芯接地' },
+  { name: '散热器及冷却风机检查', dev: 'transformer1', lookY: 1.9, lookOff: [0, -2.1], camOff: [0, .9, -4.5], kind: 'check', desc: '散热器无渗漏油，风机运转正常、无异音', devName: '1 号主变散热器' },
+  { name: '中性点接地刀闸检查', dev: 'neutral', lookY: 1.2, camOff: [3, 1.8, 4.5], kind: 'check', desc: '刀闸位置与运行方式相符，接触良好、无过热', devName: '主变中性点接地刀闸' },
+  { name: '断路器外观与压力检查', dev: 'breaker', lookY: 2.6, camOff: [4.5, 1.2, 5], kind: 'meter', meter: { label: 'SF6 气体压力表', val: '0.55', unit: 'MPa', bar: 58 }, devName: '110kV 断路器' },
+  { name: '隔离开关触头检查', dev: 'disconnector', lookY: 2, camOff: [4.5, .9, 4.5], kind: 'check', desc: '触头接触良好、无过热变色，操作机构完好', devName: '110kV 隔离开关' },
+  { name: '接地刀闸检查', dev: 'earthing', lookY: 1.1, camOff: [4, 1.1, 4], kind: 'check', desc: '分合位置正确，机构闭锁完好，接地连接可靠', devName: '110kV 接地刀闸' },
+  { name: '电流互感器检查', dev: 'ct', lookY: 2.2, camOff: [4.5, 1, 4.5], kind: 'check', desc: '无渗漏油，油位正常，二次端子箱密封良好', devName: '110kV 电流互感器' },
+  { name: '避雷器泄漏电流检查', dev: 'arrester', lookY: 1.9, camOff: [3.5, .8, 4], kind: 'meter', meter: { label: '泄漏电流监测仪', val: '0.45', unit: 'mA', bar: 45 }, devName: '110kV 避雷器' },
+  { name: '10kV 开关柜巡检', dev: 'switchgear', lookY: 2, camOff: [5, 1.5, 7], kind: 'check', desc: '柜面指示灯与运行方式相符，无异味、无异音', devName: '10kV 开关柜室' },
+  { name: '主控保护屏检查', dev: 'protect', lookY: 2.5, camOff: [6, 1, 7], kind: 'check', desc: '无异常告警光字，压板位置与定值单相符', devName: '主控室保护屏' },
+];
+const patrol = { on: false, cur: -1, anim: null, done: new Set(), bad: new Set() };
+const pget = id => document.getElementById(id);
+function ptRender() {
+  pget('ptProg').textContent = (patrol.done.size + patrol.bad.size) + '/' + PATROL.length;
+  pget('ptList').innerHTML = PATROL.map((t, i) => {
+    const bad = patrol.bad.has(i), done = patrol.done.has(i);
+    const cls = bad ? 'bad' : done ? 'done' : '';
+    const mark = bad ? '!' : done ? '√' : (i + 1);
+    const go = (bad || done) ? '已完成' : '去巡检';
+    return `<div class="pt-row ${cls}" data-i="${i}"><span class="no">${mark}</span><span class="nm">${t.name}</span><span class="go">${go}</span></div>`;
+  }).join('');
+  [...pget('ptList').children].forEach(row => row.onclick = () => patrolStart(+row.dataset.i));
+}
+function patrolStart(i) {
+  const t = PATROL[i];
+  const c = devCenter(t.dev);
+  if (!c) { toast('目标设备未找到：' + t.dev); return; }
+  const look = new THREE.Vector3(
+    c.x + (t.lookOff ? t.lookOff[0] : 0), Math.max(t.lookY, .8),
+    c.z + (t.lookOff ? t.lookOff[1] : 0));
+  let cam = look.clone().add(new THREE.Vector3(...t.camOff));
+  /* ── 相机安全校正 ── */
+  cam.y = Math.max(cam.y, 1.6);
+  cam.x = THREE.MathUtils.clamp(cam.x, -64, 64);
+  cam.z = THREE.MathUtils.clamp(cam.z, -46, 46);
+  /* 从目标射向相机：被设备挡住（会贴脸/穿模）就退到遮挡物前 1.2m */
+  {
+    const dir = new THREE.Vector3().subVectors(cam, look);
+    const dist = dir.length(); dir.normalize();
+    const rc = new THREE.Raycaster(look.clone(), dir, .4, dist);
+  const hits = rc.intersectObjects(pickables, false)
+      .filter(h => h.object.userData.dev && h.distance < dist - .6);
+  if (hits.length) cam = look.clone().add(dir.multiplyScalar(Math.max(hits[0].distance - 1.2, 2.2)));
+  window.__patrolRay = { dist, hits: hits.map(h => ({ d: +h.distance.toFixed(2), dev: h.object.userData.dev.id })) };
+  }
+  cam.y = Math.max(cam.y, 1.6);
+  window.__patrolDebug = { c: c.toArray(), look: look.toArray(), cam: cam.toArray() };
+  /* 巡检特写距离都小于全局 minDistance=8，不放开会被 OrbitControls 每帧推到 8m 外（视角飘走的根因） */
+  controls.minDistance = Math.max(1, Math.min(8, cam.distanceTo(look) * .55));
+  patrol.cur = i; patrol.on = true; patrol.anim = null;
+  camAnim = null;
+  patrol.anim = {
+    p0: camera.position.clone(), p1: cam,
+    t0: controls.target.clone(), t1: look, t: 0
+  };
+  ptRender();
+  [...pget('ptList').children].forEach((r, j) => r.classList.toggle('now', j === i));
+  toast('巡检：' + t.name);
+}
+function patrolTick() {
+  if (!patrol.anim) return;
+  const a = patrol.anim;
+  a.t = Math.min(1, a.t + .014);
+  const k = 1 - Math.pow(1 - a.t, 2);
+  camera.position.lerpVectors(a.p0, a.p1, k);
+  camera.position.y = Math.max(camera.position.y, 1.4);
+  controls.target.lerpVectors(a.t0, a.t1, k);
+  if (a.t >= 1) { patrol.anim = null; openCheck(PATROL[patrol.cur]); }
+}
+function openCheck(t) {
+  pget('checkMask').classList.add('show');
+  const isMeter = t.kind === 'meter';
+  pget('ckCheck').style.display = isMeter ? 'none' : 'block';
+  pget('ckMeter').style.display = isMeter ? 'block' : 'none';
+  if (isMeter) {
+    pget('mtTitle').textContent = t.meter.label + ' · ' + t.devName;
+    pget('mtVal').textContent = t.meter.val;
+    pget('mtUnit').textContent = '单位 ' + t.meter.unit;
+    pget('mtBar').style.width = t.meter.bar + '%';
+  } else {
+    pget('ckTitle').textContent = t.name;
+    pget('ckDesc').textContent = t.desc;
+    pget('ckTip').textContent = '巡检对象：' + t.devName;
+  }
+}
+function ptClose() { pget('checkMask').classList.remove('show'); controls.minDistance = 8; }
+function ptFinish(ok) {
+  const i = patrol.cur, t = PATROL[i];
+  if (i < 0) return;
+  if (ok) patrol.done.add(i); else patrol.bad.add(i);
+  ptClose();
+  pushEvent((ok ? '[巡检正常] ' : '[巡检异常] ') + t.name, false);
+  toast(ok ? t.name + '：正常' : t.name + '：异常，已记录上报');
+  ptRender();
+  if (patrol.done.size + patrol.bad.size === PATROL.length) {
+    pushEvent('巡检任务全部完成（异常 ' + patrol.bad.size + ' 项）', true);
+    toast('15 项巡检全部完成，异常 ' + patrol.bad.size + ' 项');
+  }
+  patrol.cur = -1;
+}
+pget('ckCancel').onclick = ptClose;
+pget('ckOk').onclick = () => ptFinish(true);
+pget('ckBad').onclick = () => ptFinish(false);
+pget('mtOk').onclick = () => ptFinish(true);
+pget('mtReport').onclick = () => ptFinish(false);
+pget('checkMask').addEventListener('click', e => { if (e.target === pget('checkMask')) ptClose(); });
+pget('btnPatrol').onclick = function () {
+  const next = PATROL.findIndex((_, i) => !patrol.done.has(i) && !patrol.bad.has(i));
+  if (next < 0) { toast('15 项已全部巡完，可刷新页面重巡'); return; }
+  this.classList.add('on');
+  patrolStart(next);
+};
+pget('btnPatrolAll').onclick = () => {
+  const rest = PATROL.map((_, i) => i).filter(i => !patrol.done.has(i) && !patrol.bad.has(i));
+  if (!rest.length) { toast('15 项已全部巡完，可刷新页面重巡'); return; }
+  patrolStart(rest[(Math.random() * rest.length) | 0]);
+};
+ptRender();
+
+/* ═════════ GLTF 高清模型（.glb 替换程序化设备，Sketchfab/Blender 导出均可） ═════════ */
+const MODEL_DIR = './models/';
+/* f: 文件名  ry: 绕 Y 轴旋转（度）  s: 缩放微调（1 = 自动按程序化设备高度匹配） */
+const MODEL_MAP = {
+  transformer1: { f: 'transformer.glb', ry: 0, s: 1 },
+  transformer2: { f: 'transformer.glb', ry: 0, s: 1 },
+  switchgear:   { f: 'switchgear.glb',  ry: 0, s: 1 },
+  stationTrans: { f: 'stationtrans.glb', ry: 0, s: 1 },
+};
+const gltfState = { loader: new GLTFLoader(), loaded: new Set(), blobDone: new Set(), cache: {} };
+function applyGltf(devId, gltf, cfg) {
+  const d = DEVICES.find(v => v.id === devId);
+  if (!d || !d.anchor || gltfState.loaded.has(devId)) return false;
+  cfg = cfg || {};
+  const root = gltf.scene;
+  /* 归一化：按程序化设备包围盒高度等比缩放，水平居中、底面对齐到设备基座 */
+  const box = new THREE.Box3().setFromObject(d.anchor);
+  if (box.isEmpty()) return false;
+  const size = box.getSize(new THREE.Vector3());
+  const mb = new THREE.Box3().setFromObject(root);
+  const ms = mb.getSize(new THREE.Vector3());
+  const s = (size.y || 3) / (ms.y || 1) * (cfg.s || 1);
+  root.scale.setScalar(s);
+  if (cfg.ry) root.rotation.y = cfg.ry * Math.PI / 180;
+  const mr = new THREE.Box3().setFromObject(root);   // 旋转后重算
+  const mc = mr.getCenter(new THREE.Vector3());
+  root.position.set(-mc.x, -mr.min.y, -mc.z);        // 底面中心 → 原点（世界系）
+  const wrapG = new THREE.Group();
+  wrapG.position.set(d.anchor.position.x, box.min.y, d.anchor.position.z);
+  wrapG.add(root);
+  wrapG.traverse(o => {
+    if (o.isMesh) {
+      o.userData.dev = d; pickables.push(o);
+      o.castShadow = true; o.receiveShadow = true;
+    }
+  });
+  d.anchor.visible = false;          // 程序化模型隐藏（保留可随时切回）
+  scene.add(wrapG);
+  d.gltfWrap = wrapG;
+  gltfState.loaded.add(devId);
+  return true;
+}
+function loadGltfFor(devId, url, onOk, onErr) {
+  const cfg = MODEL_MAP[devId];
+  const use = g => { if (applyGltf(devId, { scene: g.scene.clone(true) }, cfg)) onOk && onOk(); else onErr && onErr(); };
+  if (gltfState.cache[url]) { use(gltfState.cache[url]); return; }
+  gltfState.loader.load(url, g => {
+    gltfState.cache[url] = g;      // 几何体共享：2 号主变 clone 复用，不再走网络
+    use(g);
+  }, undefined, () => onErr && onErr());
+}
+/* 一键加载 models/ 目录下的全部模型（需要 http 服务；file:// 会被浏览器拦） */
+function gltfAutoLoad(silent) {
+  const ids = Object.keys(MODEL_MAP).filter(id => !gltfState.loaded.has(id));
+  if (!ids.length) { if (!silent) toast('高清模型已全部加载'); return; }
+  let ok = 0, miss = 0;
+  ids.forEach(id => loadGltfFor(id, MODEL_DIR + MODEL_MAP[id].f,
+    () => {
+      ok++;
+      if (ok + miss === ids.length && !silent) toast('高清模型加载成功 ' + ok + ' 台');
+    },
+    () => {
+      miss++;
+      if (ok + miss === ids.length && !silent) {
+        if (!ok) toast('未找到 models/ 目录模型（file:// 打开会被拦截），请点「导入GLB」选择本地文件');
+        else toast('已加载 ' + ok + ' 台，' + miss + ' 台缺文件，可点「导入GLB」补齐');
+      }
+    }));
+}
+/* 本地 .glb 导入（file:// 下也可用）：文件名即设备名，transformer 同时替换两台主变 */
+document.getElementById('glbFile').addEventListener('change', e => {
+  const files = [...e.target.files]; if (!files.length) return;
+  let pending = 0, finished = 0; const bad = [];
+  const chk = () => {
+    finished++;
+    if (finished === pending) {
+      toast('已导入，当前共 ' + gltfState.loaded.size + ' 台高清模型' + (bad.length ? '；无法识别：' + bad.join('、') : ''));
+      e.target.value = '';
+    }
+  };
+  files.forEach(f => {
+    const base = f.name.replace(/\.(glb|gltf)$/i, '').toLowerCase();
+    const url = URL.createObjectURL(f);
+    if (base === 'transformer') { pending += 2; loadGltfFor('transformer1', url, chk, chk); loadGltfFor('transformer2', url, chk, chk); }
+    else if (MODEL_MAP[base] || Object.values(MODEL_MAP).some(v => v.f === base + '.glb')) {
+      const id = MODEL_MAP[base] ? base : Object.keys(MODEL_MAP).find(k => MODEL_MAP[k].f === base + '.glb');
+      pending++; loadGltfFor(id, url, chk, chk);
+    }
+    else { bad.push(f.name); }
+  });
+  if (!pending) { toast('无法识别文件名，应为：' + Object.values(MODEL_MAP).join(' / ')); e.target.value = ''; }
+});
+document.getElementById('btnGltf').onclick = () => gltfAutoLoad(false);
+document.getElementById('btnGlbImport').onclick = () => document.getElementById('glbFile').click();
+/* 启动时静默尝试自动加载（http 服务下生效；file:// 失败不打扰） */
+gltfAutoLoad(true);
+
+/* 昼夜与降雨 */
+let night = false, rainOn = false, rainObj = null;
+function applyNight(v, silent) {
+  night = v;
+  const skyC = v ? 0x04070f : 0xbcd8ee;
+  scene.background.set(skyC); scene.fog.color.set(skyC);
+  domeMat.map = v ? skyNight : skyDay; domeMat.needsUpdate = true;
+  stars.visible = v;
+  scene.children.forEach(o => {
+    if (o.type === 'HemisphereLight') { o.intensity = v ? .22 : 1.05; o.color.setHex(v ? 0x8fb0e0 : 0xffffff); o.groundColor.setHex(v ? 0x1a2742 : 0x93a9c9); }
+    if (o.type === 'DirectionalLight') { o.intensity = v ? .16 : 1.35; o.color.setHex(v ? 0xcfe0ff : 0xfff1d6); }
+  });
+  cloudMats.forEach(m => { m.opacity = v ? .25 : .85; });
+  lampGlows.forEach(b => b.material.color.setHex(v ? 0xfff3cf : 0xffe6a8));
+  nightStrips.forEach(s => s.material.opacity = v ? .8 : .18);
+  document.getElementById('btnNight').classList.toggle('on', v);
+  if (!silent) toast(v ? '夜间模式：巡视重点转为看灯带、听声音、查放电' : '白天模式：巡视重点为外观、油位、测温');
+}
+function applyRain(v) {
+  rainOn = v;
+  document.getElementById('btnRain').classList.toggle('on', v);
+  if (v && !rainObj) {
+    const N = 420, pos = new Float32Array(N * 6);
+    for (let i = 0; i < N; i++) {
+      const x = (Math.random() - .5) * 220, z = (Math.random() - .5) * 220, y = Math.random() * 70;
+      pos[i * 6] = x; pos[i * 6 + 1] = y; pos[i * 6 + 2] = z;
+      pos[i * 6 + 3] = x; pos[i * 6 + 4] = y - 1.4; pos[i * 6 + 5] = z;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    rainObj = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0x9fb8dd, transparent: true, opacity: .5 }));
+    scene.add(rainObj);
+  }
+  if (rainObj) rainObj.visible = v;
+  toast(v ? '降雨模式：雨后重点查瓷套闪络、端子箱受潮' : '降雨停止');
+}
+function tickRain(dt) {
+  if (!rainOn || !rainObj) return;
+  const p = rainObj.geometry.attributes.position;
+  for (let i = 0; i < p.count; i += 2) {
+    let y = p.getY(i) - dt * 42;
+    if (y < 0) y = 70 + Math.random() * 10;
+    p.setY(i, y); p.setY(i + 1, y - 1.4);
+  }
+  p.needsUpdate = true;
+}
+document.getElementById('btnNight').onclick = () => applyNight(!night);
+document.getElementById('btnRain').onclick = () => applyRain(!rainOn);
+document.getElementById('rsQuit').onclick = scnQuit;
+document.getElementById('rvAgain').onclick = scnAgain;
+document.getElementById('rvClose').onclick = scnClose;
+/* 快捷切换：下拉直接跳 + 随机抽取 */
+(function scnQuickInit() {
+  const sel = document.getElementById('scnSel');
+  sel.innerHTML = '<option value="">快速选择情景…</option>' +
+    SCENARIOS.map(s => `<option value="${s.id}">${s.cat}｜${s.name}</option>`).join('');
+  sel.onchange = () => {
+    const s = SCENARIOS.find(x => x.id === sel.value);
+    if (s) { sel.value = ''; scnStart(s); }
+  };
+  document.getElementById('scnRand').onclick = () => {
+    const pool = SCENARIOS.filter(s => !scn.active || s.id !== scn.active.id);
+    scnStart(pool[Math.floor(Math.random() * pool.length)]);
+  };
+  document.getElementById('rsBack').onclick = () => {
+    scn.active = null; scn.done = false;
+    document.getElementById('resultMask').classList.remove('show');
+    scnRenderIdle();
+  };
+})();
+scnRenderIdle();
+
+/* ═════════ 教学模式：小电带逛（语音讲解 + 自动带路 + 互动） ═════════ */
+const teach = { on: false, i: 0, learned: false, walking: false, phase: 'idle', path: [], pi: 0, autoT: null };
+const STATIONS = [
+  { dev: 'gate', t: '第 1 站 · 进站规矩',
+    k: '进变电站第一课不是设备，是<b>规矩</b>：进门先登记、交出火种、戴好安全帽。站里全是高压设备，<b>必须两人一组</b>才能工作，任何情况下都不能单独进设备区乱走乱碰。' },
+  { dev: 'transformer1', t: '第 2 站 · 主变压器（全站的心脏）',
+    k: '它把 110kV 高电压降到 10.5kV 供全站使用。巡检先看三样：<b>油位表</b>、<b>油温表</b>、再<b>听声音</b>——"嗡嗡"均匀是正常，出现"噼啪"放电声要立刻汇报。风扇是给主变降温的，油温高就得多开几组。' },
+  { dev: 'breaker', t: '第 3 站 · 断路器（会自动跳闸的大开关）',
+    k: '故障时它能在 <b>0.06 秒</b>内自动分闸，是保护电网的第一道闸门。红线记忆：<b>地刀没拉开时绝不能合断路器</b>——带地线合闸等于人为制造短路爆炸。' },
+  { dev: 'disconnector', t: '第 4 站 · 隔离开关（没有灭弧能力的刀闸）',
+    k: '它只能"空载"操作：<b>断路器先分闸</b>，才能拉合隔离开关。带负荷拉闸会产生巨大电弧，烧设备也伤人。看图上两根支柱会水平旋转 90°，那就是它的分合动作。' },
+  { dev: 'earthing', t: '第 5 站 · 接地刀闸（检修时的保命刀）',
+    k: '设备停电检修前，顺序是：<b>停电 → 验电 → 合接地刀</b>。合上地刀等于把电放走，防止有人误送电伤到检修的人。送电时顺序反过来，<b>先拉地刀</b>再合开关。' },
+  { dev: 'ct', t: '第 6 站 · 电流互感器（大电流变小电流）',
+    k: '它把几千安的大电流缩成 5A 以下给仪表和保护装置用。铁律：<b>二次侧绝不能开路</b>，开路会打出高压电弧！巡视看两点：油位正常、无渗油。' },
+  { dev: 'arrester', t: '第 7 站 · 避雷器（雷电泄放的卫士）',
+    k: '雷击线路时，它把雷电波泄放进大地，保护站内设备。巡视看<b>动作计数器</b>：次数突然增多说明附近落雷频繁；再看<b>泄漏电流表</b>有无超标。' },
+  { dev: 'busbar', t: '第 8 站 · 母线（全站电流的主干道）',
+    k: '所有设备的电都从母线汇流分配。巡视重点是用<b>红外测温仪</b>看接头：接头温度比别处高 10℃ 就要登记上报，发红发烫是事故前兆。' },
+  { dev: 'switchgear', t: '第 9 站 · 10kV 开关柜（带五防联锁的铁柜）',
+    k: '柜内自带"五防"机械联锁，防误分误合、防带电挂地线等五种误操作。手车摇进摇出要听到<b>"咔哒"到位声</b>；柜面红绿灯就是它的状态语言：红灯合闸运行、绿灯分闸。' },
+  { dev: 'protect', t: '第 10 站 · 主控楼保护室（全站的大脑）',
+    k: '保护装置像保镖，故障时<b>毫秒级</b>发出跳闸命令。进主控楼先看有无<b>告警灯</b>亮起，抄录数据要"眼看、手记、再核对"三步走。到这里十站全部逛完啦！' }
+];
+/* 站间步行路线：只沿园区道路走（主路 z=±40、中央路 x=0、检修路 z=-19/x=-24/z=27、
+   主变支路 x=-45、母线支路 x=0），不穿围墙/围栏/设备。每条路线从上一站站位出发，
+   最后一个是本站讲解站位。 */
+const ROUTES = {
+  gate:         [[0, 41]],
+  transformer1: [[-3.8, 40], [-3.8, 13.2], [-45, 13.2]],
+  breaker:      [[-3.8, 13.2], [-3.8, -19], [-16, -19]],
+  disconnector: [[-7, -19]],
+  earthing:     [[2, -19]],
+  ct:           [[11, -19]],
+  arrester:     [[30, -19]],
+  busbar:       [[22, -19], [0, -19], [0, -27]],
+  switchgear:   [[0, -19], [-3.8, -19], [-3.8, 27], [-24, 27]],
+  protect:      [[-24, 27], [8, 27]]
+};
+function routeTo(i) {
+  const R = ROUTES[STATIONS[i].dev] || [];
+  const d = w => Math.hypot(w[0] - guide.position.x, w[1] - guide.position.z);
+  let path;
+  if (teach.i === i - 1) path = R;                              /* 顺序：照路线走 */
+  else if (teach.i === i + 1) path = R.slice().reverse();       /* 后退：原路返回 */
+  else path = (R.length > 1 && d(R[R.length - 1]) < d(R[0])) ? R.slice().reverse() : R;
+  while (path.length > 1 && d(path[0]) < .8) path = path.slice(1);  /* 跳过身后的点 */
+  return path;
+}
+/* 禁区硬护栏：围栏/建筑/水池的占地矩形（坐标已含各自的安全边距；工器具室贴路侧用真实边），
+   走路时每帧做碰撞检查，从根上保证小电不穿墙不穿围栏不穿水池 */
+const NOGO_BOXES = [
+  [-53.8, -28.2, -8.3, 12.3],     /* 主变围栏（外扩 0.8） */
+  [-29.05, -6.95, 14.45, 25.55],  /* 10kV 开关柜室（实际屋顶 20.5×9.5：x[-28.25,-7.75] z[15.25,24.75]，外扩 0.8） */
+  [-0.8, 16.8, 12.9, 23.3],       /* 主控楼（外扩 0.8） */
+  [39.2, 46.8, 0.2, 7.8],         /* 电容器组 */
+  [27.2, 34.8, 2.2, 9.8],         /* 消弧线圈 */
+  [37.2, 44.8, -11.8, -4.2],      /* 站用变 */
+  [-57, -47, 22, 30],             /* 消防泵房（外扩 0.8） */
+  [-50.5, -40.5, 21, 31],         /* 消防水池（圆 r4.2 外接 + 0.8） */
+  [-44.3, -31.7, 29.45, 38.55],   /* 备品库（外扩 0.8） */
+  [-21, -14, 29, 35],            /* 安全工器具室（已东移避让连络路，真实边） */
+  [-59.5, -52.5, 7.25, 12.75]     /* 事故油池 */
+];
+function inNogo(x, z) {
+  for (const [x1, x2, z1, z2] of NOGO_BOXES)
+    if (x > x1 && x < x2 && z > z1 && z < z2) return true;
+  return false;
+}
+/* 朗读稿：口播化重写（区别于面板里的书面知识点），TTS 念这个才不像机器人 */
+const SAYS = [
+  '欢迎来到变电站！进门第一课不是设备，是规矩。你看门口这个登记本，进门先登记，火种要交出去，安全帽戴好。对了，站里全是高压设备，必须两个人一组才能干活，千万别一个人往设备区里乱闯哦。记住了吗？记住咱们就去下一站。',
+  '这就是主变压器，全站的心脏。它把十一万伏的高电压，降到一万零五百伏给大家用。巡检它先看三样：油位表、油温表，再凑近听听声音。均匀的嗡嗡声是正常的，可要是听见噼里啪啦的放电声，得马上汇报！旁边那些风扇是给它降温的，油温一高就多开几组。',
+  '这台是断路器，一个大开关。厉害在哪？故障的时候，零点零六秒就能自动跳闸，是保护电网的第一道闸门。这里有个红线口诀你记好：地刀没拉开，绝不能合断路器。带地线合闸，等于人为制造短路爆炸，非常危险。',
+  '看这两根支柱，会水平转九十度的就是隔离开关。它没有灭弧能力，只能空载操作。必须等断路器先分开，才能拉合它。要是带着负荷拉闸，会产生巨大的电弧，设备烧坏不说，人也会受伤。所以这个顺序千万别搞反。',
+  '这把是接地刀闸，检修时的保命刀。停电检修之前，顺序是三步：先停电，再验电，然后合接地刀。合上它，就等于把电放走啦，就算有人误送电，也伤不到检修的人。送电的时候反过来，先把地刀拉开，再合开关。',
+  '这是电流互感器，干的活儿是把几千安的大电流，缩小成五安以下，给仪表和保护装置用。它有一条铁律你要背下来：二次侧绝对不能开路！一旦开路，会打出高压电弧。巡视的时候看两点：油位正常、没有渗油，就放心了。',
+  '这位是避雷器，雷电泄放的卫士。雷打到来线路上，它就把雷电波泄放进大地，保护站里的设备。巡视它主要看那个动作计数器，次数突然变多，说明附近落雷频繁；再看看泄漏电流表有没有超标。',
+  '头顶上这些就是母线，全站电流的主干道，所有设备的电都从这儿汇流分配。巡视重点是用红外测温仪看接头：接头温度比别处高出十度就要登记上报，要是发红发烫，那可是事故的前兆。',
+  '这一排是十千伏开关柜，铁柜子里自带五防机械联锁，防误分误合、防带电挂地线，一共五种误操作都防。手车摇进摇出，要听到咔哒一声才算到位；柜面上的红绿灯就是它说话的方式，红灯是合闸运行，绿灯是分闸。',
+  '最后进主控楼，这里是全站的大脑。保护装置就像保镖，故障的时候毫秒级发出跳闸命令。进门先看有没有告警灯亮着，抄数据要三步走：眼看、手记、再核对。好啦，十站全部逛完！以后巡检就按今天这条路走，我随时在这儿等你。'
+];
+STATIONS.forEach((s, i) => s.say = SAYS[i] || s.k.replace(/<[^>]+>/g, '').replace(/\s+/g, ''));
+/* 上手操作：只进左侧教学面板（文字展示），不拼接进讲稿朗读——朗读太多会和画面节奏脱节 */
+const STATION_OPS = [
+  '来，跟我动手做一遍：第一步，在登记本上写清姓名、单位和进站时间；第二步，把打火机、火柴这些火种交给门卫保管；第三步，安全帽戴正，帽带在下巴上系紧，用手晃一下晃不动才算合格。往后只走灰色的巡检道，黄黑条纹的地方是设备区边界，脚别越过去。',
+  '咱们实际操作一遍：你先走到油位表跟前，眼睛平视刻度，读个数记在本子上，跟上一班的记录比一比，掉得快就要警惕。再看油温表，把读数抄下来，超过八十五度就得汇报并多开几组风扇。然后用木棒贴在箱壁上听，注意耳朵不要直接贴，均匀的嗡嗡声就放心，有噼啪声马上退出来汇报。',
+  '断路器实际操作有两条路：一是在主控楼里遥控操作，二是在机构箱旁边就电动手按。你记住看它的两个窗口：压力表指在零点五兆帕左右才允许操作；柜面红灯亮是合闸、绿灯亮是分闸。真要动手合闸之前，必须先扭头确认接地刀闸在拉开位置，这个动作要养成习惯。',
+  '隔离开关是纯手动操作，来，跟着做：先确认对应的断路器确实已经分开；然后开锁，握住操作杆匀速拉动，不要猛拉猛推；拉到位后回头看三根支柱是不是都转到了九十度，三相要一致；最后检查触头接触紧密，再把锁挂回去。',
+  '接地刀闸的操作口诀是七步：停电、验电、合地刀。实际做的时候：先确认开关已经断开，再拿验电器逐相验电，验电器要先在有电的地方试一下好坏，确认没电以后，才能合上接地刀，合完检查接地引线连接牢固。送电之前，第一件事就是把地刀拉开。',
+  '电流互感器本身不用你去动它，你要做的是检查：看油位在刻度中间、箱体没有油渍；打开端子箱看接线紧不紧、密封圈有没有老化。特别注意，二次端子排上的短接片你绝对不能动，那是运行人员做试验专用的，乱动就等于让二次侧开路。',
+  '避雷器的操作就是抄表：拿本子记下动作计数器的读数，跟上次记录对比；再看泄漏电流表的指针在不在正常范围，超标立刻上报。记住一个习惯：每场雷雨过后，要专门跑一趟补抄一次，这是雷雨季的加练项目。',
+  '母线你摸不着也够不着，你的工具是红外测温仪。操作要领：站到安全距离以外，举起测温仪对准每个接头逐个测，屏幕上出现红色的高温点就要重点记录，把温度、位置、时间都写进本子，回头跟历史数据比，涨得快就要上报安排停电处理。',
+  '开关柜是可以实际动手的，但规矩最多：必须两人进行，一人操作、一人监护。摇手车的时候双手握住摇把，匀速摇，听到咔哒一声才算到位，半途卡住不许硬摇。看柜面：红灯亮是运行，绿灯亮是停运。柜门有联锁钥匙，红绿翻转不对、钥匙拔不出来，都说明状态不对，先停下找班长。',
+  '保护室的活儿是眼睛和笔的活儿：进门先抬头看告警灯和光字牌有没有亮的；然后逐面保护屏抄录数据，动作要三步走——眼睛看清、笔记下来、再回头核对一遍；最后对照定值单核对压板位置，一个一个打勾，漏一个都不行。好，到这里十站的看、听、抄、测你都练过一遍了！'
+];
+STATIONS.forEach((s, i) => { s.say = SAYS[i] || s.k.replace(/<[^>]+>/g, '').replace(/\s+/g, ''); s.op = STATION_OPS[i] || ''; });
+/* 互动问答：讲完一站考一题（题目与解析全部来自本站讲解内容） */
+const QUIZ = [
+  { q: '进入变电站后，下面哪种做法是对的？',
+    opts: ['必须两人一组，不能单独进设备区', '一个人熟悉路了也能进', '夜里没人看着可以单独进去', '戴了安全帽就可以随便走'],
+    ans: 0, why: '站里全是高压设备，规矩就是两人一组、登记进出，任何情况下都不能单独乱走乱碰。' },
+  { q: '巡检主变压器，下面哪样是不用看的？',
+    opts: ['油位表', '油温表', '听声音', '转速表'],
+    ans: 3, why: '主变巡检三样：油位表、油温表、再听声音；主变没有"转速表"这种东西。' },
+  { q: '地刀（接地刀闸）还没拉开时，能合断路器吗？',
+    opts: ['可以，快点合就行', '绝不能合', '看电压高低决定', '夜间可以合'],
+    ans: 1, why: '这是红线：带地线合闸等于人为制造短路爆炸，地刀没拉开绝不能合断路器。' },
+  { q: '隔离开关（刀闸）应该在什么时候拉合？',
+    opts: ['带着负荷随时拉合', '断路器先分闸、空载时操作', '负荷越大越要拉', '下雨天才能操作'],
+    ans: 1, why: '隔离开关没有灭弧能力，必须等断路器先分闸、空载才能操作，带负荷拉闸会产生巨大电弧。' },
+  { q: '设备停电检修前，正确的顺序是？',
+    opts: ['验电 → 停电 → 合地刀', '合地刀 → 停电 → 验电', '停电 → 验电 → 合接地刀', '不用验电，直接合地刀'],
+    ans: 2, why: '保命口诀：停电 → 验电 → 合接地刀，把电放走才能保住检修的人；送电时先拉地刀再合开关。' },
+  { q: '电流互感器的二次侧最怕什么？',
+    opts: ['短路', '开路', '受潮', '过载'],
+    ans: 1, why: '铁律：二次侧绝不能开路，开路会打出高压电弧；这一点和电压互感器正好相反（PT 怕短路）。' },
+  { q: '巡视避雷器，重点看哪两个东西？',
+    opts: ['动作计数器和泄漏电流表', '油位和油温', '风扇和照明', '柜面红绿灯'],
+    ans: 0, why: '动作计数器次数突然增多说明附近落雷频繁，再看泄漏电流表有没有超标。' },
+  { q: '母线接头温度比别处高多少，就要登记上报？',
+    opts: ['高 1℃', '高 5℃', '高 10℃', '高 20℃'],
+    ans: 2, why: '红外测温看接头：比别处高 10℃ 就要登记上报，发红发烫是事故前兆。' },
+  { q: '开关柜手车摇进摇出，怎样才算到位？',
+    opts: ['灯亮了就行', '听到"咔哒"到位声', '慢慢摇就行不用管', '用力推到底'],
+    ans: 1, why: '手车摇进摇出要听到"咔哒"到位声才算到位，柜面红绿灯是它的状态语言。' },
+  { q: '在保护室抄录数据，正确的做法是？',
+    opts: ['拍张照片就行', '凭记忆回来补记', '眼看、手记、再核对', '让同事顺便抄一份'],
+    ans: 2, why: '抄数据要"眼看、手记、再核对"三步走，进主控楼还要先看有无告警灯亮起。' }
+];
+STATIONS.forEach((s, i) => { if (QUIZ[i]) s.quiz = QUIZ[i]; });
+/* 小电角色建模：安全帽 + 荧光马甲 + 反光条 */
+const guide = new THREE.Group();
+const gMat = c => new THREE.MeshLambertMaterial({ color: c });
+function gLimb(parent, geo, c, x, y, z) {
+  const m = new THREE.Mesh(geo, gMat(c)); m.position.set(x, y, z); parent.add(m); return m;
+}
+const hipY = .8;
+const legL = new THREE.Group(), legR = new THREE.Group();
+legL.position.set(-.12, hipY, 0); legR.position.set(.12, hipY, 0);
+gLimb(legL, new THREE.BoxGeometry(.16, .8, .22), 0x24406e, 0, -.4, 0);
+gLimb(legR, new THREE.BoxGeometry(.16, .8, .22), 0x24406e, 0, -.4, 0);
+gLimb(legL, new THREE.BoxGeometry(.18, .1, .3), 0x1f2a44, 0, -.78, .04);
+gLimb(legR, new THREE.BoxGeometry(.18, .1, .3), 0x1f2a44, 0, -.78, .04);
+guide.add(legL, legR);
+gLimb(guide, new THREE.BoxGeometry(.5, .64, .3), 0x2f6bff, 0, 1.12, 0);          // 蓝色工装
+gLimb(guide, new THREE.BoxGeometry(.55, .42, .35), 0xb8e600, 0, 1.1, 0);          // 荧光马甲
+gLimb(guide, new THREE.BoxGeometry(.57, .07, .37), 0xe8eef7, 0, 1.0, 0);          // 反光条
+gLimb(guide, new THREE.BoxGeometry(.57, .07, .37), 0xe8eef7, 0, 1.2, 0);
+const armL = new THREE.Group(), armR = new THREE.Group();
+armL.position.set(-.33, 1.38, 0); armR.position.set(.33, 1.38, 0);
+gLimb(armL, new THREE.BoxGeometry(.13, .56, .13), 0x2f6bff, 0, -.26, 0);
+gLimb(armR, new THREE.BoxGeometry(.13, .56, .13), 0x2f6bff, 0, -.26, 0);
+gLimb(armL, new THREE.BoxGeometry(.14, .12, .14), 0xffd9b3, 0, -.56, 0);
+gLimb(armR, new THREE.BoxGeometry(.14, .12, .14), 0xffd9b3, 0, -.56, 0);
+guide.add(armL, armR);
+gLimb(guide, new THREE.BoxGeometry(.24, .1, .24), 0xffd9b3, 0, 1.5, 0);           // 脖子
+const gHead = gLimb(guide, new THREE.SphereGeometry(.18, 16, 12), 0xffd9b3, 0, 1.62, 0); // 脸
+gLimb(guide, new THREE.SphereGeometry(.21, 16, 12), 0xf7b500, 0, 1.7, 0).scale.set(1, .72, 1); // 安全帽
+gLimb(guide, new THREE.BoxGeometry(.46, .04, .26), 0xf7b500, 0, 1.66, .04);       // 帽檐
+guide.position.set(4, 0, 41.5); guide.scale.setScalar(1.3); guide.visible = false; scene.add(guide);
+const guideMeshes = [];
+guide.traverse(o => { if (o.isMesh) guideMeshes.push(o); });
+/* 目标设备打卡圈：任务阶段在高亮设备脚下画一个跳动的金色圆环 */
+const teachRing = new THREE.Mesh(new THREE.RingGeometry(2.1, 2.6, 40),
+  new THREE.MeshBasicMaterial({ color: 0xf7b500, transparent: true, opacity: .8, side: THREE.DoubleSide }));
+teachRing.rotation.x = -Math.PI / 2; teachRing.visible = false; scene.add(teachRing);
+
+/* 语音：浏览器 TTS 朗读讲解，按句推进气泡字幕；无 TTS 时退化为按字数节奏出字幕 */
+const Voice = {
+  ok: typeof speechSynthesis !== 'undefined' && typeof SpeechSynthesisUtterance !== 'undefined',
+  muted: false, aborted: false, onDone: null, subCb: null, timer: null, _v: null,
+  /* 选声：优先 Edge 在线神经语音（"…Online (Natural)…"），接近真人；其次任意中文 */
+  voice() {
+    if (!this.ok) return null;
+    try {
+      const vs = speechSynthesis.getVoices() || [];
+      if (this._v && vs.includes(this._v)) return this._v;
+      const score = v => {
+        let s = 0;
+        if (/Online \(Natural\)|Neural/i.test(v.name)) s += 100;    /* 神经语音：音色最接近真人 */
+        if (/Xiaoxiao|Xiaoyi|Yunxi|Yunyang/i.test(v.name)) s += 20; /* 已知听感较好的音色 */
+        if (/zh[-_]CN/i.test(v.lang)) s += 10;
+        if (v.localService === false) s += 5;                       /* 云端合成通常优于本地老引擎 */
+        return s;
+      };
+      this._v = vs.filter(v => /^zh/i.test(v.lang)).sort((a, b) => score(b) - score(a))[0] || null;
+      return this._v;
+    } catch (e) { return null; }
+  },
+  speak(text, { sub, done } = {}) {
+    this.stop();
+    this.aborted = false; this.onDone = done || null; this.subCb = sub || null;
+    /* 切句并记录每句在全文中的起始偏移，供 onboundary 事件映射字幕 */
+    /* 发音修正：Web Speech API 不支持标拼音，多音字读错的词只能在朗读文本里换成同义说法（显示文本不受影响） */
+    const SAY_FIX = [[/地刀/g, '接地刀'], [/地线合闸/g, '接地线合闸']];
+    const plain = String(text).replace(/<[^>]+>/g, '').replace(SAY_FIX[0][0], SAY_FIX[0][1]).replace(SAY_FIX[1][0], SAY_FIX[1][1]);
+    const parts = []; let off = 0;
+    plain.split(/(?<=[。！？；])/).forEach(s => {
+      const t = s.trim(); if (!t) { off += s.length; return; }
+      parts.push({ t, start: plain.indexOf(t, off) }); off = parts[parts.length - 1].start + t.length;
+    });
+    if (!parts.length) { this.finish(); return; }
+    if (!this.ok || this.muted) {           /* 无语音能力/已静音：字幕仍按节奏推进 */
+      let idx = 0;
+      const step = () => {
+        if (this.aborted) return;
+        if (idx >= parts.length) { this.finish(); return; }
+        const p = parts[idx++];
+        if (this.subCb) this.subCb(p.t);
+        this.timer = setTimeout(step, Math.max(1500, p.t.length * 190));
+      };
+      this.timer = setTimeout(step, 120); return;   /* cancel 后缓冲 120ms，防引擎丢句 */
+    }
+    /* 分块：2~3 句 / ≤80 字一块。块内连续波形（引擎自己处理标点停顿，最顺滑）；
+       块间只留引擎衔接的最小间隙——不再人工插 200ms+ 停顿，根治"一卡一卡"。
+       也不超过 Google 云语音 ~15s 断流与超长 utterance 丢事件的坑。 */
+    const chunks = []; let cur = null;
+    const push = c => { if (c) chunks.push(c); };
+    parts.forEach(p => {
+      if (!cur) cur = { parts: [], start: p.start, text: '' };
+      cur.parts.push(p); cur.text += p.t;
+      if (cur.text.length >= 70) { push(cur); cur = null; }
+    });
+    push(cur);
+    const v = this.voice();
+    const speakChunk = ci => {
+      if (this.aborted) return;
+      if (ci >= chunks.length) { this.finish(); return; }
+      const c = chunks[ci];
+      /* 块内字幕：优先 onboundary 逐字进度（神经/本地引擎支持）；
+         引擎不发事件（如 Google 云语音）则按字数估算节奏兜底 */
+      let seen = false, ei = 0;
+      const est = () => {
+        if (this.aborted || seen) return;
+        if (ei >= c.parts.length) return;
+        const p = c.parts[ei++];
+        if (this.subCb) this.subCb(p.t);
+        this.timer = setTimeout(est, Math.max(1200, p.t.length * 230));
+      };
+      est();
+      const u = new SpeechSynthesisUtterance(c.text);
+      if (v) u.voice = v;
+      u.lang = 'zh-CN';
+      u.rate = .95;                        /* 旁白最佳区间 95%~105%，全程恒定才稳 */
+      u.pitch = v ? (/xiao/i.test(v.name) ? 1.03 : /yun/i.test(v.name) ? .98 : 1.02) : 1.02;
+      u.volume = 1;
+      u.onboundary = e => {
+        seen = true; clearTimeout(this.timer);
+        const at = (e.charIndex || 0) + c.start;
+        let best = c.parts[0];
+        for (const p of c.parts) if (p.start <= at) best = p;
+        if (this.subCb) this.subCb(best.t);
+      };
+      u.onend = () => { clearTimeout(this.timer); this.timer = setTimeout(() => speakChunk(ci + 1), 80); };
+      u.onerror = () => { clearTimeout(this.timer); speakChunk(ci + 1); };
+      try { speechSynthesis.speak(u); } catch (e) { speakChunk(ci + 1); }
+    };
+    /* cancel 后立刻 speak 会被部分引擎丢句（onend 瞬间触发→整篇"秒完"直接跳题），
+       统一缓冲 120ms 再开口；期间 stop() 置 aborted 即取消 */
+    const start = () => {
+      if (this.aborted) return;
+      if (!this.voice() && speechSynthesis.onvoiceschanged !== undefined) {
+        let waits = 0;                   /* voices 列表在部分浏览器首次为空，异步等它 */
+        const waitV = () => { if (this.aborted) return; if (this.voice() || waits > 8) speakChunk(0); else { waits++; setTimeout(waitV, 250); } };
+        waitV();
+      } else speakChunk(0);
+    };
+    this.timer = setTimeout(start, 120);
+  },
+  finish() { const f = this.onDone; this.onDone = null; if (f) setTimeout(() => { if (!this.aborted) f(); }, 450); },
+  stop() {
+    this.aborted = true;
+    if (this.ok) { try { speechSynthesis.cancel(); } catch (e) {} }
+    clearTimeout(this.timer); this.onDone = null; this.subCb = null;
+  }
+};
+if (Voice.ok) { try { speechSynthesis.onvoiceschanged = () => {}; speechSynthesis.getVoices(); } catch (e) {} }
+
+/* 气泡：字幕 + 互动按钮，每帧钉在小电头顶 */
+const gbub = document.getElementById('gbub'), gbSay = document.getElementById('gbSay'),
+      gbAct = document.getElementById('gbAct'), gbSpk = document.getElementById('gbSpk');
+function bubShow() { gbub.classList.add('show'); }
+function bubHide() { gbub.classList.remove('show'); Voice.stop(); }
+function bubSay(html) { gbSay.innerHTML = html; }
+function bubSpkLabel() {
+  gbSpk.textContent = Voice.muted || !Voice.ok ? '字幕模式' : '语音讲解中';
+  gbSpk.classList.toggle('off', Voice.muted || !Voice.ok);
+}
+function bubActions(list) {
+  gbAct.innerHTML = '';
+  (list || []).forEach(([label, fn, primary]) => {
+    const b = document.createElement('button');
+    b.textContent = label; if (primary) b.className = 'primary';
+    b.onclick = fn; gbAct.appendChild(b);
+  });
+}
+function toggleVoice() {
+  Voice.muted = !Voice.muted;
+  bubSpkLabel();
+  toast(Voice.muted ? '小电：好的，我只出字幕不出声，点「开声音」随时恢复' : '小电：声音开回来啦～');
+  if (teach.on && teach.phase === 'talking') talkStation(teach.i);   /* 立即按新的声音模式重讲本句 */
+}
+function bubFollow() {
+  if (!teach.on || !guide.visible || !gbub.classList.contains('show')) return;
+  const p = guide.position.clone().add(new THREE.Vector3(0, 2.55 * guide.scale.x, 0)).project(camera);
+  const r = renderer.domElement.getBoundingClientRect();
+  const x = r.left + (p.x + 1) / 2 * r.width, y = r.top + (1 - p.y) / 2 * r.height;
+  gbub.style.left = Math.max(170, Math.min(window.innerWidth - 170, x)) + 'px';
+  /* 气泡默认悬在小电头顶上方；头顶空间不够（答题气泡高）就翻到下方 */
+  const h = gbub.offsetHeight;
+  let top = y - 14, below = false;
+  if (top - h < 10) { top = y + 18; below = true; }
+  gbub.classList.toggle('below', below);
+  gbub.style.top = Math.max(8, top) + 'px';
+}
+function paintTeachAct() {
+  const s = STATIONS[teach.i], dev = DEVICES.find(d => d.id === s.dev);
+  document.getElementById('tpAct').innerHTML = teach.learned
+    ? '✓ 本站打卡完成！' + (teach.i < STATIONS.length - 1 ? '小电马上带你去下一站。' : '全部 10 站学习完成。')
+    : teach.phase === 'task'
+      ? '请点击场景中的「' + dev.name + '」完成本站打卡（或点气泡里的打卡按钮）'
+      : teach.phase === 'quiz'
+        ? '小电出了道题，会答就答，不会就点「跳过答题」～'
+        : teach.phase === 'asked' ? '答完啦，去打卡吧！'
+        : '小电正在讲解，请听～ 可点小电重听';
+}
+function gotoStation(i) {
+  clearTimeout(teach.autoT);
+  teach.i = i; teach.learned = false; teach.phase = 'walking';
+  teach.quizResult = null; teach.skippedTalk = false; teach.retried = false;
+  const s = STATIONS[i], dev = DEVICES.find(d => d.id === s.dev);
+  teach.path = routeTo(i); teach.pi = 0;
+  teach.walking = true;
+  teachRing.visible = false;
+  Voice.stop();
+  document.getElementById('tpProg').textContent = (i + 1) + '/' + STATIONS.length;
+  document.getElementById('tpTitle').textContent = s.t;
+  document.getElementById('tpKnow').innerHTML = s.k + (s.op ? '<div class="teach-op"><b>🛠 上手操作</b><br>' + s.op + '</div>' : '');
+  paintTeachAct();
+  bubShow(); bubSpkLabel();
+  bubSay('跟我来，前面就是「' + dev.name + '」～');
+  bubActions([['⏭ 直接到站', () => {
+    if (!teach.walking) return;
+    const e = teach.path[teach.path.length - 1];
+    guide.position.set(e[0], 0, e[1]);
+    teach.walking = false;
+    arriveStation();
+  }]]);
+}
+/* 到站：镜头定格到设备取景，小电和设备同框，然后开讲 */
+function arriveStation() {
+  legL.rotation.x = legR.rotation.x = armL.rotation.x = armR.rotation.x = 0;
+  guide.position.y = 0;
+  const dev = DEVICES.find(d => d.id === STATIONS[teach.i].dev);
+  const fp = new THREE.Vector3(); if (dev.anchor) dev.anchor.getWorldPosition(fp);
+  const fdir = fp.clone().setY(0).normalize();
+  controls.target.copy(fp.clone().setY(1.5));
+  camTween(fp.clone().addScaledVector(fdir, 4).add(new THREE.Vector3(6, 9, 9)));
+  talkStation(teach.i);          /* 到站自动开讲 */
+}
+/* 到站开讲：语音 + 气泡字幕逐句推进，讲完自动进入打卡任务 */
+function talkStation(i) {
+  if (!teach.on || !guide.visible) return;
+  clearTimeout(teach.autoT);     /* 重听讲解时取消"自动去下一站"，听一半被拽走 */
+  teach.phase = 'talking';
+  paintTeachAct();
+  bubShow(); bubSpkLabel();
+  bubActions([['⏭ 跳过讲解', () => { Voice.stop(); teach.skippedTalk = true; teach.quizResult = 'skip'; startTask(); }], [Voice.muted || !Voice.ok ? '🔊 开声音' : '🔇 静音', toggleVoice]]);
+  const s = STATIONS[i];
+  /* 丢句保险：讲稿明明很长却"秒完"（真机上 cancel→speak 竞态会整篇丢弃），自动重讲一次 */
+  const t0 = performance.now();
+  const minMs = Math.max(4000, s.say.length * 120);
+  Voice.speak(s.say, {
+    sub: txt => { if (teach.phase === 'talking') bubSay(txt); },
+    done: () => {
+      if (!(teach.on && teach.phase === 'talking' && teach.i === i)) return;
+      if (performance.now() - t0 < minMs && !teach.retried) { teach.retried = true; talkStation(i); return; }
+      teach.retried = false;
+      startQuiz();
+    }
+  });
+}
+/* 考一考：讲完出一道选择题，答完再进打卡任务 */
+function startQuiz() {
+  if (!teach.on) return;
+  const s = STATIONS[teach.i];
+  if (!s.quiz) { startTask(); return; }
+  teach.phase = 'quiz';
+  paintTeachAct();
+  bubShow();
+  bubSay('讲解完毕！<b>我来考考你</b>——' + s.quiz.q);
+  bubActions([
+    ...s.quiz.opts.map((o, oi) => ['ABCDEFGHIJKLMNOPQRSTUVWXYZ'[oi] + '. ' + o, () => answerQuiz(oi)]),
+    ['跳过答题 ⏭', () => { if (teach.phase === 'quiz') { clearTimeout(teach.autoT); Voice.stop(); teach.quizResult = 'skip'; startTask(); } }]
+  ]);
+  [...gbAct.querySelectorAll('button')].forEach((b, bi) => { if (bi < s.quiz.opts.length) b.dataset.ok = bi === s.quiz.ans ? '1' : '0'; });
+  Voice.speak('好，讲解完了，我来考考你。' + s.quiz.q, {
+    sub: txt => { if (teach.phase === 'quiz') bubSay('<b>我来考考你</b>——' + s.quiz.q); }
+  });
+}
+function answerQuiz(oi) {
+  const s = STATIONS[teach.i];
+  if (!s.quiz || teach.phase !== 'quiz') return;
+  const ok = oi === s.quiz.ans;
+  teach.quizResult = ok ? 'ok' : 'bad';
+  const label = 'ABCDEF'[s.quiz.ans] + '. ' + s.quiz.opts[s.quiz.ans];
+  /* 按钮表态：答对的亮绿、点错的标红，正确项标绿 */
+  [...gbAct.querySelectorAll('button')].forEach((b, bi) => {
+    b.disabled = true;
+    if (bi === s.quiz.ans) b.style.borderColor = 'rgba(53,208,142,.8)', b.style.color = '#8cecc3';
+    else if (bi === oi) b.style.borderColor = 'rgba(255,107,107,.7)', b.style.color = '#ff9c9c';
+    b.style.opacity = bi === s.quiz.ans ? 1 : .55;
+  });
+  const feed = (ok ? '答对啦，就是它！' : '哎呀，不对哦，正确答案是「' + label + '」。') + s.quiz.why + ' 学会了就去打卡吧！';
+  bubSay((ok ? '✅ 答对啦！' : '❌ 正确答案是 <b>' + label + '</b>。') + s.quiz.why);
+  teach.phase = 'asked';
+  Voice.speak(feed, {
+    sub: txt => { if (teach.phase === 'asked') bubSay((ok ? '✅ 答对啦！' : '❌ 正确答案是 <b>' + label + '</b>。') + s.quiz.why); },
+    done: () => { if (teach.on && teach.phase === 'asked') startTask(); }
+  });
+  clearTimeout(teach.autoT);                 /* 万一语音不可用，10s 后也放行去打卡 */
+  teach.autoT = setTimeout(() => { if (teach.on && teach.phase === 'asked') startTask(); }, 10000);
+}
+function startTask() {
+  if (!teach.on) return;
+  teach.phase = 'task';
+  const s = STATIONS[teach.i], dev = DEVICES.find(d => d.id === s.dev);
+  if (dev.anchor) {
+    const p = new THREE.Vector3(); dev.anchor.getWorldPosition(p);
+    teachRing.position.set(p.x, .5, p.z); teachRing.visible = true;
+  }
+  paintTeachAct();
+  bubShow();
+  bubSay(teach.skippedTalk
+    ? '到站啦！这台是<b>「' + dev.name + '」</b>。想听讲解随时点「重听讲解」，或者直接点它打卡～'
+    : '听完了？现在<b>点击场景中的「' + dev.name + '」</b>完成打卡，也可以直接点下面的按钮～');
+  bubActions([['✅ 我学会了 · 打卡', doCheckin, true], ['🔊 重听讲解', () => talkStation(teach.i)]]);
+}
+function doCheckin() {
+  if (!teach.on || teach.learned) return;
+  if (teach.phase !== 'task') { toast('小电：我还没讲完呢，先听我说完，或者点「跳过讲解」～'); return; }
+  markLearned();
+}
+function markLearned() {
+  if (teach.learned) return;
+  teach.learned = true; teach.phase = 'praise'; teachRing.visible = false;
+  paintTeachAct();
+  const last = teach.i >= STATIONS.length - 1;
+  bubShow();
+  /* 三套话术：答对 / 答错 / 跳过答题（或跳过讲解直接打卡），不再对跳过的人说"答对啦" */
+  const t = STATIONS[teach.i].t.replace(/^第 \d+ 站 · /, '');
+  const PRAISES = {
+    ok: [
+      '答对啦，「{t}」学会了！下一站我带路，跟紧我～',
+      '厉害，{t}这就拿下了！走，下一站在等你。',
+      '不错不错，{t}记住啦吧？跟我去下一站看看～',
+      '漂亮！{t}这一关过了，接下来这站更有意思。'
+    ],
+    bad: [
+      '没关系，答错才记得牢。正确答案我再强调一遍，{t}的要点你已经看过了，跟我去下一站吧。',
+      '哎呀没答对也别灰心，{t}这条口诀你回头多念两遍就行。走，继续下一站！',
+      '错了才印象深！{t}这个知识点今天算是记住了。下一站走起～'
+    ],
+    skip: [
+      '好，{t}打卡完成！不考了咱就继续走，下一站在前面。',
+      '{t}这就学会了！那我带你去下一站，边走边聊。',
+      '收到，{t}打卡成功。跟我来，下一站也很值得一看。',
+      'OK，{t}这一站完成！咱们不答题直接赶路，下一站走起。'
+    ]
+  };
+  const pool = PRAISES[teach.quizResult] || PRAISES.skip;
+  const praise = last
+    ? '太棒了，十站全部逛完！你已经是一名合格的见习电维人了，以后巡检就按今天这条路走。'
+    : pool[Math.floor(Math.random() * pool.length)].replace('{t}', t);
+  teach.quizResult = null; teach.skippedTalk = false;
+  bubSay(praise);
+  bubActions([['🔊 重听讲解', () => talkStation(teach.i)]]);
+  Voice.speak(praise, { sub: txt => { if (teach.phase === 'praise') bubSay(txt); } });
+  /* 讲完自动走到下一站（最后一站除外） */
+  clearTimeout(teach.autoT);
+  teach.autoT = setTimeout(() => {
+    if (!teach.on || teach.i >= STATIONS.length - 1) return;
+    gotoStation(teach.i + 1);
+  }, 3400);
+}
+let _gt = performance.now();
+/* 调试/测试钩子：暴露小电与镜头实时位置（生产无副作用，仅一个只读函数） */
+window.__teachDebug = () => {
+  const s = STATIONS[teach.i], dev = s && DEVICES.find(d => d.id === s.dev);
+  const p = new THREE.Vector3();
+  if (dev && dev.anchor) dev.anchor.getWorldPosition(p);
+  return {
+    gx: guide.position.x, gz: guide.position.z,
+    cx: camera.position.x, cy: camera.position.y, cz: camera.position.z,
+    tx: controls.target.x, ty: controls.target.y, tz: controls.target.z,
+    phase: teach.phase, i: teach.i, walking: teach.walking, learned: teach.learned,
+    target: s ? s.dev : '', ax: p.x, ay: p.y, az: p.z
+  };
+};
+window.__voiceMute = v => { Voice.muted = !!v; };
+/* 测试钩子：世界坐标 → 画布像素坐标（真实点击模拟用，只读无副作用） */
+window.__proj = (x, y, z) => {
+  const v = new THREE.Vector3(x, y, z).project(camera);
+  const r = renderer.domElement.getBoundingClientRect();
+  return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height,
+           on: v.z < 1 && v.x > -1 && v.x < 1 && v.y > -1 && v.y < 1 };
+};
+function tickGuide() {
+  if (!teach.on || !guide.visible) {
+    if (gbub.classList.contains('show')) bubHide();
+    return;
+  }
+  const t = performance.now() / 1000;
+  const dt = Math.min(.05, Math.max(.001, (performance.now() - _gt) / 1000)); _gt = performance.now();
+  if (teach.walking) {
+    const w = teach.path[teach.pi] || [guide.position.x, guide.position.z];
+    const dx = w[0] - guide.position.x, dz = w[1] - guide.position.z;
+    const dist = Math.hypot(dx, dz);
+    if (dist < .35 && teach.pi < teach.path.length - 1) {
+      teach.pi++;                    /* 中途路径点到了，转下一个 */
+    } else if (dist < .35) {
+      teach.walking = false;
+      arriveStation();
+    } else {
+      const sp = Math.min(5.5 * dt, dist);   /* 按真实时间走，帧率低也不变慢 */
+      const nx = guide.position.x + dx / dist * sp, nz = guide.position.z + dz / dist * sp;
+      /* 禁区硬护栏：围栏/建筑体（含 0.8m 安全距离），护栏拦住时原地等一帧，绝不穿模 */
+      if (inNogo(nx, nz)) {
+        teach.stuck = (teach.stuck || 0) + dt;
+        if (teach.stuck > 2 && teach.pi < teach.path.length - 1) { teach.pi++; teach.stuck = 0; } /* 兜底：卡住 2s 跳到下一个路径点 */
+      } else { guide.position.x = nx; guide.position.z = nz; teach.stuck = 0; }
+      /* 平滑转身：朝向逐渐转向行进方向，避免急转弯时镜头甩飞 */
+      const ry = Math.atan2(dx, dz);
+      let dr = ry - guide.rotation.y;
+      dr = Math.atan2(Math.sin(dr), Math.cos(dr));
+      guide.rotation.y += dr * .18;
+      const sw = Math.sin(t * 13) * .55;
+      legL.rotation.x = sw; legR.rotation.x = -sw;
+      armL.rotation.x = -sw * .7; armR.rotation.x = sw * .7;
+      guide.position.y = Math.abs(Math.sin(t * 13)) * .06;
+      /* 追尾镜头：跟拍小电，用户视角始终跟着它走，不再跟丢 */
+      const gp = guide.position;
+      const back = new THREE.Vector3(Math.sin(guide.rotation.y), 0, Math.cos(guide.rotation.y));
+      const desired = gp.clone().addScaledVector(back, -9).add(new THREE.Vector3(0, 7, 0));
+      camera.position.lerp(desired, .07);
+      /* 镜头硬护栏：禁区（围栏/建筑）上空不得低于 9.5m，杜绝转场时镜头穿墙/穿设备的闪屏 */
+      if (inNogo(camera.position.x, camera.position.z)) camera.position.y = Math.max(camera.position.y, 9.5);
+      controls.target.lerp(new THREE.Vector3(gp.x, 1.9, gp.z), .13);
+    }
+  } else if (teach.phase === 'talking') {
+    /* 讲解手势：手臂交替轻摆 + 身体轻微起伏，像在比划着说 */
+    const sw = Math.sin(t * 3.2) * .3;
+    armR.rotation.x = -sw; armR.rotation.z = -.15;
+    armL.rotation.x = sw * .5; armL.rotation.z = 0;
+    guide.position.y = Math.sin(t * 2.4) * .02;
+  } else {
+    armR.rotation.x = 0; armL.rotation.x = 0;
+    armR.rotation.z = Math.sin(t * 3) * .18 - .12;   /* 待机挥手 */
+    guide.position.y = 0;
+  }
+  if (teachRing.visible) teachRing.material.opacity = .45 + Math.sin(t * 4) * .3;
+  bubFollow();
+}
+function startTeach() {
+  teach.on = true; guide.visible = true;
+  document.getElementById('btnTeach').classList.add('on');
+  document.getElementById('btnTeach').textContent = '教学模式进行中 · 点击退出';
+  document.getElementById('teachPanel').classList.add('show');
+  document.getElementById('app').classList.add('teaching');
+  gotoStation(0);
+  Voice.speak('哈喽，欢迎来到变电站！我是你的电维向导小电。今天我带你把全站十处设备逛一圈，我边走边讲，到了地方你动动手打个卡就行。走，跟紧我～', {
+    sub: txt => { if (teach.phase === 'walking') bubSay(txt); },
+    done: () => { if (teach.on && teach.phase === 'walking') bubSay('跟我来，前面就是「' + DEVICES.find(d => d.id === STATIONS[teach.i].dev).name + '」～'); }
+  });
+  toast('小电：教学模式开始！我会讲解，到站后带你打卡');
+}
+function exitTeach() {
+  teach.on = false; guide.visible = false; teach.walking = false; teach.phase = 'idle';
+  clearTimeout(teach.autoT);
+  bubHide();
+  teachRing.visible = false;
+  document.getElementById('btnTeach').classList.remove('on');
+  document.getElementById('btnTeach').textContent = '进入教学模式 · 跟随小电逛站';
+  document.getElementById('teachPanel').classList.remove('show');
+  document.getElementById('app').classList.remove('teaching');
+  toast('教学模式已退出，可随时再进入');
+}
+document.getElementById('btnTeach').onclick = () => teach.on ? exitTeach() : startTeach();
+document.getElementById('tpPrev').onclick = () => {
+  if (teach.i > 0) gotoStation(teach.i - 1); else toast('小电：这已经是第一站啦');
+};
+document.getElementById('tpNext').onclick = () => {
+  if (!teach.learned) {
+    if (teach.phase === 'talking') { Voice.stop(); startTask(); }
+    else toast('小电：先打卡再走哦～点场景里的设备，或点气泡里的「打卡」按钮');
+    return;
+  }
+  if (teach.i < STATIONS.length - 1) gotoStation(teach.i + 1);
+  else toast('十站全部学完，你已经是半个电维人了');
+};
+document.getElementById('tpExit').onclick = exitTeach;
+
+/* 专注模式：隐藏全部面板，按 H 或点按钮恢复 */
+const appEl = document.getElementById('app');
+function toggleZen() {
+  appEl.classList.toggle('zen');
+  resize();   // 顶栏隐藏/恢复后画布容器尺寸变化，立即重设渲染尺寸
+  toast(appEl.classList.contains('zen') ? '已隐藏全部面板 · 按 H 或点右下角按钮恢复' : '面板已恢复显示');
+}
+document.getElementById('btnZen').onclick = toggleZen;
+window.addEventListener('keydown', e => {
+  if ((e.key === 'h' || e.key === 'H') && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) toggleZen();
+});
+
+/* 嵌入模式：宿主前端以 iframe + ?embed=1 引入。与独立打开完全一致——
+   顶栏、巡检任务、演练中心、园区设备等全部面板原样保留（宿主只在其上方
+   提供一条页面导航，不再额外叠加信息浮层，避免与本体面板重复）。
+   主题联动：?theme=day|night 设初始主题；宿主切换时 postMessage
+   {type:'wb-theme', theme} 实时同步——ui-day 换 UI 浅色，applyNight 换场景日照。 */
+(function () {
+  function setTheme(t) {
+    const day = t === 'day';
+    document.documentElement.classList.toggle('ui-day', day);
+    if (typeof applyNight === 'function' && night === day) applyNight(!day, true);
+  }
+  try {
+    const q = new URLSearchParams(location.search);
+    if (q.get('embed') === '1') { appEl.dataset.embed = '1'; }
+    const t = q.get('theme');
+    if (t === 'day' || t === 'night') setTheme(t);
+    window.addEventListener('message', e => {
+      const d = e.data || {};
+      if (d.type === 'wb-theme' && (d.theme === 'day' || d.theme === 'night')) setTheme(d.theme);
+    });
+  } catch (err) { /* 非常规环境下静默降级为完整页 */ }
+})();
+
+/* 动画 */
+const ROBOT_PATH = [[0, 34], [26, 33], [58, 30], [58, 0], [58, -34], [20, -34], [-20, -34], [-58, -34], [-58, 0], [-58, 30], [-20, 34], [0, 34]];
+let pathSeg = 0, pathT = 0;
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = .016, t = performance.now() / 1000;
+  fans.forEach(f => { if (f.owner === 'stationTrans' ? true : state.fan[f.owner]) f.mesh.rotation.z += dt * 5; });
+  if (state.robotRun) {
+    pathT += dt * .055;
+    if (pathT >= 1) { pathT = 0; pathSeg = (pathSeg + 1) % (ROBOT_PATH.length - 1); }
+  }
+  const a = ROBOT_PATH[pathSeg], b = ROBOT_PATH[pathSeg + 1];
+  robot.position.x = a[0] + (b[0] - a[0]) * pathT;
+  robot.position.z = a[1] + (b[1] - a[1]) * pathT;
+  if (state.robotRun) robot.rotation.y = Math.atan2(b[0] - a[0], b[1] - a[1]);
+  roboLight.material.color.setHex(state.robotRun && Math.sin(t * 6) > 0 ? 0x22b573 : 0x14532d);
+  if (rotors.camera && state.cameraRun) rotors.camera.rotation.y = Math.sin(t * .5) * .9;
+  cars.forEach(c => {
+    c.g.position.x += c.dir * dt * 9;
+    if (c.g.position.x > 190) c.g.position.x = -190;
+    if (c.g.position.x < -190) c.g.position.x = 190;
+  });
+  clouds.forEach((c, i) => { c.position.x += dt * (.4 + i * .05); if (c.position.x > 240) c.position.x = -240; });
+  tickRain(dt);
+  scnTick();
+  tickGuide();
+  patrolTick();
+  turbines.forEach(tb => tb.rotation.z += dt * 1.3);
+  if (ring.visible) ring.material.opacity = .5 + Math.sin(t * 4) * .3;
+  for (let i = flashes.length - 1; i >= 0; i--) {
+    const f = flashes[i]; f.t += dt; f.m.scale.setScalar(1 + f.t * 2.2);
+    f.m.material.opacity = Math.max(0, .9 - f.t * 1.6);
+    if (f.t > .6) { scene.remove(f.m); flashes.splice(i, 1); }
+  }
+  for (let i = tweens.length - 1; i >= 0; i--) {
+    const tw = tweens[i]; tw.t += dt;
+    const k = Math.min(1, tw.t / tw.dur);
+    tw.fn(k * k * (3 - 2 * k));
+    if (k >= 1) tweens.splice(i, 1);
+  }
+  if (camAnim) {
+    camAnim.t += .045;
+    const k = 1 - Math.pow(1 - Math.min(1, camAnim.t), 2);
+    camera.position.lerpVectors(camAnim.from, camAnim.to, k);
+    /* 镜头飞行途中同样受禁区高度保护：低空掠过围栏/建筑上空时抬到 9.5m */
+    if (typeof inNogo === 'function' && teach && teach.on && inNogo(camera.position.x, camera.position.z))
+      camera.position.y = Math.max(camera.position.y, 9.5);
+    if (camAnim.t >= 1) camAnim = null;
+  }
+  controls.update();
+  renderer.render(scene, camera);
+}
+function resize() {
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+  renderer.setSize(w, h); renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+}
+window.addEventListener('resize', resize);
+new ResizeObserver(resize).observe(wrap);   // 任何布局变化（专注模式/面板显隐）都自动铺满
+resize();
+animate();
+</script>
+</body>
+</html>

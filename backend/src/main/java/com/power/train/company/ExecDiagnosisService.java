@@ -63,8 +63,9 @@ public class ExecDiagnosisService {
         List<Map<String, Object>> facts = facts();
 
         // 1. 走一遍公共管道：查事实 → 提示词 → 大模型出结论 → 契约硬校验（不过就回退内置规则结论）
+        //    exec=true：走 ai.exec-* 专属端点（本地 sft17_exec 专用模型），未配置时回落共用端点
         DiagnosisPipeline.ModelRun run = DiagnosisPipeline.generate(client, "公司诊断", systemPrompt(),
-            userPrompt(DiagnosisPipeline.renderFacts(facts)), DiagnosisContract::validateExec);
+            userPrompt(DiagnosisPipeline.renderFacts(facts)), DiagnosisContract::validateExec, true);
         Map<String, Object> result = new LinkedHashMap<>(run.usable() ? run.payload() : baseline);
 
         // 2. 运行时字段由后端写死：编号、时间、来源、证据条数、实时报告份数、输入清单、同步板块
@@ -72,7 +73,7 @@ public class ExecDiagnosisService {
         result.put("ran_at", ranAt);
         result.put("source", run.usable() ? "model" : "rule");
         result.put("source_label", run.usable()
-            ? "公司运行诊断 Agent（大模型 " + client.modelName() + " · 实时计算）"
+            ? "公司运行诊断 Agent（大模型 " + client.execModelName() + " · 实时计算）"
             : LABEL_RULE);
         result.put("live_reports", reportService.list().size());
         result.put("evidence_count", facts.size());
